@@ -36,6 +36,7 @@ import { applyStm, activeCount as activeStmCount } from "@/lib/stm";
 import { useT } from "@/lib/i18n";
 import { tierAtLeast } from "@/lib/subscription";
 import { HyperFusionModal } from "./modals/HyperFusionModal";
+import { NeuralPulseBackground } from "./NeuralPulseBackground";
 
 const SLASH = [
   { cmd: "/code", hint: "Generate code for a task" },
@@ -912,6 +913,8 @@ export function ChatView({ onShare, onOpenOsintDash }: { onShare?: () => void; o
 
   return (
     <div className="flex-1 flex flex-col h-full relative overflow-hidden">
+      {/* Neural pulse behind chat area */}
+      <NeuralPulseBackground />
       {chat && (
         <div className="h-10 flex items-center justify-between px-4 relative"
           style={{ borderBottom: "1px solid rgba(255,255,255,0.04)", background: "rgba(8,8,12,0.8)" }}>

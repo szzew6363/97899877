@@ -129,6 +129,9 @@ import { MonacoEditorModal } from "./components/modals/MonacoEditorModal";
 import { DefensiveAIModal } from "./components/modals/DefensiveAIModal";
 import { OpenSkynetModal } from "./components/modals/OpenSkynetModal";
 import { WarRoomModal } from "./components/modals/WarRoomModal";
+import { CyberHeatmapHUD } from "./components/CyberHeatmapHUD";
+import { LiveThreatTicker } from "./components/LiveThreatTicker";
+import { SystemStatusWidget } from "./components/SystemStatusWidget";
 
 const queryClient = new QueryClient();
 
@@ -622,6 +625,15 @@ function AppContent() {
           </div>
         </div>
       )}
+
+      {/* Cyber Attack Heatmap HUD */}
+      <CyberHeatmapHUD />
+
+      {/* Live Threat Ticker */}
+      <LiveThreatTicker />
+
+      {/* System Status Widget */}
+      <SystemStatusWidget />
 
       {/* Global HUD scan line — year 3090 effect */}
       <div className="hud-scan-line pointer-events-none" />
