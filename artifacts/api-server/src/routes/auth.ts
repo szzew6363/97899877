@@ -1,21 +1,22 @@
 import { Router } from "express";
 import * as client from "openid-client";
-import memoize from "memoizee";
 import passport from "passport";
 import { Strategy as OidcStrategy, type VerifyFunction } from "openid-client/passport";
 import { pool } from "../db";
 
 const router = Router();
 
-const getOidcConfig = memoize(
-  async () => {
-    return await client.discovery(
-      new URL(process.env.ISSUER_URL ?? "https://replit.com/oidc"),
-      process.env.REPL_ID!,
-    );
-  },
-  { maxAge: 3600 * 1000 },
-);
+let _oidcCache: { value: Awaited<ReturnType<typeof client.discovery>>; expiry: number } | null = null;
+async function getOidcConfig() {
+  const now = Date.now();
+  if (_oidcCache && now < _oidcCache.expiry) return _oidcCache.value;
+  const value = await client.discovery(
+    new URL(process.env.ISSUER_URL ?? "https://replit.com/oidc"),
+    process.env.REPL_ID!,
+  );
+  _oidcCache = { value, expiry: now + 3600 * 1000 };
+  return value;
+}
 
 async function upsertUser(claims: Record<string, unknown>) {
   try {
