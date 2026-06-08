@@ -65,16 +65,6 @@ export function TopBar({ onMenuClick, onOpenPricing, onOpenToolsHub, onOpenHelp,
   const [q, setQ] = useState("");
   const ref = useRef<HTMLDivElement>(null);
 
-  // Quick Provider Chip panel
-  const providerRef = useRef<HTMLDivElement>(null);
-  const [providerPanelOpen, setProviderPanelOpen] = useState(false);
-  useEffect(() => {
-    function onOutside(e: MouseEvent) {
-      if (providerRef.current && !providerRef.current.contains(e.target as Node)) setProviderPanelOpen(false);
-    }
-    document.addEventListener("mousedown", onOutside);
-    return () => document.removeEventListener("mousedown", onOutside);
-  }, []);
 
   // Scrollable right toolbar
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -382,84 +372,30 @@ export function TopBar({ onMenuClick, onOpenPricing, onOpenToolsHub, onOpenHelp,
             <Brain className="w-4 h-4" />
           </button>
 
-          {/* Quick Provider Chip */}
+          {/* Quick Provider Chip — clicks directly into full settings */}
           {onOpenProviderSettings && (
-            <div className="relative flex-shrink-0" ref={providerRef}>
-              <button
-                onClick={() => setProviderPanelOpen(o => !o)}
-                className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border text-[10px] font-mono transition-all ${
-                  providerPanelOpen
-                    ? "border-primary/50 bg-primary/8 text-primary"
-                    : state.activeProvider && state.activeProvider !== "personal"
-                    ? "bg-violet-500/10 border-violet-500/30 text-violet-300 hover:border-violet-400/50"
-                    : "bg-card border-border text-muted-foreground hover:text-foreground hover:bg-accent"
-                }`}
-                title="تغيير مزود AI"
-              >
-                <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: PROVIDER_COLORS[state.activeProvider ?? "personal"] ?? "#6b7280" }} />
-                <span className="hidden sm:block uppercase font-bold">{(state.activeProvider ?? "personal").slice(0, 8)}</span>
-                {state.activeProviderModel && (
-                  <span className="hidden md:block text-muted-foreground/70 truncate max-w-[60px]">/{state.activeProviderModel.split("/").pop()?.slice(0, 12)}</span>
-                )}
-              </button>
-
-              <AnimatePresence>
-                {providerPanelOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -6, scale: 0.96 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -6, scale: 0.96 }}
-                    transition={{ duration: 0.14 }}
-                    className="absolute right-0 top-full mt-1.5 z-50 w-60 bg-[#0d0d0d] border border-[#262626] rounded-xl shadow-2xl overflow-hidden"
-                  >
-                    {/* Current info */}
-                    <div className="px-3 py-2.5 border-b border-[#1f1f1f] bg-[#111]">
-                      <p className="text-[9px] text-muted-foreground uppercase tracking-widest">المزود النشط</p>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: PROVIDER_COLORS[state.activeProvider ?? "personal"] ?? "#6b7280" }} />
-                        <p className="text-[12px] font-bold text-foreground uppercase">{state.activeProvider ?? "personal"}</p>
-                      </div>
-                      {state.activeProviderModel && (
-                        <p className="text-[10px] text-muted-foreground font-mono truncate mt-0.5">{state.activeProviderModel}</p>
-                      )}
-                    </div>
-
-                    {/* Quick-switch grid */}
-                    <div className="p-2 grid grid-cols-3 gap-1">
-                      {QUICK_PROVIDERS.map(p => (
-                        <button
-                          key={p.id}
-                          onClick={() => {
-                            dispatch({ type: "SET_PROVIDER", provider: p.id, providerModel: p.model });
-                            setProviderPanelOpen(false);
-                            toast({ description: `المزود: ${p.label}` });
-                          }}
-                          className={`flex flex-col items-center gap-1 px-1 py-2 rounded-lg border transition-all text-center ${
-                            state.activeProvider === p.id
-                              ? "border-primary/50 bg-primary/8 text-primary"
-                              : "border-[#1f1f1f] hover:border-[#333] hover:bg-[#181818] text-muted-foreground hover:text-foreground"
-                          }`}
-                        >
-                          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: PROVIDER_COLORS[p.id] ?? "#6b7280" }} />
-                          <span className="text-[9px] font-mono uppercase leading-none">{p.label}</span>
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Full settings */}
-                    <div className="px-2 pb-2">
-                      <button
-                        onClick={() => { setProviderPanelOpen(false); onOpenProviderSettings?.(); }}
-                        className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-primary text-[11px] font-semibold hover:bg-primary/15 transition-colors"
-                      >
-                        <Wifi className="w-3 h-3" />
-                        إعدادات كاملة
-                      </button>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+            <button
+              onClick={onOpenProviderSettings}
+              className={`flex-shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[10px] font-mono transition-all ${
+                state.activeProvider && state.activeProvider !== "personal"
+                  ? "bg-violet-500/10 border-violet-500/30 text-violet-300 hover:border-violet-400/60 hover:bg-violet-500/15"
+                  : "bg-card border-border text-muted-foreground hover:text-foreground hover:bg-accent hover:border-border/80"
+              }`}
+              title="إعدادات مزود الذكاء الاصطناعي"
+            >
+              <span
+                className="w-1.5 h-1.5 rounded-full shrink-0"
+                style={{ backgroundColor: PROVIDER_COLORS[state.activeProvider ?? "personal"] ?? "#6b7280" }}
+              />
+              <span className="hidden sm:block uppercase font-bold tracking-wide">
+                {(state.activeProvider ?? "personal").slice(0, 8)}
+              </span>
+              {state.activeProviderModel && (
+                <span className="hidden md:block text-muted-foreground/60 truncate max-w-[64px]">
+                  /{state.activeProviderModel.split("/").pop()?.slice(0, 12)}
+                </span>
+              )}
+            </button>
           )}
 
           {/* Local Model */}

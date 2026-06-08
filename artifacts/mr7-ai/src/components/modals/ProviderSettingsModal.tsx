@@ -1603,6 +1603,110 @@ export function ProviderSettingsModal({ open, onClose }: Props) {
                     </div>
                   </div>
 
+                  {/* ── Fallback Chain ──────────────────────────────────── */}
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-[13px] font-black">سلسلة الـ Fallback التلقائي</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">إذا فشل المزود الرئيسي، يحاول النظام المزودين التاليين بالترتيب تلقائياً</p>
+                    </div>
+
+                    {/* Chain list */}
+                    {(state.settings.providerFallbackChain ?? []).length === 0 ? (
+                      <div className="rounded-xl border border-dashed border-[#2a2a2a] py-5 text-center">
+                        <p className="text-[11px] text-muted-foreground">لا توجد مزودين في السلسلة — أضف مزوداً للبدء</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {(state.settings.providerFallbackChain ?? []).map((fb, i) => (
+                          <div key={i} className="flex items-center gap-2 bg-[#0d0d0d] border border-[#1f1f1f] rounded-xl px-3 py-2.5">
+                            <span className="text-[10px] font-mono text-muted-foreground/50 w-4">{i + 1}</span>
+                            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor:
+                              fb.provider === "openai" ? "#10b981" :
+                              fb.provider === "anthropic" ? "#f97316" :
+                              fb.provider === "groq" ? "#f59e0b" :
+                              fb.provider === "gemini" ? "#3b82f6" :
+                              fb.provider === "openrouter" ? "#8b5cf6" :
+                              fb.provider === "personal" ? "#e21227" : "#6b7280"
+                            }} />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[12px] font-bold uppercase">{fb.provider}</p>
+                              {fb.model && <p className="text-[10px] text-muted-foreground font-mono truncate">{fb.model}</p>}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <button
+                                disabled={i === 0}
+                                onClick={() => {
+                                  const chain = [...(state.settings.providerFallbackChain ?? [])];
+                                  [chain[i - 1], chain[i]] = [chain[i], chain[i - 1]];
+                                  dispatch({ type: "SET_SETTINGS", patch: { providerFallbackChain: chain } });
+                                }}
+                                className="p-1 rounded hover:bg-[#222] text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+                              >
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3"><path d="m18 15-6-6-6 6" /></svg>
+                              </button>
+                              <button
+                                disabled={i === (state.settings.providerFallbackChain ?? []).length - 1}
+                                onClick={() => {
+                                  const chain = [...(state.settings.providerFallbackChain ?? [])];
+                                  [chain[i], chain[i + 1]] = [chain[i + 1], chain[i]];
+                                  dispatch({ type: "SET_SETTINGS", patch: { providerFallbackChain: chain } });
+                                }}
+                                className="p-1 rounded hover:bg-[#222] text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+                              >
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3"><path d="m6 9 6 6 6-6" /></svg>
+                              </button>
+                              <button
+                                onClick={() => {
+                                  const chain = (state.settings.providerFallbackChain ?? []).filter((_, j) => j !== i);
+                                  dispatch({ type: "SET_SETTINGS", patch: { providerFallbackChain: chain } });
+                                }}
+                                className="p-1 rounded hover:bg-red-500/10 text-muted-foreground hover:text-red-400 transition-colors"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Add to chain */}
+                    <div className="flex gap-2">
+                      {[
+                        { id: "openai", model: "gpt-4o-mini" },
+                        { id: "anthropic", model: "claude-3-5-haiku-latest" },
+                        { id: "groq", model: "llama-3.3-70b-versatile" },
+                        { id: "gemini", model: "gemini-2.0-flash" },
+                        { id: "openrouter", model: "meta-llama/llama-3.3-70b-instruct:free" },
+                        { id: "personal", model: "" },
+                      ].map(p => {
+                        const alreadyIn = (state.settings.providerFallbackChain ?? []).some(fb => fb.provider === p.id);
+                        return (
+                          <button
+                            key={p.id}
+                            disabled={alreadyIn}
+                            onClick={() => {
+                              const chain = [...(state.settings.providerFallbackChain ?? []), { provider: p.id, model: p.model }];
+                              dispatch({ type: "SET_SETTINGS", patch: { providerFallbackChain: chain } });
+                              toast({ description: `تمت إضافة ${p.id} إلى سلسلة الـ Fallback` });
+                            }}
+                            className="flex-1 py-1.5 rounded-lg border text-[9px] font-mono font-bold uppercase transition-all disabled:opacity-30 disabled:cursor-not-allowed border-[#1f1f1f] hover:border-[#333] hover:bg-[#181818] text-muted-foreground hover:text-foreground"
+                          >
+                            {alreadyIn ? "✓" : "+"} {p.id.slice(0, 6)}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div className="flex justify-end">
+                      <button
+                        onClick={() => dispatch({ type: "SET_SETTINGS", patch: { providerFallbackChain: [] } })}
+                        className="text-[10px] text-muted-foreground hover:text-red-400 transition-colors"
+                      >
+                        مسح الكل
+                      </button>
+                    </div>
+                  </div>
+
                   {/* Response Format */}
                   <div className="space-y-2">
                     <p className="text-[12px] font-bold">إعدادات إضافية</p>

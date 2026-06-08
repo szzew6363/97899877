@@ -250,7 +250,40 @@ export function ChatView({ onShare, onOpenOsintDash }: { onShare?: () => void; o
           }
         }
       } else {
-        await streamChat(cloudChatReq, onChunk, abortRef.current.signal);
+        // ── Provider fallback chain ────────────────────────────────────────
+        let primaryOk = false;
+        let primaryErr = "";
+        try {
+          await streamChat(cloudChatReq, onChunk, abortRef.current.signal);
+          primaryOk = true;
+        } catch (err) {
+          if ((err as { name?: string })?.name === "AbortError") throw err;
+          primaryErr = err instanceof Error ? err.message : String(err);
+        }
+
+        if (!primaryOk) {
+          const chain = (state.settings.providerFallbackChain ?? []);
+          let recovered = false;
+          for (const fb of chain) {
+            if (abortRef.current?.signal.aborted) break;
+            acc = "";
+            dispatch({ type: "PATCH_MSG", chatId, msgId: aId, patch: { content: "" } });
+            toast({ description: `فشل ${cloudChatReq.provider} — جاري التبديل إلى ${fb.provider}...` });
+            try {
+              await streamChat(
+                { ...cloudChatReq, provider: fb.provider as import("@/lib/store").ProviderName, providerModel: fb.model },
+                onChunk,
+                abortRef.current!.signal,
+              );
+              toast({ description: `تم التبديل تلقائياً إلى ${fb.provider}` });
+              recovered = true;
+              break;
+            } catch (fbErr) {
+              if ((fbErr as { name?: string })?.name === "AbortError") throw fbErr;
+            }
+          }
+          if (!recovered) throw new Error(primaryErr || "Stream failed.");
+        }
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Stream failed.";
