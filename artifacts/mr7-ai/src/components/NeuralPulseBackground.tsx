@@ -1,9 +1,9 @@
 import { useEffect, useRef } from "react";
 
 /* ══════════════════════════════════════════════════════
-   NEURAL PULSE BACKGROUND
-   Animated neural network visualization behind the chat
-   area — subtle, dark, and GPU-efficient.
+   NEURAL PULSE BACKGROUND v2
+   Enhanced neural network with data packets, hex labels
+   and multi-layer depth — subtle, dark, GPU-efficient.
 ══════════════════════════════════════════════════════ */
 
 interface NeuralNode {
@@ -13,20 +13,35 @@ interface NeuralNode {
   phase: number;
   phaseSpeed: number;
   color: string;
+  label: string;
+  tier: number;
+}
+
+interface DataPacket {
+  fromIdx: number;
+  toIdx: number;
+  t: number;
+  speed: number;
+  color: string;
 }
 
 const NODE_COLORS = [
-  "rgba(226,18,39,0.5)",
-  "rgba(255,255,255,0.15)",
-  "rgba(226,18,39,0.3)",
-  "rgba(255,100,50,0.25)",
+  "rgba(226,18,39,0.55)",
+  "rgba(255,255,255,0.18)",
+  "rgba(226,18,39,0.35)",
+  "rgba(255,120,60,0.28)",
+  "rgba(180,60,60,0.4)",
 ];
+
+const HEX_LABELS = ["0xDEAD", "CVE", "SHELL", "ROOT", "FUZZ", "OSINT", "NEXUS", "NET", "MEM", "SSH", "XSS", "RCE", "ARM64", "ELF"];
 
 export function NeuralPulseBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const nodesRef = useRef<NeuralNode[]>([]);
+  const packetsRef = useRef<DataPacket[]>([]);
   const frameRef = useRef<number>(0);
-  const mouseRef = useRef({ x: 0, y: 0 });
+  const mouseRef = useRef({ x: -999, y: -999 });
+  const timeRef = useRef(0);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -41,16 +56,18 @@ export function NeuralPulseBackground() {
 
     function initNodes() {
       const w = canvas!.width; const h = canvas!.height;
-      const count = Math.min(40, Math.floor((w * h) / 18000));
-      nodesRef.current = Array.from({ length: count }, () => ({
+      const count = Math.min(50, Math.floor((w * h) / 14000));
+      nodesRef.current = Array.from({ length: count }, (_, i) => ({
         x: Math.random() * w,
         y: Math.random() * h,
-        vx: (Math.random() - 0.5) * 0.25,
-        vy: (Math.random() - 0.5) * 0.25,
-        r: 1.5 + Math.random() * 2,
+        vx: (Math.random() - 0.5) * 0.22,
+        vy: (Math.random() - 0.5) * 0.22,
+        r: 1.5 + Math.random() * 2.2,
         phase: Math.random() * Math.PI * 2,
-        phaseSpeed: 0.01 + Math.random() * 0.02,
+        phaseSpeed: 0.008 + Math.random() * 0.018,
         color: NODE_COLORS[Math.floor(Math.random() * NODE_COLORS.length)],
+        label: HEX_LABELS[i % HEX_LABELS.length],
+        tier: Math.floor(Math.random() * 3),
       }));
     }
 
@@ -64,7 +81,26 @@ export function NeuralPulseBackground() {
     }
     canvas.addEventListener("mousemove", onMouse);
 
+    function spawnPackets(nodes: NeuralNode[]) {
+      if (packetsRef.current.length >= 8) return;
+      if (nodes.length < 2) return;
+      const fi = Math.floor(Math.random() * nodes.length);
+      let ti = Math.floor(Math.random() * nodes.length);
+      if (ti === fi) ti = (ti + 1) % nodes.length;
+      const dx = nodes[fi].x - nodes[ti].x;
+      const dy = nodes[fi].y - nodes[ti].y;
+      if (Math.sqrt(dx * dx + dy * dy) > 220) return;
+      packetsRef.current.push({
+        fromIdx: fi, toIdx: ti,
+        t: 0,
+        speed: 0.008 + Math.random() * 0.012,
+        color: Math.random() > 0.5 ? "rgba(226,18,39,0.9)" : "rgba(255,255,255,0.8)",
+      });
+    }
+
     function draw() {
+      timeRef.current += 0.012;
+      const t = timeRef.current;
       const w = canvas!.width; const h = canvas!.height;
       ctx.clearRect(0, 0, w, h);
       const nodes = nodesRef.current;
@@ -73,43 +109,92 @@ export function NeuralPulseBackground() {
 
       nodes.forEach(n => {
         n.phase += n.phaseSpeed;
-        n.x += n.vx + (mx - n.x) * 0.00005;
-        n.y += n.vy + (my - n.y) * 0.00005;
+        const attract = 0.00004;
+        n.x += n.vx + (mx - n.x) * attract;
+        n.y += n.vy + (my - n.y) * attract;
         if (n.x < 0 || n.x > w) n.vx *= -1;
         if (n.y < 0 || n.y > h) n.vy *= -1;
-        n.x = Math.max(0, Math.min(w, n.x));
-        n.y = Math.max(0, Math.min(h, n.y));
+        n.x = Math.max(2, Math.min(w - 2, n.x));
+        n.y = Math.max(2, Math.min(h - 2, n.y));
       });
 
-      // Draw edges
+      const MAX_DIST = 170;
+
       for (let i = 0; i < nodes.length; i++) {
         for (let j = i + 1; j < nodes.length; j++) {
           const a = nodes[i]; const b = nodes[j];
           const dx = a.x - b.x; const dy = a.y - b.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
-          const maxDist = 160;
-          if (dist > maxDist) continue;
-          const alpha = (1 - dist / maxDist) * 0.15;
-          const pulse = (Math.sin(a.phase + b.phase) * 0.5 + 0.5) * 0.08;
+          if (dist > MAX_DIST) continue;
+
+          const baseAlpha = (1 - dist / MAX_DIST) * 0.12;
+          const pulse = Math.sin(a.phase + b.phase + t) * 0.5 + 0.5;
+          const edgeAlpha = baseAlpha + pulse * 0.05;
+
+          const grad = ctx.createLinearGradient(a.x, a.y, b.x, b.y);
+          grad.addColorStop(0, `rgba(226,18,39,${edgeAlpha})`);
+          grad.addColorStop(0.5, `rgba(255,255,255,${edgeAlpha * 0.6})`);
+          grad.addColorStop(1, `rgba(226,18,39,${edgeAlpha})`);
+
           ctx.beginPath();
           ctx.moveTo(a.x, a.y);
           ctx.lineTo(b.x, b.y);
-          ctx.strokeStyle = `rgba(226,18,39,${(alpha + pulse).toFixed(3)})`;
-          ctx.lineWidth = 0.5;
+          ctx.strokeStyle = grad;
+          ctx.lineWidth = 0.5 + pulse * 0.3;
           ctx.stroke();
         }
       }
 
-      // Draw nodes
-      nodes.forEach(n => {
-        const pulse = Math.sin(n.phase) * 0.5 + 0.5;
-        const r = n.r * (0.8 + pulse * 0.4);
+      if (Math.random() < 0.04) spawnPackets(nodes);
 
-        const grd = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, r * 4);
-        grd.addColorStop(0, n.color);
+      packetsRef.current = packetsRef.current.filter(p => {
+        p.t += p.speed;
+        if (p.t >= 1) return false;
+        const from = nodes[p.fromIdx];
+        const to = nodes[p.toIdx];
+        if (!from || !to) return false;
+
+        const px = from.x + (to.x - from.x) * p.t;
+        const py = from.y + (to.y - from.y) * p.t;
+
+        const tailLen = 0.12;
+        const tailT = Math.max(0, p.t - tailLen);
+        const tx2 = from.x + (to.x - from.x) * tailT;
+        const ty2 = from.y + (to.y - from.y) * tailT;
+
+        const trail = ctx.createLinearGradient(tx2, ty2, px, py);
+        trail.addColorStop(0, "transparent");
+        trail.addColorStop(1, p.color);
+
+        ctx.beginPath();
+        ctx.moveTo(tx2, ty2);
+        ctx.lineTo(px, py);
+        ctx.strokeStyle = trail;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        const grd = ctx.createRadialGradient(px, py, 0, px, py, 5);
+        grd.addColorStop(0, p.color);
         grd.addColorStop(1, "transparent");
         ctx.beginPath();
-        ctx.arc(n.x, n.y, r * 4, 0, Math.PI * 2);
+        ctx.arc(px, py, 5, 0, Math.PI * 2);
+        ctx.fillStyle = grd;
+        ctx.fill();
+
+        return true;
+      });
+
+      nodes.forEach(n => {
+        const pulse = Math.sin(n.phase) * 0.5 + 0.5;
+        const r = n.r * (0.7 + pulse * 0.5);
+        const glowR = r * 5 + pulse * 4;
+
+        const grd = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, glowR);
+        grd.addColorStop(0, n.color);
+        grd.addColorStop(0.4, n.color.replace(/[\d.]+\)$/, "0.15)"));
+        grd.addColorStop(1, "transparent");
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, glowR, 0, Math.PI * 2);
         ctx.fillStyle = grd;
         ctx.fill();
 
@@ -117,6 +202,12 @@ export function NeuralPulseBackground() {
         ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
         ctx.fillStyle = n.color;
         ctx.fill();
+
+        if (n.tier === 0 && pulse > 0.7) {
+          ctx.font = "8px monospace";
+          ctx.fillStyle = `rgba(226,18,39,${pulse * 0.35})`;
+          ctx.fillText(n.label, n.x + r + 4, n.y + 3);
+        }
       });
 
       frameRef.current = requestAnimationFrame(draw);
@@ -140,7 +231,7 @@ export function NeuralPulseBackground() {
         height: "100%",
         pointerEvents: "none",
         zIndex: 0,
-        opacity: 0.6,
+        opacity: 0.55,
       }}
     />
   );

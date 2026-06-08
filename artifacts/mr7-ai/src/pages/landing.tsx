@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from "react";
 import { useLocation } from "wouter";
 import { Shield, Terminal, Zap, Eye, Brain, Lock, ChevronRight, Server, Code2, Crosshair, Cpu, Activity, Globe } from "lucide-react";
+import { MatrixRain } from "@/components/MatrixRain";
+import { HoloCoreOrb } from "@/components/HoloCoreOrb";
+import { Cyber3DGrid } from "@/components/Cyber3DGrid";
 
 /* ── 3D PARTICLE SYSTEM ── */
 interface Particle {
@@ -492,11 +495,10 @@ export default function LandingPage() {
       {/* HERO */}
       <section style={{
         position: "relative",
-        paddingTop: "140px",
-        paddingBottom: "100px",
+        paddingTop: "120px",
+        paddingBottom: "80px",
         paddingLeft: "24px",
         paddingRight: "24px",
-        textAlign: "center",
         zIndex: 10,
         minHeight: "100vh",
         display: "flex",
@@ -504,8 +506,53 @@ export default function LandingPage() {
         alignItems: "center",
         justifyContent: "center",
       }}>
-        <GridBackground />
+        {/* Matrix rain — very subtle behind hero */}
+        <MatrixRain opacity={0.07} color="#e21227" speed={0.7} density={0.6} style={{ zIndex: 0 }} />
+        <Cyber3DGrid opacity={0.45} color="#e21227" style={{ zIndex: 1 }} />
         <ScanLine />
+
+        {/* HoloCoreOrb — floating right side desktop */}
+        <div style={{
+          position: "absolute",
+          right: "clamp(2%, 6%, 120px)",
+          top: "50%",
+          transform: "translateY(-50%)",
+          zIndex: 3,
+          opacity: 0.9,
+          pointerEvents: "none",
+          display: "none",
+        }} className="hero-orb-desktop">
+          <HoloCoreOrb
+            size={320}
+            color="#e21227"
+            stats={[
+              { label: "Models", value: "15+" },
+              { label: "Modes", value: "18" },
+              { label: "Brains", value: "105" },
+              { label: "Uptime", value: "99%" },
+            ]}
+          />
+        </div>
+
+        {/* Left side floating data stream */}
+        <div style={{
+          position: "absolute",
+          left: "clamp(2%, 4%, 60px)",
+          top: "50%",
+          transform: "translateY(-50%)",
+          zIndex: 3,
+          opacity: 0.4,
+          pointerEvents: "none",
+          fontFamily: "monospace",
+          fontSize: "10px",
+          color: "#e21227",
+          lineHeight: 2,
+          letterSpacing: "0.5px",
+        }} className="hero-data-stream">
+          {["0xDEADBEEF", "CVE-2024-1234", "SHELL::REVERSE", "OSINT::SCAN", "AGENT::LOOP", "NET::INTERCEPT", "FUZZ::TARGET", "MEM::INJECT", "0xCAFEBABE", "KERNEL::EXPLOIT"].map((line, i) => (
+            <div key={i} style={{ opacity: 0.3 + (i % 3) * 0.2 }}>{line}</div>
+          ))}
+        </div>
 
         {/* Main glow */}
         <div style={{
