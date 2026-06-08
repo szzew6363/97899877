@@ -2,6 +2,157 @@ import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from 
 import { useLocation } from "wouter";
 import { Shield, Terminal, Zap, Eye, Brain, Lock, ChevronRight, Server, Code2, Crosshair, Cpu, Activity, Globe } from "lucide-react";
 
+/* ── 3D PARTICLE SYSTEM ── */
+interface Particle {
+  x: number; y: number; z: number;
+  vx: number; vy: number; vz: number;
+  r: number; alpha: number; color: string; type: "dot" | "cross" | "ring";
+}
+
+function ParticleCanvas() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const particles = useRef<Particle[]>([]);
+  const mouseRef = useRef({ x: 0.5, y: 0.5 });
+  const frameRef = useRef<number>(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d")!;
+
+    function resize() {
+      canvas!.width = window.innerWidth;
+      canvas!.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener("resize", resize);
+
+    const COLORS = ["#e21227", "#ff3c3c", "#ff6b35", "rgba(226,18,39,0.6)", "rgba(255,255,255,0.5)", "rgba(255,255,255,0.2)"];
+    const TYPES: Particle["type"][] = ["dot", "dot", "dot", "cross", "ring"];
+
+    particles.current = Array.from({ length: 180 }, () => ({
+      x: Math.random() * canvas!.width,
+      y: Math.random() * canvas!.height,
+      z: Math.random() * 1000,
+      vx: (Math.random() - 0.5) * 0.4,
+      vy: (Math.random() - 0.5) * 0.4,
+      vz: -0.5 - Math.random() * 1.5,
+      r: 1 + Math.random() * 3,
+      alpha: 0.3 + Math.random() * 0.7,
+      color: COLORS[Math.floor(Math.random() * COLORS.length)],
+      type: TYPES[Math.floor(Math.random() * TYPES.length)],
+    }));
+
+    function onMouse(e: MouseEvent) {
+      mouseRef.current = { x: e.clientX / window.innerWidth, y: e.clientY / window.innerHeight };
+    }
+    window.addEventListener("mousemove", onMouse);
+
+    function draw() {
+      const w = canvas!.width; const h = canvas!.height;
+      ctx.clearRect(0, 0, w, h);
+
+      const focalLength = 600;
+      const mx = (mouseRef.current.x - 0.5) * 30;
+      const my = (mouseRef.current.y - 0.5) * 20;
+
+      particles.current.forEach(p => {
+        // Update
+        p.z += p.vz;
+        p.x += p.vx + mx * 0.002;
+        p.y += p.vy + my * 0.002;
+
+        if (p.z <= 0) p.z = 1000;
+        if (p.x < 0) p.x = w;
+        if (p.x > w) p.x = 0;
+        if (p.y < 0) p.y = h;
+        if (p.y > h) p.y = 0;
+
+        // Project to 2D
+        const scale = focalLength / (focalLength + p.z);
+        const px = (p.x - w / 2) * scale + w / 2;
+        const py = (p.y - h / 2) * scale + h / 2;
+        const r = Math.max(0.3, p.r * scale);
+        const alpha = p.alpha * scale * 0.8;
+
+        ctx.globalAlpha = Math.min(1, alpha);
+
+        if (p.type === "dot") {
+          // Glow
+          const grd = ctx.createRadialGradient(px, py, 0, px, py, r * 4);
+          grd.addColorStop(0, p.color);
+          grd.addColorStop(1, "transparent");
+          ctx.beginPath();
+          ctx.arc(px, py, r * 4, 0, Math.PI * 2);
+          ctx.fillStyle = grd;
+          ctx.fill();
+
+          ctx.beginPath();
+          ctx.arc(px, py, r, 0, Math.PI * 2);
+          ctx.fillStyle = p.color;
+          ctx.fill();
+        } else if (p.type === "cross") {
+          ctx.strokeStyle = p.color;
+          ctx.lineWidth = r * 0.5;
+          ctx.beginPath();
+          ctx.moveTo(px - r * 3, py); ctx.lineTo(px + r * 3, py);
+          ctx.moveTo(px, py - r * 3); ctx.lineTo(px, py + r * 3);
+          ctx.stroke();
+        } else {
+          ctx.strokeStyle = p.color;
+          ctx.lineWidth = r * 0.4;
+          ctx.beginPath();
+          ctx.arc(px, py, r * 2.5, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+      });
+
+      // Draw connection lines between nearby particles
+      const pts = particles.current;
+      for (let i = 0; i < pts.length; i++) {
+        const focalLength2 = 600;
+        const scale1 = focalLength2 / (focalLength2 + pts[i].z);
+        const px1 = (pts[i].x - canvas!.width / 2) * scale1 + canvas!.width / 2;
+        const py1 = (pts[i].y - canvas!.height / 2) * scale1 + canvas!.height / 2;
+        for (let j = i + 1; j < Math.min(pts.length, i + 8); j++) {
+          const scale2 = focalLength2 / (focalLength2 + pts[j].z);
+          const px2 = (pts[j].x - canvas!.width / 2) * scale2 + canvas!.width / 2;
+          const py2 = (pts[j].y - canvas!.height / 2) * scale2 + canvas!.height / 2;
+          const dx = px1 - px2; const dy = py1 - py2;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 120) {
+            ctx.globalAlpha = (1 - dist / 120) * 0.12;
+            ctx.strokeStyle = "#e21227";
+            ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            ctx.moveTo(px1, py1);
+            ctx.lineTo(px2, py2);
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+          }
+        }
+      }
+
+      frameRef.current = requestAnimationFrame(draw);
+    }
+
+    frameRef.current = requestAnimationFrame(draw);
+    return () => {
+      cancelAnimationFrame(frameRef.current);
+      window.removeEventListener("resize", resize);
+      window.removeEventListener("mousemove", onMouse);
+    };
+  }, []);
+
+  return (
+    <div ref={containerRef} style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0 }}>
+      <canvas ref={canvasRef} style={{ display: "block", width: "100%", height: "100%" }} />
+    </div>
+  );
+}
+
 const features = [
   { icon: Brain, title: "ذكاء اصطناعي متخصص", desc: "نماذج مدرّبة خصيصاً على الأمن السيبراني — اختبار الاختراق، تحليل الثغرات، والأوامر الهجومية.", color: "#e21227" },
   { icon: Terminal, title: "ترمينال تفاعلي", desc: "طرفية أوامر مدمجة في المتصفح تتيح تنفيذ أوامر Shell بشكل مباشر داخل جلسة الذكاء الاصطناعي.", color: "#ff6b35" },
@@ -240,6 +391,7 @@ export default function LandingPage() {
         }
       `}</style>
 
+      <ParticleCanvas />
       {/* DATA STREAMS background */}
       <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0, overflow: "hidden" }}>
         {[...Array(8)].map((_, i) => (

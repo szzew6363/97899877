@@ -128,6 +128,7 @@ import { AnalyticsDashboard } from "./components/modals/AnalyticsDashboard";
 import { MonacoEditorModal } from "./components/modals/MonacoEditorModal";
 import { DefensiveAIModal } from "./components/modals/DefensiveAIModal";
 import { OpenSkynetModal } from "./components/modals/OpenSkynetModal";
+import { WarRoomModal } from "./components/modals/WarRoomModal";
 
 const queryClient = new QueryClient();
 
@@ -302,6 +303,7 @@ function AppContent() {
   const [monacoInitCode, setMonacoInitCode] = useState<string | undefined>();
   const [monacoInitLang, setMonacoInitLang] = useState<string | undefined>();
   const [shellGeneratorInject, setShellGeneratorInject] = useState<string | undefined>();
+  const [warRoomOpen, setWarRoomOpen] = useState(false);
 
   const [pipelineKeyRef] = useState(() => ({ n: 0 }));
   const [ragPipelineDoc, setRagPipelineDoc] = useState<{ text: string; name: string; key: number } | undefined>();
@@ -453,6 +455,7 @@ function AppContent() {
           onOpenModelCompare={() => setModelCompareOpen(true)}
           onOpenNeuralMatrix={() => setNeuralMatrixOpen(true)}
           onOpenAnalytics={() => setAnalyticsOpen(true)}
+          onOpenWarRoom={() => setWarRoomOpen(true)}
         />
         <ChatView onOpenOsintDash={() => setOsintDashOpen(true)} />
         {compareOpen && <CompareView onClose={() => setCompareOpen(false)} />}
@@ -591,6 +594,7 @@ function AppContent() {
       <NetworkMonitorModal open={networkMonitorOpen} onOpenChange={setNetworkMonitorOpen} />
       <DefensiveAIModal open={defensiveAIOpen} onOpenChange={setDefensiveAIOpen} />
       <OpenSkynetModal open={openSkynetOpen} onOpenChange={setOpenSkynetOpen} />
+      <WarRoomModal open={warRoomOpen} onOpenChange={setWarRoomOpen} />
       <MonacoEditorModal
         open={monacoOpen}
         onClose={() => setMonacoOpen(false)}
