@@ -127,6 +127,7 @@ import { ShellGeneratorModal } from "./components/modals/ShellGeneratorModal";
 import { AnalyticsDashboard } from "./components/modals/AnalyticsDashboard";
 import { MonacoEditorModal } from "./components/modals/MonacoEditorModal";
 import { DefensiveAIModal } from "./components/modals/DefensiveAIModal";
+import { OpenSkynetModal } from "./components/modals/OpenSkynetModal";
 
 const queryClient = new QueryClient();
 
@@ -293,6 +294,7 @@ function AppContent() {
   const [securityKanbanOpen, setSecurityKanbanOpen] = useState(false);
   const [networkMonitorOpen, setNetworkMonitorOpen] = useState(false);
   const [defensiveAIOpen, setDefensiveAIOpen] = useState(false);
+  const [openSkynetOpen, setOpenSkynetOpen] = useState(false);
   const [neuralMatrixOpen, setNeuralMatrixOpen] = useState(false);
   const [shellGeneratorOpen, setShellGeneratorOpen] = useState(false);
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
@@ -336,6 +338,8 @@ function AppContent() {
       setNetworkMonitorOpen(true);
     } else if (id === "defensiveai") {
       setDefensiveAIOpen(true);
+    } else if (id === "openskynet") {
+      setOpenSkynetOpen(true);
     } else {
       setArsenalPage(id);
     }
@@ -586,6 +590,7 @@ function AppContent() {
       <SecurityKanbanModal open={securityKanbanOpen} onOpenChange={setSecurityKanbanOpen} />
       <NetworkMonitorModal open={networkMonitorOpen} onOpenChange={setNetworkMonitorOpen} />
       <DefensiveAIModal open={defensiveAIOpen} onOpenChange={setDefensiveAIOpen} />
+      <OpenSkynetModal open={openSkynetOpen} onOpenChange={setOpenSkynetOpen} />
       <MonacoEditorModal
         open={monacoOpen}
         onClose={() => setMonacoOpen(false)}

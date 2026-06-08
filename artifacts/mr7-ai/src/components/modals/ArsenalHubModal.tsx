@@ -9,7 +9,7 @@ import {
   ToggleLeft, ToggleRight, ChevronDown, ChevronUp,
   Flame, TrendingDown, Monitor, BarChart2, Bug, Factory,
   FlaskConical, Search, Wifi, Rocket, FileText, Skull, Shuffle,
-  Settings, Eye, AlertTriangle, Microscope, Globe, TrendingUp, Crown, Map,
+  Settings, Eye, AlertTriangle, Microscope, Globe, TrendingUp, Crown, Map, Orbit,
 } from "lucide-react";
 import { pipeline, type PipelineHistoryEntry, type ChainRule } from "@/lib/pipeline";
 
@@ -46,7 +46,8 @@ export type ArsenalModuleId =
   | "deeppacket" | "identitygraph" | "autonomoussoc" | "dataintel" | "sysevolution"
   | "digitaltwin" | "sovereignai" | "threatpredict" | "forensicrecon"
   | "exploitresist" | "cyberphysical" | "providerstatus"
-  | "defensiveai";
+  | "defensiveai"
+  | "openskynet";
 
 export type ArsenalModule = {
   id: ArsenalModuleId;
@@ -575,6 +576,12 @@ export const ARSENAL_MODULES: ArsenalModule[] = [
     desc: "Real-time network traffic monitoring with protocol filtering, packet detail inspection, protocol breakdown charts, top talker analysis, live traffic graph, and CSV export.",
     icon: Wifi, color: "#00e5ff", border: "rgba(0,229,255,0.35)", bg: "rgba(0,229,255,0.07)", glow: "rgba(0,229,255,0.25)",
     source: "KaliGPT Native", tag: "NETWORK",
+  },
+  {
+    id: "openskynet", name: "OpenSkynet", subtitle: "AI Terminator — 4-Agent Automation",
+    desc: "4 وكلاء متخصصون: Manager · Browser · Coder · Terminator. تعلّم بالتسجيل مرة واحدة، يُكرر 24/7. Self-healing، جدولة Cron، Skills Hub، ذاكرة مستمرة عبر الجلسات.",
+    icon: Orbit, color: "#818cf8", border: "rgba(129,140,248,0.35)", bg: "rgba(129,140,248,0.07)", glow: "rgba(129,140,248,0.25)",
+    source: "OpenSkynet / sediman-agent", tag: "AUTOMATION",
   },
   {
     id: "defensiveai", name: "Defensive AI", subtitle: "نظام الأمن الدفاعي الذكي",
