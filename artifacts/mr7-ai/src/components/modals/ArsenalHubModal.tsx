@@ -47,7 +47,14 @@ export type ArsenalModuleId =
   | "digitaltwin" | "sovereignai" | "threatpredict" | "forensicrecon"
   | "exploitresist" | "cyberphysical" | "providerstatus"
   | "defensiveai"
-  | "openskynet";
+  | "openskynet"
+  // Batch 9 — Futuristic Arsenal (Year 3090)
+  | "threatdetect" | "deepfake" | "misinfo" | "cyberconsciousness"
+  | "behavioraldna" | "incidentresponse" | "intelfabric" | "temporalthreat"
+  | "cyberevolution" | "malwareanalysis" | "aisafety" | "multireality"
+  | "zeroboundary" | "globalintelsync" | "privacyrisk" | "crossdomain"
+  | "selfimprove" | "hyperadaptive" | "causalreason" | "fullspectrum"
+  | "autonomousoversight" | "largescaleanomaly";
 
 export type ArsenalModule = {
   id: ArsenalModuleId;
