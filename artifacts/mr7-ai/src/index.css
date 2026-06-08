@@ -1122,3 +1122,430 @@ html::before {
     0 0 18px -10px rgba(226, 18, 39, 0.50),
     0 6px 18px -14px rgba(0, 0, 0, 0.9);
 }
+/* ============================================================
+   FUTURISTIC 3D UI SYSTEM v3.0 — KaliGPT
+   Full-depth holographic effects on every interactive element
+   ============================================================ */
+
+/* ── GPU Acceleration for all interactive elements ── */
+button, [role="button"], a, input, textarea, select,
+[class*="rounded"], [class*="border"], [class*="card"] {
+  will-change: auto;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── 3D Perspective container ── */
+.dark body, .dark #root {
+  perspective: 2000px;
+  perspective-origin: 50% 50%;
+}
+
+/* ── Universal button 3D lift ── */
+.dark button:not([disabled]):not([aria-expanded]):hover {
+  transform: translateY(-1px) translateZ(4px);
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s ease !important;
+}
+.dark button:not([disabled]):active {
+  transform: translateY(0px) translateZ(0px) !important;
+  transition: transform 0.08s ease !important;
+}
+
+/* ── Primary red buttons — deep 3D neon press ── */
+.dark button[class*="bg-primary"],
+.dark button[class*="bg-red"],
+.dark [class*="bg-primary"] button {
+  position: relative;
+  box-shadow:
+    0 4px 15px rgba(226,18,39,0.3),
+    0 0 0 1px rgba(226,18,39,0.2),
+    inset 0 1px 0 rgba(255,255,255,0.15),
+    inset 0 -2px 0 rgba(0,0,0,0.3) !important;
+  transform-style: preserve-3d;
+}
+.dark button[class*="bg-primary"]:hover {
+  box-shadow:
+    0 8px 25px rgba(226,18,39,0.45),
+    0 0 0 1px rgba(226,18,39,0.4),
+    0 0 40px rgba(226,18,39,0.2),
+    inset 0 1px 0 rgba(255,255,255,0.2),
+    inset 0 -2px 0 rgba(0,0,0,0.2) !important;
+  transform: translateY(-2px) translateZ(8px) !important;
+}
+
+/* ── Sidebar items — 3D sliding depth ── */
+.dark .CHAT-GPT-sidebar [role="button"],
+.dark .CHAT-GPT-sidebar button,
+.dark .CHAT-GPT-sidebar [class*="cursor-pointer"] {
+  position: relative;
+  transform-origin: left center;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+.dark .CHAT-GPT-sidebar [role="button"]:hover,
+.dark .CHAT-GPT-sidebar button:hover {
+  transform: translateX(3px) translateZ(6px) !important;
+  box-shadow:
+    2px 0 0 rgba(226,18,39,0.5),
+    4px 0 20px rgba(226,18,39,0.15),
+    inset 0 0 0 1px rgba(226,18,39,0.08) !important;
+}
+
+/* ── TopBar buttons — 3D floating chips ── */
+.dark .CHAT-GPT-topbar button {
+  position: relative;
+  transform-style: preserve-3d;
+  transition: all 0.18s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+  backface-visibility: hidden;
+}
+.dark .CHAT-GPT-topbar button:hover {
+  transform: translateY(-2px) translateZ(6px) scale(1.04) !important;
+  box-shadow:
+    0 6px 20px rgba(0,0,0,0.4),
+    0 0 0 1px rgba(255,255,255,0.05),
+    inset 0 1px 0 rgba(255,255,255,0.08) !important;
+}
+.dark .CHAT-GPT-topbar button:active {
+  transform: translateY(0) translateZ(0) scale(0.97) !important;
+}
+
+/* ── Chat input — 3D glass panel ── */
+.dark textarea,
+.dark [contenteditable] {
+  box-shadow:
+    inset 0 2px 8px rgba(0,0,0,0.5),
+    inset 0 0 0 1px rgba(255,255,255,0.04),
+    0 0 0 1px rgba(226,18,39,0.06) !important;
+  transition: box-shadow 0.3s ease, transform 0.2s ease !important;
+}
+.dark textarea:focus,
+.dark [contenteditable]:focus {
+  box-shadow:
+    inset 0 2px 8px rgba(0,0,0,0.6),
+    inset 0 0 0 1px rgba(226,18,39,0.3),
+    0 0 0 3px rgba(226,18,39,0.08),
+    0 0 30px rgba(226,18,39,0.08) !important;
+  transform: translateZ(2px) !important;
+  outline: none !important;
+}
+
+/* ── Modal dialogs — 3D floating layer ── */
+.dark [role="dialog"],
+.dark [data-state="open"][class*="Dialog"] {
+  box-shadow:
+    0 0 0 1px rgba(226,18,39,0.2),
+    0 24px 80px rgba(0,0,0,0.8),
+    0 8px 24px rgba(0,0,0,0.6),
+    inset 0 1px 0 rgba(255,255,255,0.06) !important;
+  transform: perspective(1200px) rotateX(0.5deg) !important;
+  transform-origin: 50% 0% !important;
+}
+
+/* ── Dropdown menus — 3D reveal from behind ── */
+.dark [role="menu"],
+.dark [role="listbox"],
+.dark [data-radix-popper-content-wrapper] > div {
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.06),
+    0 20px 60px rgba(0,0,0,0.8),
+    0 0 40px rgba(226,18,39,0.06),
+    inset 0 1px 0 rgba(255,255,255,0.06) !important;
+  transform: perspective(800px) rotateX(1deg) !important;
+  transform-origin: top center !important;
+}
+
+/* ── Badge / pill labels — holographic shimmer ── */
+.dark [class*="badge"],
+.dark [class*="Badge"],
+.dark span[class*="rounded-full"][class*="text-xs"] {
+  position: relative;
+  overflow: hidden;
+}
+.dark [class*="badge"]::after,
+.dark [class*="Badge"]::after {
+  content: "";
+  position: absolute;
+  top: 0; left: -100%;
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.2) 50%, transparent 100%);
+  animation: badge-shimmer 3s ease infinite;
+}
+
+@keyframes badge-shimmer {
+  0% { left: -100%; }
+  40%, 100% { left: 200%; }
+}
+
+/* ── Input fields — neon edge glow ── */
+.dark input[type="text"],
+.dark input[type="password"],
+.dark input[type="email"],
+.dark input[type="search"],
+.dark input:not([type]) {
+  transition: all 0.25s ease !important;
+  box-shadow:
+    inset 0 1px 4px rgba(0,0,0,0.4),
+    0 0 0 1px rgba(255,255,255,0.04) !important;
+}
+.dark input:focus {
+  box-shadow:
+    inset 0 1px 4px rgba(0,0,0,0.5),
+    0 0 0 2px rgba(226,18,39,0.3),
+    0 0 16px rgba(226,18,39,0.1) !important;
+  outline: none !important;
+}
+
+/* ── Scrollbars — futuristic red thin rail ── */
+.dark *::-webkit-scrollbar { width: 4px; height: 4px; }
+.dark *::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); }
+.dark *::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(226,18,39,0.4), rgba(226,18,39,0.2));
+  border-radius: 4px;
+  box-shadow: 0 0 6px rgba(226,18,39,0.3);
+}
+.dark *::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(226,18,39,0.8), rgba(226,18,39,0.5));
+}
+
+/* ── Selection highlight ── */
+.dark ::selection {
+  background: rgba(226,18,39,0.3);
+  color: #fff;
+  text-shadow: 0 0 8px rgba(226,18,39,0.6);
+}
+
+/* ── Chat message bubbles — 3D depth card ── */
+.dark .msg-bubble-user {
+  box-shadow:
+    0 4px 20px rgba(226,18,39,0.12),
+    0 1px 4px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    inset 0 -1px 0 rgba(226,18,39,0.1) !important;
+  transform: perspective(600px) rotateX(0.5deg);
+  transform-origin: bottom center;
+  transition: box-shadow 0.3s ease, transform 0.2s ease !important;
+}
+.dark .msg-bubble-user:hover {
+  box-shadow:
+    0 8px 30px rgba(226,18,39,0.2),
+    0 2px 8px rgba(0,0,0,0.6),
+    inset 0 1px 0 rgba(255,255,255,0.1),
+    inset 0 -1px 0 rgba(226,18,39,0.2) !important;
+  transform: perspective(600px) rotateX(0deg) translateY(-1px) !important;
+}
+
+/* ── Floating Action Dock buttons — deep 3D lift ── */
+.dark [class*="FloatingAction"] button,
+.dark [aria-label*="New Chat"],
+.dark [aria-label*="Search"],
+.dark [aria-label*="Memory"] {
+  transform-style: preserve-3d;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+.dark [class*="FloatingAction"] button:hover {
+  transform: translateY(-4px) translateZ(12px) scale(1.1) !important;
+  box-shadow:
+    0 12px 30px rgba(0,0,0,0.5),
+    0 4px 12px rgba(226,18,39,0.2),
+    inset 0 1px 0 rgba(255,255,255,0.1) !important;
+}
+
+/* ── Tabs — 3D active indicator ── */
+.dark [role="tab"][aria-selected="true"] {
+  position: relative;
+  box-shadow:
+    0 2px 8px rgba(226,18,39,0.2),
+    inset 0 -2px 0 #e21227,
+    inset 0 1px 0 rgba(255,255,255,0.06) !important;
+  transform: translateZ(4px) !important;
+}
+
+/* ── Tooltip — glass 3D panel ── */
+.dark [role="tooltip"] {
+  box-shadow:
+    0 8px 30px rgba(0,0,0,0.8),
+    0 0 0 1px rgba(255,255,255,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.1) !important;
+  backdrop-filter: blur(16px) !important;
+  transform: perspective(400px) rotateX(2deg) !important;
+  transform-origin: bottom center !important;
+}
+
+/* ── Notification / Toast — 3D slide-in ── */
+.dark [data-sonner-toast],
+.dark [class*="toast"] {
+  box-shadow:
+    0 16px 48px rgba(0,0,0,0.8),
+    0 4px 12px rgba(0,0,0,0.5),
+    0 0 0 1px rgba(255,255,255,0.06),
+    inset 0 1px 0 rgba(255,255,255,0.08) !important;
+  transform: perspective(600px) rotateX(1deg) !important;
+}
+
+/* ── Progress bars — neon fill with trailing glow ── */
+.dark [role="progressbar"] > *,
+.dark [class*="progress"] > div {
+  background: linear-gradient(90deg, rgba(226,18,39,0.6), #e21227) !important;
+  box-shadow: 0 0 10px rgba(226,18,39,0.5), 4px 0 8px rgba(226,18,39,0.3) !important;
+  position: relative !important;
+}
+.dark [role="progressbar"] > *::after,
+.dark [class*="progress"] > div::after {
+  content: "";
+  position: absolute;
+  right: 0; top: 0; bottom: 0;
+  width: 20px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6));
+  animation: progress-tip 1.5s ease-in-out infinite;
+}
+
+@keyframes progress-tip {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+/* ── Switch / toggle — 3D flip ── */
+.dark [role="switch"] {
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+  box-shadow:
+    inset 0 2px 4px rgba(0,0,0,0.4),
+    0 0 0 1px rgba(255,255,255,0.04) !important;
+}
+.dark [role="switch"][aria-checked="true"] {
+  box-shadow:
+    inset 0 2px 4px rgba(0,0,0,0.3),
+    0 0 0 1px rgba(226,18,39,0.4),
+    0 0 12px rgba(226,18,39,0.25) !important;
+}
+.dark [role="switch"] > span {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.3) !important;
+  transform-style: preserve-3d;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+
+/* ── Code blocks — 3D terminal effect ── */
+.dark pre, .dark code {
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,0.06),
+    0 4px 16px rgba(0,0,0,0.5) !important;
+  transform: perspective(800px) rotateX(0.3deg);
+  transform-origin: top center;
+}
+
+/* ── Separator / divider — glowing edge ── */
+.dark [role="separator"],
+.dark hr {
+  border: none !important;
+  height: 1px !important;
+  background: linear-gradient(90deg, transparent, rgba(226,18,39,0.3) 30%, rgba(255,255,255,0.1) 50%, rgba(226,18,39,0.3) 70%, transparent) !important;
+  box-shadow: 0 1px 4px rgba(226,18,39,0.1) !important;
+}
+
+/* ── Holographic flicker on critical elements ── */
+@keyframes holo-flicker {
+  0%, 95%, 100% { opacity: 1; }
+  96% { opacity: 0.85; }
+  97% { opacity: 1; }
+  98% { opacity: 0.9; }
+  99% { opacity: 1; }
+}
+
+/* ── 3D card tilt on large cards ── */
+.dark [class*="Card"],
+.dark [class*="card"]:not(button):not([role]) {
+  transition: transform 0.3s ease, box-shadow 0.3s ease !important;
+  transform-style: preserve-3d;
+}
+
+/* ── Neon border pulse on focused modals ── */
+@keyframes neon-pulse-border {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(226,18,39,0.2), 0 24px 80px rgba(0,0,0,0.8); }
+  50% { box-shadow: 0 0 0 1px rgba(226,18,39,0.4), 0 0 30px rgba(226,18,39,0.1), 0 24px 80px rgba(0,0,0,0.8); }
+}
+
+/* ── Arsenal Hub cards ── */
+.dark [class*="arsenal"] [class*="card"],
+.dark [class*="module"] [class*="card"] {
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+.dark [class*="arsenal"] [class*="card"]:hover,
+.dark [class*="module"] [class*="card"]:hover {
+  transform: translateY(-3px) translateZ(8px) !important;
+  box-shadow:
+    0 12px 30px rgba(0,0,0,0.5),
+    0 0 0 1px rgba(226,18,39,0.3),
+    0 0 20px rgba(226,18,39,0.1) !important;
+}
+
+/* ── 3D glow behind the main app logo / branding ── */
+.dark [class*="logo"],
+.dark [class*="brand"] {
+  filter: drop-shadow(0 0 12px rgba(226,18,39,0.4));
+  transition: filter 0.3s ease !important;
+}
+.dark [class*="logo"]:hover,
+.dark [class*="brand"]:hover {
+  filter: drop-shadow(0 0 20px rgba(226,18,39,0.6));
+}
+
+/* ── 3D Depth on ALL icon buttons ── */
+.dark button svg {
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.2s ease !important;
+}
+.dark button:hover svg {
+  transform: translateZ(4px) scale(1.08) !important;
+  filter: drop-shadow(0 0 4px currentColor) !important;
+}
+
+/* ── Neon glow on active/selected states ── */
+.dark [aria-current="page"],
+.dark [aria-selected="true"],
+.dark [data-selected="true"] {
+  text-shadow: 0 0 12px rgba(226,18,39,0.7) !important;
+}
+
+/* ── 3D underline effect on links ── */
+.dark a:not([class]) {
+  position: relative;
+  transition: all 0.2s ease !important;
+}
+.dark a:not([class])::after {
+  content: "";
+  position: absolute;
+  bottom: -2px; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, currentColor, transparent);
+  transform: scaleX(0);
+  transition: transform 0.2s ease !important;
+}
+.dark a:not([class]):hover::after {
+  transform: scaleX(1);
+}
+
+/* ── Micro-animation on number counters ── */
+@keyframes count-tick {
+  0% { transform: translateY(4px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+.dark [class*="counter"],
+.dark [class*="stat"] span[class*="font-mono"] {
+  animation: count-tick 0.3s ease;
+}
+
+/* ── War Room specific — enhanced node glow ── */
+canvas {
+  image-rendering: auto;
+  -webkit-image-rendering: auto;
+}
+
+/* ── Ensure landing page 3D elements don't overflow ── */
+[style*="perspective"] {
+  contain: layout style;
+}
+
+/* ── Glowing cursor for the entire dark app ── */
+.dark {
+  cursor: default;
+}
+.dark button, .dark [role="button"], .dark a, .dark select, .dark [contenteditable], .dark textarea {
+  cursor: pointer;
+}
