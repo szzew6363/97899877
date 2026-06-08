@@ -9,6 +9,7 @@ import {
   ToggleLeft, ToggleRight, ChevronDown, ChevronUp,
   Flame, TrendingDown, Monitor, BarChart2, Bug, Factory,
   FlaskConical, Search, Wifi, Rocket, FileText, Skull, Shuffle,
+  Settings, Eye, AlertTriangle, Microscope, Globe, TrendingUp, Crown, Map,
 } from "lucide-react";
 import { pipeline, type PipelineHistoryEntry, type ChainRule } from "@/lib/pipeline";
 
@@ -37,7 +38,14 @@ export type ArsenalModuleId =
   // Batch 7 — Mark XXXIX, FreeLLMAPI, 9Router, Feynman, Governor, Headroom, TokenOptimizer, ClaudeMemory
   | "markxxxix" | "markxxxixor" | "freellmapi" | "ninerouter"
   | "feynman" | "governor" | "headroom" | "tokenoptimizer" | "claudememory"
-  | "securitykanban" | "networkmonitor";
+  | "securitykanban" | "networkmonitor"
+  // Batch 8 — Cyber Intelligence Suite
+  | "cyberintel" | "agentswarm" | "archengine" | "syscognition" | "anomalycs"
+  | "binarycore" | "sysobs" | "cyberwarfare" | "threatcog" | "malwarecog"
+  | "exploitabs" | "vulndiscovery" | "infraintel" | "selfhealing" | "attacksurface"
+  | "deeppacket" | "identitygraph" | "autonomoussoc" | "dataintel" | "sysevolution"
+  | "digitaltwin" | "sovereignai" | "threatpredict" | "forensicrecon"
+  | "exploitresist" | "cyberphysical" | "providerstatus";
 
 export type ArsenalModule = {
   id: ArsenalModuleId;
@@ -566,6 +574,169 @@ export const ARSENAL_MODULES: ArsenalModule[] = [
     desc: "Real-time network traffic monitoring with protocol filtering, packet detail inspection, protocol breakdown charts, top talker analysis, live traffic graph, and CSV export.",
     icon: Wifi, color: "#00e5ff", border: "rgba(0,229,255,0.35)", bg: "rgba(0,229,255,0.07)", glow: "rgba(0,229,255,0.25)",
     source: "KaliGPT Native", tag: "NETWORK",
+  },
+  // ── Batch 8: Cyber Intelligence Suite ─────────────────────────────────
+  {
+    id: "cyberintel", name: "Cyber Intelligence Brain", subtitle: "Digital Ecosystem Mapper",
+    desc: "Maps your entire digital ecosystem, understands dependencies across systems, and predicts failures and attacks before they happen using autonomous AI analysis.",
+    icon: Brain, color: "#00e5ff", border: "rgba(0,229,255,0.35)", bg: "rgba(0,229,255,0.07)", glow: "rgba(0,229,255,0.25)",
+    source: "KaliGPT Native", tag: "INTEL",
+  },
+  {
+    id: "agentswarm", name: "AI Agent Swarm", subtitle: "Multi-Domain Parallel Agents",
+    desc: "Dynamically spawns 5 specialized agents (Engineering, Security, RE, Data, IR) running in parallel, then fuses results into unified intelligence.",
+    icon: Network, color: "#f97316", border: "rgba(249,115,22,0.35)", bg: "rgba(249,115,22,0.07)", glow: "rgba(249,115,22,0.25)",
+    source: "KaliGPT Native", tag: "SWARM",
+  },
+  {
+    id: "archengine", name: "Architecture Engine", subtitle: "Self-Evolving System Design",
+    desc: "Redesigns your system infrastructure automatically based on performance, security posture, and workload distribution with phased migration plans.",
+    icon: Settings, color: "#a78bfa", border: "rgba(167,139,250,0.35)", bg: "rgba(167,139,250,0.07)", glow: "rgba(167,139,250,0.25)",
+    source: "KaliGPT Native", tag: "ARCHITECTURE",
+  },
+  {
+    id: "syscognition", name: "System Cognition Layer", subtitle: "Runtime-Level Intelligence",
+    desc: "Deep system cognition that understands applications at runtime level — tracking memory, processes, API flows, and execution paths like a digital microscope.",
+    icon: Eye, color: "#06b6d4", border: "rgba(6,182,212,0.35)", bg: "rgba(6,182,212,0.07)", glow: "rgba(6,182,212,0.25)",
+    source: "KaliGPT Native", tag: "RUNTIME",
+  },
+  {
+    id: "anomalycs", name: "Anomaly Consciousness", subtitle: "Unknown Pattern Detector",
+    desc: "Detects even unknown, never-before-seen attack patterns using behavioral abstraction models rather than signatures.",
+    icon: AlertTriangle, color: "#f59e0b", border: "rgba(245,158,11,0.35)", bg: "rgba(245,158,11,0.07)", glow: "rgba(245,158,11,0.25)",
+    source: "KaliGPT Native", tag: "BEHAVIORAL AI",
+  },
+  {
+    id: "binarycore", name: "Binary Intelligence Core", subtitle: "Reverse Engineering AI",
+    desc: "Reconstructs full software logic from compiled artifacts and generates architectural understanding from assembly, hex, bytecode, and pseudocode automatically.",
+    icon: Code2, color: "#00ff41", border: "rgba(0,255,65,0.3)", bg: "rgba(0,255,65,0.06)", glow: "rgba(0,255,65,0.2)",
+    source: "KaliGPT Native", tag: "REVERSE ENG",
+  },
+  {
+    id: "sysobs", name: "System Observation Engine", subtitle: "Kernel & Syscall Monitor",
+    desc: "Monitors kernel interactions, system calls, hardware signals, and execution timing anomalies for hidden threats and rootkit indicators.",
+    icon: Microscope, color: "#ec4899", border: "rgba(236,72,153,0.35)", bg: "rgba(236,72,153,0.07)", glow: "rgba(236,72,153,0.25)",
+    source: "KaliGPT Native", tag: "KERNEL",
+  },
+  {
+    id: "cyberwarfare", name: "Cyber Warfare Simulator", subtitle: "Attack Scenario Engine",
+    desc: "Models large-scale attack scenarios across cloud, network, and infrastructure environments for defense planning and APT wargaming.",
+    icon: Swords, color: "#ef4444", border: "rgba(239,68,68,0.35)", bg: "rgba(239,68,68,0.07)", glow: "rgba(239,68,68,0.25)",
+    source: "KaliGPT Native", tag: "WARGAMING",
+  },
+  {
+    id: "threatcog", name: "Threat Cognition Network", subtitle: "Global Intelligence Correlation",
+    desc: "Correlates global threat signals, vulnerability disclosures, and attack behaviors into a unified intelligence graph with actor attribution.",
+    icon: Globe, color: "#3b82f6", border: "rgba(59,130,246,0.35)", bg: "rgba(59,130,246,0.07)", glow: "rgba(59,130,246,0.25)",
+    source: "KaliGPT Native", tag: "THREAT INTEL",
+  },
+  {
+    id: "malwarecog", name: "Malware Cognition Lab", subtitle: "Behavioral DNA Analysis",
+    desc: "Dissects malicious software into behavioral DNA, reconstructs attacker intent, and maps variant evolution across malware families.",
+    icon: Bug, color: "#ff4d4d", border: "rgba(255,77,77,0.35)", bg: "rgba(255,77,77,0.07)", glow: "rgba(255,77,77,0.25)",
+    source: "KaliGPT Native", tag: "MALWARE",
+  },
+  {
+    id: "exploitabs", name: "Exploit Behavior Abstraction", subtitle: "Memory Pattern Analysis",
+    desc: "Identifies exploitation attempts based on memory manipulation patterns — heap spray, UAF, ROP chains — rather than static signatures.",
+    icon: Zap, color: "#f59e0b", border: "rgba(245,158,11,0.35)", bg: "rgba(245,158,11,0.07)", glow: "rgba(245,158,11,0.25)",
+    source: "KaliGPT Native", tag: "EXPLOIT",
+  },
+  {
+    id: "vulndiscovery", name: "Vulnerability Discovery", subtitle: "Autonomous Flaw Hunter",
+    desc: "Analyzes source code, binaries, and runtime behavior to identify previously unknown security flaws with CVSS scores and PoC sketches.",
+    icon: Search, color: "#10b981", border: "rgba(16,185,129,0.35)", bg: "rgba(16,185,129,0.07)", glow: "rgba(16,185,129,0.25)",
+    source: "KaliGPT Native", tag: "ZERO-DAY",
+  },
+  {
+    id: "infraintel", name: "Infrastructure Intelligence", subtitle: "Cross-Layer Unified Control",
+    desc: "Unifies cloud, on-prem, edge, and IoT environments into a single observable AI-driven control plane with risk heat maps.",
+    icon: Layers, color: "#fb923c", border: "rgba(251,146,60,0.35)", bg: "rgba(251,146,60,0.07)", glow: "rgba(251,146,60,0.25)",
+    source: "KaliGPT Native", tag: "INFRASTRUCTURE",
+  },
+  {
+    id: "selfhealing", name: "Self-Healing Defense", subtitle: "Autonomous Incident Response",
+    desc: "Isolates compromised components, rewrites configurations, and restores secure system states automatically without human intervention.",
+    icon: Shield, color: "#22c55e", border: "rgba(34,197,94,0.35)", bg: "rgba(34,197,94,0.07)", glow: "rgba(34,197,94,0.25)",
+    source: "KaliGPT Native", tag: "AUTO-DEFENSE",
+  },
+  {
+    id: "attacksurface", name: "Attack Surface Tracker", subtitle: "Exposure Evolution Map",
+    desc: "Continuously maps external exposure and predicts how your system will be targeted over time with 30/90-day forecasts.",
+    icon: Map, color: "#818cf8", border: "rgba(129,140,248,0.35)", bg: "rgba(129,140,248,0.07)", glow: "rgba(129,140,248,0.25)",
+    source: "KaliGPT Native", tag: "EXPOSURE",
+  },
+  {
+    id: "deeppacket", name: "Deep Packet Cognition", subtitle: "Encrypted Traffic Analysis",
+    desc: "Reconstructs encrypted and fragmented network sessions into meaningful behavioral insights without breaking encryption.",
+    icon: Wifi, color: "#0ea5e9", border: "rgba(14,165,233,0.35)", bg: "rgba(14,165,233,0.07)", glow: "rgba(14,165,233,0.25)",
+    source: "KaliGPT Native", tag: "NETWORK",
+  },
+  {
+    id: "identitygraph", name: "Identity Graph Intelligence", subtitle: "User & Device Relationship Map",
+    desc: "Maps relationships between users, devices, sessions, and behaviors to detect hidden compromise chains and insider threats.",
+    icon: Users, color: "#c084fc", border: "rgba(192,132,252,0.35)", bg: "rgba(192,132,252,0.07)", glow: "rgba(192,132,252,0.25)",
+    source: "KaliGPT Native", tag: "IDENTITY",
+  },
+  {
+    id: "autonomoussoc", name: "Autonomous SOC AI", subtitle: "Tier-3 Alert Analyst",
+    desc: "Replaces traditional analysts by triaging alerts, correlating events, and executing responses instantly with MITRE ATT&CK mapping.",
+    icon: Activity, color: "#f97316", border: "rgba(249,115,22,0.35)", bg: "rgba(249,115,22,0.07)", glow: "rgba(249,115,22,0.25)",
+    source: "KaliGPT Native", tag: "SOC",
+  },
+  {
+    id: "dataintel", name: "Data Intelligence Engine", subtitle: "Semantic Multi-Source Fusion",
+    desc: "Merges structured, unstructured, and streaming data into a single semantic understanding layer with knowledge graph construction.",
+    icon: Database, color: "#06b6d4", border: "rgba(6,182,212,0.35)", bg: "rgba(6,182,212,0.07)", glow: "rgba(6,182,212,0.25)",
+    source: "KaliGPT Native", tag: "DATA",
+  },
+  {
+    id: "sysevolution", name: "System Evolution Engine", subtitle: "Zero-Downtime Continuous Upgrade",
+    desc: "Rewrites system components over time to optimize security, performance, and scalability without downtime via phased evolution roadmaps.",
+    icon: TrendingUp, color: "#4ade80", border: "rgba(74,222,128,0.35)", bg: "rgba(74,222,128,0.07)", glow: "rgba(74,222,128,0.25)",
+    source: "KaliGPT Native", tag: "EVOLUTION",
+  },
+  {
+    id: "digitaltwin", name: "Digital Twin Engine", subtitle: "Parallel Reality Simulation",
+    desc: "Full-spectrum digital twin of your infrastructure that simulates real-world behavior, attacks, failures, and optimizations in parallel reality.",
+    icon: Copy, color: "#fbbf24", border: "rgba(251,191,36,0.35)", bg: "rgba(251,191,36,0.07)", glow: "rgba(251,191,36,0.25)",
+    source: "KaliGPT Native", tag: "SIMULATION",
+  },
+  {
+    id: "sovereignai", name: "Sovereign AI Command Core", subtitle: "Hierarchical Agent Governance",
+    desc: "Governs all agents, systems, and intelligence layers with hierarchical decision-making, policy enforcement, and strict control protocols.",
+    icon: Crown, color: "#e21227", border: "rgba(226,18,39,0.4)", bg: "rgba(226,18,39,0.08)", glow: "rgba(226,18,39,0.3)",
+    source: "KaliGPT Native", tag: "COMMAND",
+  },
+  {
+    id: "threatpredict", name: "Threat Prediction Engine", subtitle: "Cognitive Incident Forecasting",
+    desc: "Forecasts cyber incidents by analyzing weak signals across global infrastructure data streams with 30/60/90-day probability models.",
+    icon: TrendingUp, color: "#f59e0b", border: "rgba(245,158,11,0.35)", bg: "rgba(245,158,11,0.07)", glow: "rgba(245,158,11,0.25)",
+    source: "KaliGPT Native", tag: "PREDICTION",
+  },
+  {
+    id: "forensicrecon", name: "Forensic Reconstruction", subtitle: "Autonomous Incident Replay",
+    desc: "Rebuilds full cyber incidents step-by-step including attacker behavior, complete timeline, and impact mapping for legal-quality reports.",
+    icon: FileText, color: "#818cf8", border: "rgba(129,140,248,0.35)", bg: "rgba(129,140,248,0.07)", glow: "rgba(129,140,248,0.25)",
+    source: "KaliGPT Native", tag: "FORENSICS",
+  },
+  {
+    id: "exploitresist", name: "Exploit Resistance Engine", subtitle: "Self-Learning Defense Adaptation",
+    desc: "Adapts defenses dynamically against evolving attack strategies using reinforcement learning — WAF rules, YARA, ACLs, EDR policies.",
+    icon: Flame, color: "#22d3ee", border: "rgba(34,211,238,0.35)", bg: "rgba(34,211,238,0.07)", glow: "rgba(34,211,238,0.25)",
+    source: "KaliGPT Native", tag: "ADAPTIVE",
+  },
+  {
+    id: "cyberphysical", name: "Cyber-Physical Intelligence", subtitle: "OT/IT Convergence Security",
+    desc: "Connects software systems, hardware behavior, and network activity into a single security awareness model for ICS/SCADA environments.",
+    icon: Cpu, color: "#84cc16", border: "rgba(132,204,22,0.35)", bg: "rgba(132,204,22,0.07)", glow: "rgba(132,204,22,0.25)",
+    source: "KaliGPT Native", tag: "OT/ICS",
+  },
+  {
+    id: "providerstatus", name: "Provider Status Dashboard", subtitle: "Real-Time Latency Monitor",
+    desc: "Real-time connection status dashboard for all configured AI providers — latency, uptime, auto-refresh every 30 seconds.",
+    icon: Wifi, color: "#3b82f6", border: "rgba(59,130,246,0.35)", bg: "rgba(59,130,246,0.07)", glow: "rgba(59,130,246,0.25)",
+    source: "KaliGPT Native", tag: "MONITORING",
   },
 ];
 
