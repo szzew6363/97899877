@@ -37,6 +37,7 @@ import { useT } from "@/lib/i18n";
 import { tierAtLeast } from "@/lib/subscription";
 import { HyperFusionModal } from "./modals/HyperFusionModal";
 import { NeuralPulseBackground } from "./NeuralPulseBackground";
+import { ChatEmptyState } from "./ChatEmptyState";
 
 const SLASH = [
   { cmd: "/code", hint: "Generate code for a task" },
@@ -997,65 +998,12 @@ export function ChatView({ onShare, onOpenOsintDash }: { onShare?: () => void; o
         }}
       >
         {isEmpty && (
-          <div className="max-w-3xl mx-auto w-full text-center pt-10 pb-6">
-            {/* 3D Holographic Logo */}
-            <div className="relative inline-block mb-6">
-              {/* Orbit rings */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="w-28 h-28 rounded-full border border-primary/10" style={{ animation: "spin3d 12s linear infinite" }} />
-              </div>
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="w-20 h-20 rounded-full border border-primary/20" style={{ animation: "spin3d 8s linear infinite reverse" }} />
-              </div>
-              {/* Orbiting dot */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div style={{ animation: "orbit 4s linear infinite" }} className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_rgba(226,18,39,0.9)]" />
-              </div>
-              {/* Main icon */}
-              <div
-                className="relative w-20 h-20 mx-auto rounded-2xl flex items-center justify-center empty-state-3d"
-                style={{
-                  background: "radial-gradient(circle at 35% 35%, rgba(226,18,39,0.2), rgba(8,8,12,0.95))",
-                  border: "1px solid rgba(226,18,39,0.35)",
-                  boxShadow: "0 0 40px rgba(226,18,39,0.3), inset 0 1px 0 rgba(255,255,255,0.08), 0 0 0 1px rgba(226,18,39,0.1)"
-                }}
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-10 h-10" style={{ color: "#e21227", filter: "drop-shadow(0 0 8px rgba(226,18,39,0.8))" }}>
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                </svg>
-              </div>
-            </div>
-
-            {/* Glowing title */}
-            <h2 className="text-2xl font-black tracking-tight mb-1" style={{ animation: "matrix-glow 3s ease-in-out infinite", color: "#fff" }}>
-              {state.activeModel}
-            </h2>
-            <p className="text-[13px] font-mono mb-4" style={{ color: "rgba(255,255,255,0.35)" }}>
-              {t("chat.empty")}
-            </p>
-
-            {/* Status indicators */}
-            <div className="flex items-center justify-center gap-3 flex-wrap">
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black font-mono tracking-wider"
-                style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)", color: "#10b981" }}>
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" style={{ boxShadow: "0 0 6px #10b981" }} />
-                NEURAL LINK ACTIVE
-              </div>
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black font-mono tracking-wider"
-                style={{ background: "rgba(226,18,39,0.08)", border: "1px solid rgba(226,18,39,0.2)", color: "#e21227" }}>
-                <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                SECURE CHANNEL
-              </div>
-            </div>
-
-            {state.memory.length > 0 && (
-              <div className="mt-3 inline-flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-full"
-                style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.25)", color: "#10b981" }}>
-                <Brain className="w-3 h-3" style={{ filter: "drop-shadow(0 0 4px #10b981)" }} />
-                {t("chat.memoryActive", { count: state.memory.length })}
-              </div>
-            )}
-          </div>
+          <ChatEmptyState
+            modelName={state.activeModel}
+            memoryCount={state.memory.length}
+            emptyText={t("chat.empty")}
+            onPrompt={(text) => setInput(text)}
+          />
         )}
 
         {chat?.messages.map((msg) => (

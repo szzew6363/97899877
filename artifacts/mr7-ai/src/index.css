@@ -2210,6 +2210,12 @@ html {
   to   { transform: rotateZ(600deg) translateX(180px) rotateZ(-600deg); }
 }
 
+/* ── Threat feed ticker scroll ── */
+@keyframes ticker-scroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
 /* ── Holographic panel — used on landing features ── */
 .glass-panel {
   position: relative;

@@ -4,6 +4,7 @@ import { Shield, Terminal, Zap, Eye, Brain, Lock, ChevronRight, Server, Code2, C
 import { MatrixRain } from "@/components/MatrixRain";
 import { HoloCoreOrb } from "@/components/HoloCoreOrb";
 import { Cyber3DGrid } from "@/components/Cyber3DGrid";
+import { ThreatFeedTicker } from "@/components/ThreatFeedTicker";
 
 /* ── 3D PARTICLE SYSTEM ── */
 interface Particle {
@@ -1105,9 +1106,12 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* THREAT FEED TICKER */}
+      <ThreatFeedTicker />
+
       {/* FOOTER */}
       <footer style={{
-        borderTop: "1px solid rgba(226,18,39,0.12)",
+        borderTop: "1px solid rgba(226,18,39,0.08)",
         padding: "32px 24px",
         position: "relative",
         zIndex: 10,
