@@ -1,7 +1,7 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FullPageOverlay } from "@/components/FullPageOverlay";
 import {
   Crown, MessageSquare, Brain, Bookmark, Zap, Key, Check, AlertCircle,
-  Lock, Unlock, ChevronRight, User, BarChart3, Star, Shield,
+  Lock, Unlock, ChevronRight, User, BarChart3, Star, Shield, X,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { TIER_LABELS, TIER_TOKENS, TIER_PRICES, tierAtLeast, verifyActivationCode } from "@/lib/subscription";
@@ -161,14 +161,16 @@ export function AccountModal({
     : null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#0a0a0a] border-border w-[96vw] max-w-lg max-h-[90vh] overflow-hidden flex flex-col p-0">
-        <DialogHeader className="px-5 pt-5 pb-0">
-          <DialogTitle className="flex items-center gap-2 text-base">
-            <User className="w-4 h-4 text-primary" />
-            My Account
-          </DialogTitle>
-        </DialogHeader>
+    <FullPageOverlay open={open} onClose={() => onOpenChange(false)}>
+      <div className="flex flex-col h-full w-full">
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-[#1f1f1f] bg-[#0d0d0d] shrink-0">
+          <User className="w-5 h-5 text-primary" />
+          <h2 className="text-sm font-bold text-white">حسابي</h2>
+          <button onClick={() => onOpenChange(false)} className="ml-auto w-8 h-8 rounded-lg flex items-center justify-center bg-[#161616] border border-[#1f1f1f] text-[#555] hover:text-white hover:border-[#e21227] transition-all">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto max-w-2xl mx-auto w-full">
 
         {/* Avatar + Plan Header */}
         <div className={`mx-5 mt-4 p-4 rounded-2xl border border-border bg-card ${tierGlow[sub.tier]}`}>
@@ -418,7 +420,8 @@ export function AccountModal({
             </div>
           )}
         </div>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </div>
+    </FullPageOverlay>
   );
 }

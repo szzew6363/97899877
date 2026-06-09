@@ -1,6 +1,6 @@
-import { Dialog, DialogContentTop, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { FullPageOverlay } from "@/components/FullPageOverlay";
 import { Switch } from "@/components/ui/switch";
-import { Settings as SettingsIcon, Palette, Languages, Type, Coins, Trash2, Download, Sparkles, Bot, Layers, Brain, Shield } from "lucide-react";
+import { Settings as SettingsIcon, Palette, Languages, Type, Coins, Trash2, Download, Sparkles, Bot, Layers, Brain, Shield, X } from "lucide-react";
 import { useStore, ACCENT_OPTIONS, type Settings } from "@/lib/store";
 import { useToast } from "@/hooks/use-toast";
 import { useT, type TranslationKey } from "@/lib/i18n";
@@ -74,16 +74,19 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean; onOpenCha
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContentTop className="bg-card border-border w-[96vw] max-w-2xl max-h-[82vh] overflow-y-auto"
-        onOpenAutoFocus={(e) => e.preventDefault()}>
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <SettingsIcon className="w-5 h-5 text-primary" />
-            {t("settings.title")}
-          </DialogTitle>
-          <DialogDescription>{t("settings.subtitle")}</DialogDescription>
-        </DialogHeader>
+    <FullPageOverlay open={open} onClose={() => onOpenChange(false)}>
+      <div className="flex flex-col h-full w-full">
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-[#1f1f1f] bg-[#0d0d0d] shrink-0">
+          <SettingsIcon className="w-5 h-5 text-primary" />
+          <div>
+            <h2 className="text-sm font-bold text-white">{t("settings.title")}</h2>
+            <p className="text-[10px] text-[#555]">{t("settings.subtitle")}</p>
+          </div>
+          <button onClick={() => onOpenChange(false)} className="ml-auto w-8 h-8 rounded-lg flex items-center justify-center bg-[#161616] border border-[#1f1f1f] text-[#555] hover:text-white hover:border-[#e21227] transition-all">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-5 space-y-6 max-w-2xl mx-auto w-full">
 
         {/* Language */}
         <section className="space-y-2">
@@ -268,7 +271,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean; onOpenCha
             {t("settings.dataSummary", { chats: state.chats.length, memory: state.memory.length, snippets: state.snippets.length })}
           </div>
         </section>
-      </DialogContentTop>
-    </Dialog>
+        </div>
+      </div>
+    </FullPageOverlay>
   );
 }

@@ -973,15 +973,15 @@ export function ProviderSettingsModal({ open, onClose }: Props) {
   return (
     <AnimatePresence>
       {open && (
-        <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4"
+        <motion.div
+          className="fixed inset-0 z-50"
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={onClose} />
           <motion.div
-            className="relative w-full max-w-4xl max-h-[96vh] bg-[#080808] border border-[#1f1f1f] rounded-2xl overflow-hidden flex flex-col shadow-[0_0_60px_rgba(0,0,0,0.8)]"
-            initial={{ scale: 0.94, opacity: 0, y: 20 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.94, opacity: 0, y: 20 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="relative w-full h-full bg-[#080808] flex flex-col overflow-hidden"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 12 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
           >
             {/* Top accent line */}
             <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/60 to-transparent" />

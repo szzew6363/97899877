@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import { Dialog, DialogContentTop, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { FullPageOverlay } from "@/components/FullPageOverlay";
 import { Switch } from "@/components/ui/switch";
 import {
   Server, Wifi, WifiOff, CheckCircle2, AlertCircle, ExternalLink, Cpu,
   RefreshCw, Download, Search, ChevronDown, ChevronUp, Zap, Brain,
   Shield, Code2, Eye, Globe, Star, Loader2, Copy, Check, Terminal,
-  HardDrive, Gauge, MemoryStick,
+  HardDrive, Gauge, MemoryStick, X,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useStore } from "@/lib/store";
@@ -395,21 +395,20 @@ export function LocalModelModal({ open, onOpenChange }: LocalModelModalProps) {
   const recommendedByVram = vramProfile ? VRAM_PROFILES.find(v => v.id === vramProfile)?.recommended ?? [] : [];
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContentTop className="bg-card border-border w-[96vw] max-w-2xl max-h-[90vh] overflow-y-auto"
-        onOpenAutoFocus={(e) => e.preventDefault()}>
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-base">
-            <Server className="w-5 h-5 text-primary" />
-            نموذج محلي (Ollama / LM Studio / Jan)
-            {useLocal && (
-              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-green-400/20 text-green-400 border border-green-400/30 ml-1">مُفعّل</span>
-            )}
-          </DialogTitle>
-          <DialogDescription className="text-[12px]">
-            شغّل نماذج مفتوحة المصدر غير مقيّدة محلياً على جهازك واربطها بـ KaliGPT
-          </DialogDescription>
-        </DialogHeader>
+    <FullPageOverlay open={open} onClose={() => onOpenChange(false)}>
+      <div className="flex flex-col h-full w-full">
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-[#1f1f1f] bg-[#0d0d0d] shrink-0">
+          <Server className="w-5 h-5 text-primary" />
+          <div>
+            <h2 className="text-sm font-bold text-white">نموذج محلي (Ollama / LM Studio / Jan)</h2>
+            <p className="text-[10px] text-[#555]">شغّل نماذج مفتوحة المصدر غير مقيّدة محلياً على جهازك واربطها بـ KaliGPT</p>
+          </div>
+          {useLocal && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-green-400/20 text-green-400 border border-green-400/30">مُفعّل</span>}
+          <button onClick={() => onOpenChange(false)} className="ml-auto w-8 h-8 rounded-lg flex items-center justify-center bg-[#161616] border border-[#1f1f1f] text-[#555] hover:text-white hover:border-[#e21227] transition-all">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-5 space-y-5">
 
         {/* Enable Toggle */}
         <div className="flex items-center justify-between p-3 rounded-xl border border-border bg-background/60">
@@ -848,7 +847,8 @@ export function LocalModelModal({ open, onOpenChange }: LocalModelModalProps) {
             </a>
           </div>
         </div>
-      </DialogContentTop>
-    </Dialog>
+        </div>
+      </div>
+    </FullPageOverlay>
   );
 }
