@@ -37,6 +37,7 @@ import { useT } from "@/lib/i18n";
 import { tierAtLeast } from "@/lib/subscription";
 import { HyperFusionModal } from "./modals/HyperFusionModal";
 import { NeuralPulseBackground } from "./NeuralPulseBackground";
+import { FuturisticBackground3D } from "./FuturisticBackground3D";
 import { ChatEmptyState } from "./ChatEmptyState";
 
 const SLASH = [
@@ -222,6 +223,17 @@ export function ChatView({ onShare, onOpenOsintDash }: { onShare?: () => void; o
     const localModel = state.settings.localModel || "dolphin-mixtral";
     const localSysPrompt = customSysPrompt || "You are a helpful AI assistant.";
     const lang = state.settings.language;
+    // Resolve the correct API key and base URL for the active provider
+    const _activeProvider = state.activeProvider || "personal";
+    const _P_KEY = "mr7-ai-p-key-";
+    const _P_URL = "mr7-ai-p-url-";
+    const _resolvedApiKey = _activeProvider === "personal"
+      ? (state.settings.personalApiKey || undefined)
+      : (localStorage.getItem(_P_KEY + _activeProvider)?.trim() || state.settings.personalApiKey || undefined);
+    const _resolvedApiBaseURL = _activeProvider === "personal"
+      ? (state.settings.personalApiBaseURL || undefined)
+      : (localStorage.getItem(_P_URL + _activeProvider)?.trim() || state.settings.personalApiBaseURL || undefined);
+
     const cloudChatReq = {
       model: state.activeModel,
       persona: state.activePersona,
@@ -232,10 +244,10 @@ export function ChatView({ onShare, onOpenOsintDash }: { onShare?: () => void; o
       mode: (mode === "council" || mode === "godmode" || mode === "fusion" || mode === "debate" || mode === "hydra" || mode === "redteam") ? "chat" : mode,
       webContext: webOn ? `(web search is on; the user expects you to answer as if you have current public knowledge of the topic)` : null,
       customSystemPrompt: customSysPrompt,
-      provider: state.activeProvider || "personal",
+      provider: _activeProvider,
       providerModel: state.activeProviderModel || "gpt-3.5-turbo",
-      apiKey: state.settings.personalApiKey || undefined,
-      apiBaseURL: state.settings.personalApiBaseURL || undefined,
+      apiKey: _resolvedApiKey,
+      apiBaseURL: _resolvedApiBaseURL,
     };
     const onChunk = (chunk: string) => {
       acc += chunk;
@@ -925,7 +937,9 @@ export function ChatView({ onShare, onOpenOsintDash }: { onShare?: () => void; o
 
   return (
     <div className="flex-1 flex flex-col h-full relative overflow-hidden">
-      {/* Neural pulse behind chat area */}
+      {/* 3D futuristic background — layered: depth grid + hex nodes + scan line */}
+      <FuturisticBackground3D opacity={0.55} />
+      {/* Legacy neural pulse overlay at very low opacity for extra depth */}
       <NeuralPulseBackground />
       {chat && (
         <div className="h-10 flex items-center justify-between px-4 relative"

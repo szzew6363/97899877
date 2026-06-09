@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Brain, Shield, Cpu, Network, Terminal, Zap, Code2, Eye, Target } from "lucide-react";
 import { MatrixRain } from "./MatrixRain";
+import { FuturisticBackground3D } from "./FuturisticBackground3D";
 
 const BOOT_LINES = [
   "Initializing KaliGPT neural engine...",
@@ -60,8 +61,10 @@ export function ChatEmptyState({ modelName, memoryCount = 0, onPrompt, emptyText
 
   return (
     <div style={{ position: "relative", overflow: "hidden", borderRadius: "16px", padding: "32px 24px", maxWidth: "680px", margin: "0 auto", width: "100%" }}>
-      {/* Subtle matrix rain background */}
-      <MatrixRain opacity={0.05} color="#e21227" speed={0.5} density={0.5} />
+      {/* 3D futuristic background for empty state */}
+      <FuturisticBackground3D opacity={0.35} />
+      {/* Subtle matrix rain overlay */}
+      <MatrixRain opacity={0.04} color="#e21227" speed={0.5} density={0.5} />
 
       {/* HUD corners */}
       <div className="hud-corners hud-animated" style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>

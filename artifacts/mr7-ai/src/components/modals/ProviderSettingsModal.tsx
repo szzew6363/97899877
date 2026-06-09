@@ -751,10 +751,13 @@ export function ProviderSettingsModal({ open, onClose }: Props) {
   const [catalogProvider, setCatalogProvider] = useState("الكل");
   const [catalogCategory, setCatalogCategory] = useState("الكل");
   const [catalogSort, setCatalogSort] = useState<"power" | "hot" | "cost" | "ctx" | "speed">("power");
+  const [catalogPage, setCatalogPage] = useState(0);
+  const CATALOG_PAGE_SIZE = 50;
   useEffect(() => {
-    const id = setTimeout(() => setCatalogSearch(catalogSearchInput), 140);
+    const id = setTimeout(() => { setCatalogSearch(catalogSearchInput); setCatalogPage(0); }, 140);
     return () => clearTimeout(id);
   }, [catalogSearchInput]);
+  useEffect(() => { setCatalogPage(0); }, [catalogProvider, catalogCategory, catalogSort]);
 
   // Advanced settings (stored in dispatch)
   const [temperature, setTemperature] = useState(() => (state.settings as Record<string,unknown>).aiTemperature as number ?? 0.7);
@@ -1441,14 +1444,14 @@ export function ProviderSettingsModal({ open, onClose }: Props) {
                     )}
                   </div>
 
-                  {/* Model List */}
+                  {/* Model List — paginated 50 at a time to prevent freeze */}
                   <div className="space-y-1.5 max-h-[50vh] overflow-y-auto pr-1">
-                    {filteredCatalog.map((m) => {
+                    {filteredCatalog.slice(0, (catalogPage + 1) * CATALOG_PAGE_SIZE).map((m) => {
                       const isSelected = activeProviderModel === m.id;
                       const keyStatus = modelKeyStatus(m);
                       const catColor = CAT_COLORS[m.category] ?? "text-slate-400";
                       return (
-                        <motion.div key={m.id} layout
+                        <div key={m.id}
                           className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all cursor-pointer group ${
                             isSelected ? "bg-primary/10 border-primary/40" : "bg-[#0d0d0d] border-[#1a1a1a] hover:border-[#2a2a2a] hover:bg-[#111]"
                           }`}
@@ -1485,7 +1488,7 @@ export function ProviderSettingsModal({ open, onClose }: Props) {
                               {isSelected ? "نشط" : "تفعيل"}
                             </button>
                           </div>
-                        </motion.div>
+                        </div>
                       );
                     })}
                     {filteredCatalog.length === 0 && (
@@ -1493,6 +1496,13 @@ export function ProviderSettingsModal({ open, onClose }: Props) {
                         <Search className="w-8 h-8 mx-auto mb-2 opacity-20" />
                         <p className="text-[12px]">لا توجد نتائج</p>
                       </div>
+                    )}
+                    {filteredCatalog.length > (catalogPage + 1) * CATALOG_PAGE_SIZE && (
+                      <button
+                        onClick={() => setCatalogPage(p => p + 1)}
+                        className="w-full py-2.5 rounded-xl border border-[#1f1f1f] text-[11px] font-bold text-muted-foreground hover:text-foreground hover:border-[#333] transition-colors bg-[#0a0a0a]">
+                        تحميل المزيد ({filteredCatalog.length - (catalogPage + 1) * CATALOG_PAGE_SIZE} نموذج متبقي)
+                      </button>
                     )}
                   </div>
 
