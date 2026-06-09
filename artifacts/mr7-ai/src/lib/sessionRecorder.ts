@@ -1,0 +1,147 @@
+/* ═══════════════════════════════════════════════════════════════
+   SESSION RECORDER — Global attack-log bus for KaliGPT sessions
+   Captures messages, model switches, mode changes, tool usage.
+═══════════════════════════════════════════════════════════════ */
+
+export type SessionEventType =
+  | "message_sent"
+  | "message_received"
+  | "model_switch"
+  | "mode_switch"
+  | "tool_use"
+  | "error"
+  | "session_start"
+  | "session_stop";
+
+export interface SessionEvent {
+  id: string;
+  ts: number;
+  type: SessionEventType;
+  data: Record<string, unknown>;
+}
+
+type Listener = (events: SessionEvent[]) => void;
+
+class SessionRecorder {
+  private _events: SessionEvent[] = [];
+  private _recording = false;
+  private _listeners: Listener[] = [];
+  private _sessionStart: number = Date.now();
+  private _sessionId = `session-${Date.now()}`;
+
+  subscribe(fn: Listener): () => void {
+    this._listeners.push(fn);
+    return () => { this._listeners = this._listeners.filter(l => l !== fn); };
+  }
+
+  private notify() { this._listeners.forEach(fn => fn([...this._events])); }
+
+  start() {
+    this._recording = true;
+    this._events = [];
+    this._sessionStart = Date.now();
+    this._sessionId = `kgt-${Date.now().toString(36).toUpperCase()}`;
+    this.push("session_start", { sessionId: this._sessionId });
+  }
+
+  stop() {
+    if (this._recording) {
+      this.push("session_stop", { duration: Date.now() - this._sessionStart });
+      this._recording = false;
+      this.notify();
+    }
+  }
+
+  push(type: SessionEventType, data: Record<string, unknown>) {
+    if (!this._recording && type !== "session_start") return;
+    const ev: SessionEvent = {
+      id: `ev-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      ts: Date.now(),
+      type,
+      data,
+    };
+    this._events.unshift(ev);
+    if (this._events.length > 500) this._events.pop();
+    this.notify();
+  }
+
+  get isRecording() { return this._recording; }
+  get events() { return [...this._events]; }
+  get sessionStart() { return this._sessionStart; }
+  get sessionId() { return this._sessionId; }
+  get eventCount() { return this._events.length; }
+
+  exportJSON(): string {
+    return JSON.stringify({
+      sessionId: this._sessionId,
+      startTime: new Date(this._sessionStart).toISOString(),
+      exportTime: new Date().toISOString(),
+      durationMs: Date.now() - this._sessionStart,
+      totalEvents: this._events.length,
+      events: [...this._events].reverse(),
+    }, null, 2);
+  }
+
+  exportHTMLBlob(): Blob {
+    const rows = [...this._events].reverse().map(ev => {
+      const color: Record<string, string> = {
+        message_sent: "#00e5ff",
+        message_received: "#22c55e",
+        model_switch: "#a78bfa",
+        mode_switch: "#f59e0b",
+        tool_use: "#fb923c",
+        error: "#e21227",
+        session_start: "#10b981",
+        session_stop: "#888",
+      };
+      const c = color[ev.type] ?? "#888";
+      const time = new Date(ev.ts).toISOString().slice(11, 23);
+      const dataStr = JSON.stringify(ev.data).slice(0, 160);
+      return `<tr>
+        <td style="color:#555;font-size:11px;white-space:nowrap">${time}</td>
+        <td><span style="color:${c};font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:1px">${ev.type.replace(/_/g, " ")}</span></td>
+        <td style="color:#aaa;font-size:11px;word-break:break-all">${dataStr}</td>
+      </tr>`;
+    }).join("\n");
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>KaliGPT Attack Log — ${this._sessionId}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:#080808;color:#ccc;font-family:"Courier New",monospace;padding:32px}
+    .header{border-left:3px solid #e21227;padding-left:16px;margin-bottom:24px}
+    h1{color:#e21227;font-size:22px;letter-spacing:2px;text-transform:uppercase}
+    .meta{color:#00e5ff;font-size:12px;margin-top:6px;letter-spacing:1px}
+    table{width:100%;border-collapse:collapse;margin-top:16px}
+    thead tr{background:#111;border-bottom:2px solid #e21227}
+    th{padding:8px 12px;font-size:11px;color:#e21227;text-align:left;text-transform:uppercase;letter-spacing:1px}
+    td{padding:7px 12px;border-bottom:1px solid #1a1a1a;vertical-align:top}
+    tr:hover{background:#111}
+    .footer{margin-top:24px;color:#555;font-size:11px;text-align:center}
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>KALIGPT SESSION REPLAY</h1>
+    <div class="meta">
+      ID: ${this._sessionId} &nbsp;|&nbsp;
+      START: ${new Date(this._sessionStart).toISOString()} &nbsp;|&nbsp;
+      EVENTS: ${this._events.length} &nbsp;|&nbsp;
+      EXPORTED: ${new Date().toISOString()}
+    </div>
+  </div>
+  <table>
+    <thead><tr><th>TIMESTAMP</th><th>EVENT TYPE</th><th>DATA</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <div class="footer">Generated by KaliGPT &mdash; mr7.ai &mdash; CONFIDENTIAL</div>
+</body>
+</html>`;
+    return new Blob([html], { type: "text/html" });
+  }
+}
+
+export const sessionRecorder = new SessionRecorder();

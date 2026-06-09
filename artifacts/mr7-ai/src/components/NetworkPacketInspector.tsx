@@ -1,18 +1,19 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useDraggable } from "@/hooks/useDraggable";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Activity, ChevronDown, ChevronUp, GripHorizontal, Square, Circle,
-  Filter, Trash2, Download, Search, Wifi, ChevronRight, ChevronLeft
+  Package, ChevronDown, ChevronUp, Wifi, Lock, Globe,
+  Filter, Trash2, Download, Search, Eye, Zap, Circle, Square
 } from "lucide-react";
 import { trafficBus, type TrafficEvent } from "@/lib/trafficBus";
 
 /* ═══════════════════════════════════════════════════════════════════════
-   NETWORK PACKET INSPECTOR — Wireshark-Style Live API Capture
-   Real-time packet capture · Hex dump · ASCII decode · Timing
+   PACKET INSPECTOR — Ultra 3D Holographic Packet Analyzer v2
+   3D flow canvas · Hex dump · ASCII decode · Timing waterfall
 ═══════════════════════════════════════════════════════════════════════ */
 
 const PANEL_W = 700;
+const CW = PANEL_W; const CH = 130;
 
 function toHexDump(str: string, maxBytes = 256): { offset: string; hex: string[]; ascii: string }[] {
   const bytes: number[] = [];
@@ -45,23 +46,42 @@ function shortModel(m: string): string {
 
 interface HexByte { row: number; col: number }
 
+// Flow diagram nodes for the 3D pipeline visualization
+interface FlowNode { x: number; y: number; label: string; color: string; icon: string }
+const FLOW_NODES: FlowNode[] = [
+  { x: 55,  y: CH/2, label: "CLIENT",   color: "#00e5ff", icon: "C" },
+  { x: 175, y: CH/2, label: "WAF/IDS",  color: "#22c55e", icon: "W" },
+  { x: 305, y: CH/2, label: "API-GW",   color: "#a78bfa", icon: "A" },
+  { x: 435, y: CH/2, label: "AI-MODEL", color: "#f59e0b", icon: "M" },
+  { x: 545, y: CH/2, label: "TLS-RESP", color: "#00e5ff", icon: "R" },
+  { x: 650, y: CH/2, label: "CLIENT",   color: "#22c55e", icon: "C" },
+];
+
+interface FlowPkt { nodeFrom: number; nodeTo: number; t: number; color: string; size: number }
+
 export function NetworkPacketInspector() {
-  const [collapsed, setCollapsed] = useState(false);
-  const { pos, rootRef, onDragMouseDown, onDragTouchStart } = useDraggable("mr7-packet-inspector-pos", { x: Math.max(0, (window.innerWidth - PANEL_W) / 2), y: 120 });
-  const [packets, setPackets] = useState<TrafficEvent[]>([]);
-  const [selected, setSelected] = useState<TrafficEvent | null>(null);
-  const [filter, setFilter]   = useState("");
-  const [capturing, setCapturing] = useState(true);
-  const [hoveredByte, setHoveredByte] = useState<HexByte | null>(null);
-  const [showDetail, setShowDetail] = useState(true);
-  const [capturedCount, setCapturedCount] = useState(0);
+  const [collapsed,  setCollapsed]  = useState(false);
+  const { pos, rootRef, onDragMouseDown, onDragTouchStart } = useDraggable(
+    "mr7-packet-inspector-pos",
+    { x: Math.max(0, (window.innerWidth - PANEL_W) / 2), y: 120 }
+  );
+  const [packets,      setPackets]      = useState<TrafficEvent[]>([]);
+  const [selected,     setSelected]     = useState<TrafficEvent | null>(null);
+  const [filter,       setFilter]       = useState("");
+  const [capturing,    setCapturing]    = useState(true);
+  const [hoveredByte,  setHoveredByte]  = useState<HexByte | null>(null);
+  const [showDetail,   setShowDetail]   = useState(true);
+  const [capturedCount,setCapturedCount]= useState(0);
   const captureRef = useRef(true);
   const listRef    = useRef<HTMLDivElement>(null);
   const autoScroll = useRef(true);
+  const canvasRef  = useRef<HTMLCanvasElement>(null);
+  const frameRef   = useRef<number>(0);
+  const tickRef    = useRef(0);
+  const pktsFlowRef= useRef<FlowPkt[]>([]);
+  const lastEventRef= useRef<TrafficEvent|null>(null);
 
-  useEffect(() => {
-    captureRef.current = capturing;
-  }, [capturing]);
+  useEffect(() => { captureRef.current = capturing; }, [capturing]);
 
   useEffect(() => {
     const unsub = trafficBus.subscribe(ev => {
@@ -69,408 +89,306 @@ export function NetworkPacketInspector() {
       setPackets([...trafficBus.history]);
       setCapturedCount(c => (ev.status === "pending" ? c + 1 : c));
       setSelected(prev => prev?.id === ev.id ? ev : prev);
+      lastEventRef.current = ev;
       if (autoScroll.current && listRef.current) {
         setTimeout(() => { if (listRef.current) listRef.current.scrollTop = 0; }, 30);
       }
+      // Spawn flow packets
+      const c = statusColor(ev.status);
+      pktsFlowRef.current.push({ nodeFrom: 0, nodeTo: 1, t: 0, color: c, size: 5 });
+      pktsFlowRef.current.push({ nodeFrom: 1, nodeTo: 2, t: 0.2, color: "#22c55e", size: 4 });
+      pktsFlowRef.current.push({ nodeFrom: 2, nodeTo: 3, t: 0.4, color: "#a78bfa", size: 4 });
+      pktsFlowRef.current.push({ nodeFrom: 3, nodeTo: 4, t: 0.6, color: "#f59e0b", size: 5 });
+      pktsFlowRef.current.push({ nodeFrom: 4, nodeTo: 5, t: 0.8, color: c,         size: 4 });
     });
     return unsub;
   }, []);
 
+  // 3D packet pipeline canvas
+  useEffect(() => {
+    const cv = canvasRef.current; if (!cv) return;
+    const ctx = cv.getContext("2d")!;
 
-  const filtered = packets.filter(p => {
-    if (!filter) return true;
-    const q = filter.toLowerCase();
-    return p.model.toLowerCase().includes(q) || p.provider.toLowerCase().includes(q) ||
-           p.status.includes(q) || p.endpoint.includes(q);
-  });
+    function frame() {
+      frameRef.current = requestAnimationFrame(frame);
+      const t = tickRef.current++;
+      ctx.clearRect(0, 0, CW, CH);
 
-  const hexDump = selected?.payloadPreview ? toHexDump(selected.payloadPreview) : [];
-  const respDump = selected?.responsePreview ? toHexDump(selected.responsePreview) : [];
-  const [dumpMode, setDumpMode] = useState<"request" | "response">("request");
-  const activeDump = dumpMode === "request" ? hexDump : respDump;
+      // Background
+      ctx.fillStyle = "rgba(1,4,16,0.98)"; ctx.fillRect(0, 0, CW, CH);
 
-  const totalBytes = packets.reduce((s, p) => s + (p.bytesSent ?? 0) + (p.bytesReceived ?? 0), 0);
-  const successRate = packets.length > 0
-    ? Math.round(packets.filter(p => p.status === "success").length / packets.length * 100) : 0;
+      // Grid
+      ctx.strokeStyle = "rgba(0,229,255,0.03)"; ctx.lineWidth = 0.5;
+      for (let gx = 0; gx < CW; gx += 40) { ctx.beginPath(); ctx.moveTo(gx,0); ctx.lineTo(gx,CH); ctx.stroke(); }
+      for (let gy = 0; gy < CH; gy += 20) { ctx.beginPath(); ctx.moveTo(0,gy); ctx.lineTo(CW,gy); ctx.stroke(); }
+
+      // Connection lines between flow nodes
+      for (let i = 0; i < FLOW_NODES.length - 1; i++) {
+        const n1 = FLOW_NODES[i]; const n2 = FLOW_NODES[i+1];
+        const g = ctx.createLinearGradient(n1.x, n1.y, n2.x, n2.y);
+        g.addColorStop(0, n1.color + "44"); g.addColorStop(1, n2.color + "44");
+        ctx.beginPath(); ctx.moveTo(n1.x, n1.y); ctx.lineTo(n2.x, n2.y);
+        ctx.strokeStyle = g; ctx.lineWidth = 2; ctx.stroke();
+
+        // Continuous ambient flow dots
+        const tp = ((t * 0.007 + i * 0.18) % 1);
+        const px = n1.x + (n2.x - n1.x) * tp;
+        const py = n1.y + (n2.y - n1.y) * tp;
+        ctx.beginPath(); ctx.arc(px, py, 2, 0, Math.PI*2);
+        ctx.fillStyle = n1.color + "88"; ctx.fill();
+      }
+
+      // Animated event packets
+      pktsFlowRef.current = pktsFlowRef.current.filter(p => p.t <= 1.05);
+      pktsFlowRef.current.forEach(p => {
+        const n1 = FLOW_NODES[p.nodeFrom]; const n2 = FLOW_NODES[p.nodeTo];
+        if (!n1 || !n2) return;
+        const tp = Math.min(1, p.t);
+        const px = n1.x + (n2.x - n1.x) * tp;
+        const py = n1.y + (n2.y - n1.y) * tp;
+        // Trail
+        for (let ti = 0; ti < 6; ti++) {
+          const tpt = Math.max(0, p.t - ti * 0.05);
+          const tpx = n1.x + (n2.x - n1.x) * tpt;
+          const tpy = n1.y + (n2.y - n1.y) * tpt;
+          ctx.beginPath(); ctx.arc(tpx, tpy, p.size * (1 - ti/6) * 0.6, 0, Math.PI*2);
+          ctx.fillStyle = p.color; ctx.globalAlpha = (1 - ti/6) * 0.5; ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+        const pg = ctx.createRadialGradient(px,py,0,px,py,p.size*2);
+        pg.addColorStop(0,"rgba(255,255,255,0.95)"); pg.addColorStop(0.4,p.color); pg.addColorStop(1,"rgba(0,0,0,0)");
+        ctx.fillStyle = pg; ctx.beginPath(); ctx.arc(px,py,p.size*2,0,Math.PI*2); ctx.fill();
+        p.t += 0.016;
+      });
+
+      // Draw flow nodes
+      FLOW_NODES.forEach((n, i) => {
+        const pulse = (Math.sin(t * 0.04 + i * 1.2) + 1) / 2;
+        // Outer glow
+        const glw = ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,22);
+        glw.addColorStop(0, n.color + "33"); glw.addColorStop(1,"rgba(0,0,0,0)");
+        ctx.fillStyle = glw; ctx.beginPath(); ctx.arc(n.x,n.y,22,0,Math.PI*2); ctx.fill();
+        // Pulse ring
+        ctx.beginPath(); ctx.arc(n.x,n.y,13+pulse*4,0,Math.PI*2);
+        ctx.strokeStyle=n.color; ctx.globalAlpha=0.25*pulse; ctx.lineWidth=1; ctx.stroke();
+        ctx.globalAlpha=1;
+        // Core
+        const cg = ctx.createRadialGradient(n.x-4,n.y-4,0,n.x,n.y,12);
+        cg.addColorStop(0,"#fff"); cg.addColorStop(0.4,n.color); cg.addColorStop(1,n.color+"55");
+        ctx.fillStyle=cg; ctx.beginPath(); ctx.arc(n.x,n.y,12,0,Math.PI*2); ctx.fill();
+        // Icon
+        ctx.fillStyle="#fff"; ctx.font="bold 8px monospace"; ctx.textAlign="center";
+        ctx.globalAlpha=0.9; ctx.fillText(n.icon,n.x,n.y+3); ctx.globalAlpha=1;
+        // Label
+        ctx.fillStyle=n.color; ctx.font="bold 7px monospace"; ctx.textAlign="center";
+        ctx.fillText(n.label,n.x,n.y+22);
+        // Stage number
+        ctx.fillStyle="#333"; ctx.font="7px monospace";
+        ctx.fillText(`S${i+1}`,n.x,n.y-18);
+      });
+
+      // Scan line
+      const sy = ((t * 0.4) % CH);
+      const sg = ctx.createLinearGradient(0,sy-5,0,sy+5);
+      sg.addColorStop(0,"rgba(0,229,255,0)"); sg.addColorStop(0.5,"rgba(0,229,255,0.04)"); sg.addColorStop(1,"rgba(0,229,255,0)");
+      ctx.fillStyle=sg; ctx.fillRect(0,sy-5,CW,10);
+
+      // Corner HUD
+      ctx.fillStyle="rgba(0,229,255,0.4)"; ctx.font="bold 7.5px monospace"; ctx.textAlign="left";
+      ctx.fillText(`PKTS: ${capturedCount}  HIST: ${packets.length}  ${capturing?"CAP":"IDLE"}`,4,CH-4);
+    }
+    frame();
+    return () => cancelAnimationFrame(frameRef.current);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [capturedCount, packets.length, capturing]);
+
+  const displayed = filter
+    ? packets.filter(p => (p.model??p.provider??"").toLowerCase().includes(filter.toLowerCase()))
+    : packets;
+
+  const hexDump = selected?.model
+    ? toHexDump(selected.model + (selected.provider ?? ""), 64)
+    : [];
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20, scale: 0.97 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
-      ref={rootRef as any}
-      style={{ position: "fixed", left: pos.x, top: pos.y, zIndex: 96, userSelect: "none", width: PANEL_W }}
-    >
-      {/* ── Drag strip ── */}
-      <div
-        onMouseDown={onDragMouseDown} onTouchStart={onDragTouchStart}
-        style={{
-          height: 10, borderRadius: "10px 10px 0 0", cursor: "grab",
-          background: "repeating-linear-gradient(90deg, rgba(0,229,255,0.25) 0px, rgba(0,229,255,0.25) 3px, transparent 3px, transparent 8px)",
-          border: "1px solid rgba(0,229,255,0.35)", borderBottom: "none",
-          boxShadow: "0 0 12px rgba(0,229,255,0.18)",
-        }}
-      />
-      {/* ══════════════ TOOLBAR / HEADER ══════════════ */}
-      <div
-        onMouseDown={onDragMouseDown} onTouchStart={onDragTouchStart}
-        style={{
-          display: "flex", alignItems: "center", gap: "6px",
-          padding: "5px 8px",
-          background: "linear-gradient(180deg, rgba(0,6,18,0.99) 0%, rgba(0,10,24,0.98) 100%)",
-          borderTop: "1px solid rgba(0,229,255,0.3)",
-          borderLeft: "1px solid rgba(0,229,255,0.12)",
-          borderRight: "1px solid rgba(0,229,255,0.12)",
-          borderRadius: collapsed ? "10px" : "10px 10px 0 0",
-          cursor: "grab",
-          boxShadow: "0 4px 32px rgba(0,0,0,0.9), 0 0 0 1px rgba(0,229,255,0.04), inset 0 1px 0 rgba(255,255,255,0.04)",
-        }}
+    <div ref={rootRef} style={{ left: pos.x, top: pos.y, width: PANEL_W }} className="fixed z-[96] select-none">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="rounded-2xl border border-[#1f1f1f] overflow-hidden shadow-[0_0_30px_rgba(0,229,255,0.12)]"
+        style={{ width: PANEL_W, background: "rgba(1,4,16,0.97)", backdropFilter: "blur(20px)" }}
       >
-        <GripHorizontal style={{ width: 10, height: 10, color: "rgba(0,229,255,0.35)", flexShrink: 0 }} />
-
-        {/* Wireshark fin icon */}
-        <div style={{ display: "flex", alignItems: "center", gap: "3px" }}>
-          <Wifi style={{ width: 9, height: 9, color: "#00e5ff" }} />
-          <span style={{ fontSize: "8px", fontFamily: "monospace", fontWeight: 900, color: "#00e5ff", letterSpacing: "2px" }}>
-            PACKET INSPECTOR
-          </span>
+        {/* Header */}
+        <div
+          className="flex items-center gap-2 px-3 py-1.5 cursor-grab border-b border-[#1f1f1f]"
+          onMouseDown={onDragMouseDown} onTouchStart={onDragTouchStart}
+        >
+          <Package size={11} className="text-[#00e5ff]" />
+          <span className="text-[10px] font-mono font-bold tracking-[2px] text-[#00e5ff]">PACKET INSPECTOR</span>
+          <div className="mx-2 flex-1 max-w-[160px] relative">
+            <Search size={9} className="absolute left-1.5 top-1/2 -translate-y-1/2 text-[#555]" />
+            <input
+              value={filter} onChange={e => setFilter(e.target.value)}
+              placeholder="filter..."
+              className="w-full bg-[#111] border border-[#333] rounded text-[9px] font-mono text-white pl-5 pr-2 py-0.5 focus:outline-none focus:border-[#00e5ff]"
+            />
+          </div>
+          <div className="flex items-center gap-1.5 ml-auto">
+            <button
+              onClick={() => setCapturing(c => !c)}
+              className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono ${capturing ? "text-[#22c55e] border border-[#22c55e]" : "text-[#555] border border-[#333]"}`}
+            >
+              {capturing ? <Circle size={9} fill="#22c55e" /> : <Square size={9} />}
+              {capturing ? "CAP" : "PAUSED"}
+            </button>
+            <button onClick={() => { setPackets([]); setSelected(null); setCapturedCount(0); }} title="Clear" className="text-[#555] hover:text-[#e21227]">
+              <Trash2 size={11} />
+            </button>
+            <span className="text-[9px] font-mono text-[#555]">{capturedCount}</span>
+            <button onClick={() => setCollapsed(c => !c)} className="text-[#555] hover:text-white">
+              {collapsed ? <ChevronDown size={11} /> : <ChevronUp size={11} />}
+            </button>
+          </div>
         </div>
 
-        {/* Capture dot */}
-        {capturing && (
-          <motion.div
-            animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 0.8, repeat: Infinity }}
-            style={{ width: 5, height: 5, borderRadius: "50%", background: "#e21227", boxShadow: "0 0 6px #e21227" }}
-          />
-        )}
+        <AnimatePresence>
+          {!collapsed && (
+            <motion.div initial={{ height: 0 }} animate={{ height: "auto" }} exit={{ height: 0 }} className="overflow-hidden">
+              {/* 3D Pipeline canvas */}
+              <canvas ref={canvasRef} width={CW} height={CH} className="block w-full border-b border-[#1a1a1a]" />
 
-        <div style={{ flex: 1 }} />
-
-        {/* Filter bar */}
-        <div style={{
-          display: "flex", alignItems: "center", gap: "4px",
-          background: "rgba(0,229,255,0.05)", border: "1px solid rgba(0,229,255,0.12)",
-          borderRadius: 5, padding: "2px 6px",
-        }}
-          onMouseDown={e => e.stopPropagation()}
-        >
-          <Search style={{ width: 7, height: 7, color: "rgba(0,229,255,0.4)" }} />
-          <input
-            value={filter} onChange={e => setFilter(e.target.value)}
-            placeholder="filter..."
-            style={{
-              background: "none", border: "none", outline: "none", width: 90,
-              fontSize: "7.5px", fontFamily: "monospace", color: "#00e5ff",
-              caretColor: "#00e5ff",
-            }}
-          />
-          {filter && <button onClick={() => setFilter("")} onMouseDown={e => e.stopPropagation()}
-            style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.3)", padding: 0, lineHeight: 1 }}>
-            ×
-          </button>}
-        </div>
-
-        {/* Controls */}
-        {[
-          { icon: capturing ? <Square style={{ width: 8, height: 8 }} /> : <Circle style={{ width: 8, height: 8 }} />,
-            color: capturing ? "#e21227" : "#22c55e",
-            tip: capturing ? "Stop" : "Resume",
-            onClick: () => setCapturing(c => !c) },
-          { icon: <Trash2 style={{ width: 8, height: 8 }} />, color: "rgba(255,255,255,0.3)", tip: "Clear",
-            onClick: () => { setPackets([]); setSelected(null); setCapturedCount(0); } },
-        ].map((btn, i) => (
-          <button key={i}
-            onClick={btn.onClick} onMouseDown={e => e.stopPropagation()}
-            title={btn.tip}
-            style={{ background: "none", border: "1px solid rgba(255,255,255,0.06)", cursor: "pointer", color: btn.color, padding: "2px 5px", borderRadius: 4, lineHeight: 1, display: "flex", alignItems: "center" }}
-          >
-            {btn.icon}
-          </button>
-        ))}
-
-        {/* Expand/collapse detail */}
-        <button
-          onClick={() => setShowDetail(d => !d)} onMouseDown={e => e.stopPropagation()}
-          title={showDetail ? "Hide detail" : "Show hex detail"}
-          style={{ background: "none", border: "1px solid rgba(0,229,255,0.12)", cursor: "pointer", color: "rgba(0,229,255,0.5)", padding: "2px 5px", borderRadius: 4, lineHeight: 1, display: "flex", alignItems: "center" }}
-        >
-          {showDetail ? <ChevronLeft style={{ width: 8, height: 8 }} /> : <ChevronRight style={{ width: 8, height: 8 }} />}
-        </button>
-
-        <button
-          onClick={() => setCollapsed(c => !c)} onMouseDown={e => e.stopPropagation()}
-          style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.25)", padding: 0, lineHeight: 1 }}
-        >
-          {collapsed ? <ChevronDown style={{ width: 10, height: 10 }} /> : <ChevronUp style={{ width: 10, height: 10 }} />}
-        </button>
-      </div>
-
-      {/* ══════════════ COLUMN HEADER ══════════════ */}
-      {!collapsed && (
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: showDetail ? "36px 90px 72px 80px 56px 56px 1fr" : "36px 90px 80px 72px 64px 64px 1fr",
-          gap: 0,
-          background: "rgba(0,20,40,0.98)",
-          border: "1px solid rgba(0,229,255,0.1)", borderTop: "none",
-          borderBottom: "1px solid rgba(0,229,255,0.12)",
-        }}>
-          {["No.", "Time", "Source", "Destination", "Proto", "Length", "Info"].map((h, i) => (
-            <div key={i} style={{
-              padding: "3px 6px", fontSize: "7.5px", fontFamily: "monospace", fontWeight: 800,
-              color: "rgba(0,229,255,0.5)", letterSpacing: "0.8px",
-              borderRight: i < 6 ? "1px solid rgba(0,229,255,0.06)" : "none",
-              background: i === 0 ? "rgba(0,229,255,0.03)" : "transparent",
-            }}>{h}</div>
-          ))}
-        </div>
-      )}
-
-      <AnimatePresence>
-        {!collapsed && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.22 }}
-            style={{ overflow: "hidden" }}
-          >
-            <div style={{ display: "flex", background: "rgba(1,4,12,0.99)", border: "1px solid rgba(0,229,255,0.1)", borderTop: "none", borderRadius: "0 0 10px 10px", overflow: "hidden" }}>
-
-              {/* ── LEFT: Packet list ── */}
-              <div style={{ flex: 1, minWidth: 0, borderRight: showDetail ? "1px solid rgba(0,229,255,0.08)" : "none" }}>
-                {/* Packet rows */}
-                <div ref={listRef} style={{ maxHeight: 180, overflowY: "auto", overflowX: "hidden" }}>
-                  {filtered.length === 0 ? (
-                    <div style={{ padding: "20px 12px", textAlign: "center", fontSize: "7.5px", fontFamily: "monospace", color: "rgba(0,229,255,0.2)" }}>
-                      {packets.length === 0 ? "WAITING FOR PACKETS..." : "NO MATCHING PACKETS"}
-                    </div>
-                  ) : filtered.map((pkt, i) => {
-                    const isSelected = selected?.id === pkt.id;
-                    const col = statusColor(pkt.status);
-                    const isPending = pkt.status === "pending" || pkt.status === "streaming";
-                    return (
-                      <div
-                        key={pkt.id}
-                        onClick={() => { setSelected(pkt); autoScroll.current = false; }}
-                        style={{
-                          display: "grid",
-                          gridTemplateColumns: showDetail ? "36px 90px 72px 80px 56px 56px 1fr" : "36px 90px 80px 72px 64px 64px 1fr",
-                          gap: 0, cursor: "pointer",
-                          background: isSelected
-                            ? "rgba(0,229,255,0.09)"
-                            : pkt.status === "error" ? "rgba(226,18,39,0.04)" : "transparent",
-                          borderBottom: "1px solid rgba(255,255,255,0.025)",
-                          borderLeft: isSelected ? "2px solid #00e5ff" : `2px solid ${col}22`,
-                        }}
-                      >
-                        {/* No. */}
-                        <div style={{ padding: "3px 5px", fontSize: "7px", fontFamily: "monospace", color: "rgba(255,255,255,0.3)" }}>
-                          {pkt.seq}
-                        </div>
-                        {/* Time */}
-                        <div style={{ padding: "3px 5px", fontSize: "6.5px", fontFamily: "monospace", color: "rgba(255,255,255,0.35)", borderRight: "1px solid rgba(255,255,255,0.03)" }}>
-                          {formatTime(pkt.startTime)}
-                        </div>
-                        {/* Source */}
-                        <div style={{ padding: "3px 5px", fontSize: "7px", fontFamily: "monospace", color: "#00e5ff", borderRight: "1px solid rgba(255,255,255,0.03)" }}>
-                          CLIENT
-                        </div>
-                        {/* Destination */}
-                        <div style={{ padding: "3px 5px", fontSize: "7px", fontFamily: "monospace", color: "#a78bfa", borderRight: "1px solid rgba(255,255,255,0.03)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {pkt.provider.toUpperCase()}
-                        </div>
-                        {/* Protocol */}
-                        <div style={{ padding: "3px 5px", fontSize: "7px", fontFamily: "monospace", color: "rgba(255,255,255,0.3)", borderRight: "1px solid rgba(255,255,255,0.03)" }}>
-                          HTTP/AI
-                        </div>
-                        {/* Length */}
-                        <div style={{ padding: "3px 5px", fontSize: "7px", fontFamily: "monospace", color: "rgba(255,255,255,0.35)", borderRight: "1px solid rgba(255,255,255,0.03)" }}>
-                          {pkt.bytesSent != null ? `${pkt.bytesSent}B` : "—"}
-                        </div>
-                        {/* Info */}
-                        <div style={{ padding: "3px 5px", fontSize: "7px", fontFamily: "monospace", color: col, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {isPending && <motion.span animate={{ opacity: [1, 0.4, 1] }} transition={{ duration: 0.8, repeat: Infinity }} style={{ marginRight: 4 }}>●</motion.span>}
-                          {shortModel(pkt.model)}
-                          {pkt.latency != null && <span style={{ color: "rgba(255,255,255,0.3)", marginLeft: 6 }}>{pkt.latency}ms</span>}
-                          {pkt.tokens != null && pkt.tokens > 0 && <span style={{ color: "#a78bfa", marginLeft: 6 }}>{pkt.tokens}tok</span>}
-                          {pkt.status === "error" && <span style={{ color: "#e21227", marginLeft: 6 }}>ERROR</span>}
-                        </div>
+              {/* Packet list + detail split */}
+              <div className="flex" style={{ height: showDetail ? 280 : 160 }}>
+                {/* List */}
+                <div ref={listRef} className="flex-1 overflow-y-auto border-r border-[#1a1a1a] min-w-0">
+                  <div className="sticky top-0 flex gap-1 px-2 py-1 bg-[#0a0a0a] border-b border-[#1a1a1a] text-[8px] font-mono text-[#555]">
+                    <span className="w-20 shrink-0">TIME</span>
+                    <span className="w-14 shrink-0">PROTO</span>
+                    <span className="flex-1">MODEL</span>
+                    <span className="w-14 shrink-0 text-right">LATENCY</span>
+                    <span className="w-10 shrink-0 text-right">TKN</span>
+                    <span className="w-8 shrink-0 text-right">ST</span>
+                  </div>
+                  {displayed.slice(0, 60).map((ev, i) => (
+                    <div
+                      key={ev.id}
+                      onClick={() => { setSelected(ev); setShowDetail(true); }}
+                      className={`flex items-center gap-1 px-2 py-1 text-[8px] font-mono cursor-pointer border-b border-[#0d0d0d] transition-colors ${
+                        selected?.id === ev.id ? "bg-[#111]" : "hover:bg-[#0d0d0d]"
+                      }`}
+                    >
+                      <span className="w-20 text-[#555] shrink-0 font-mono">{formatTime(ev.startTime)}</span>
+                      <div className="w-14 shrink-0 flex items-center gap-1">
+                        <Lock size={7} className="text-[#22c55e]" />
+                        <span className="text-[#22c55e]">TLS</span>
                       </div>
-                    );
-                  })}
-                </div>
-
-                {/* ── Status bar ── */}
-                <div style={{
-                  display: "flex", alignItems: "center", gap: "12px",
-                  padding: "3px 8px",
-                  background: "rgba(0,6,16,0.99)",
-                  borderTop: "1px solid rgba(0,229,255,0.06)",
-                }}>
-                  <Activity style={{ width: 7, height: 7, color: "rgba(0,229,255,0.4)" }} />
-                  <span style={{ fontSize: "6.5px", fontFamily: "monospace", color: "rgba(0,229,255,0.4)" }}>
-                    PKT: <span style={{ color: "#00e5ff", fontWeight: 700 }}>{packets.length}</span>
-                  </span>
-                  <span style={{ fontSize: "6.5px", fontFamily: "monospace", color: "rgba(0,229,255,0.4)" }}>
-                    BYTES: <span style={{ color: "#00e5ff", fontWeight: 700 }}>{totalBytes > 999 ? `${(totalBytes/1024).toFixed(1)}K` : totalBytes}</span>
-                  </span>
-                  <span style={{ fontSize: "6.5px", fontFamily: "monospace", color: "rgba(0,229,255,0.4)" }}>
-                    SUCCESS: <span style={{ color: "#22c55e", fontWeight: 700 }}>{successRate}%</span>
-                  </span>
-                  <span style={{ fontSize: "6.5px", fontFamily: "monospace", color: "rgba(255,255,255,0.2)", marginLeft: "auto" }}>
-                    {capturing ? "● CAPTURING" : "■ PAUSED"}
-                  </span>
-                </div>
-
-                {/* ── Timing waterfall (when packet selected) ── */}
-                {selected && (
-                  <div style={{ padding: "6px 8px", borderTop: "1px solid rgba(0,229,255,0.06)", background: "rgba(0,4,12,0.98)" }}>
-                    <div style={{ fontSize: "6.5px", fontFamily: "monospace", color: "rgba(0,229,255,0.4)", marginBottom: 5, letterSpacing: "1px" }}>
-                      TIMING BREAKDOWN
+                      <span className="flex-1 truncate" style={{ color: statusColor(ev.status) }}>
+                        {shortModel(ev.model ?? ev.provider ?? "?")}
+                      </span>
+                      <span className="w-14 text-right" style={{ color: ev.latency ? (ev.latency < 1000 ? "#22c55e" : ev.latency < 3000 ? "#f59e0b" : "#e21227") : "#555" }}>
+                        {ev.latency ? `${ev.latency}ms` : "—"}
+                      </span>
+                      <span className="w-10 text-right text-[#555]">{ev.tokens ?? 0}</span>
+                      <span className="w-8 text-right" style={{ color: statusColor(ev.status) }}>
+                        {ev.status.slice(0,3).toUpperCase()}
+                      </span>
                     </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                      {[
-                        { label: "Request Init", val: 8, color: "#22c55e" },
-                        { label: "API Connect", val: 42, color: "#3b82f6" },
-                        { label: "TTFB", val: selected.latency ? Math.round(selected.latency * 0.4) : 0, color: "#f59e0b" },
-                        { label: "Stream", val: selected.latency ? Math.round(selected.latency * 0.55) : 0, color: "#a78bfa" },
-                      ].map((seg, i) => {
-                        const totalLat = selected.latency ?? 1000;
-                        const pct = Math.min(100, (seg.val / totalLat) * 100);
-                        return (
-                          <div key={i} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                            <span style={{ fontSize: "6px", fontFamily: "monospace", color: "rgba(255,255,255,0.3)", minWidth: 68 }}>{seg.label}</span>
-                            <div style={{ flex: 1, height: 4, background: "rgba(255,255,255,0.05)", borderRadius: 2 }}>
-                              <div style={{ width: `${pct}%`, height: "100%", background: seg.color, borderRadius: 2, boxShadow: `0 0 4px ${seg.color}` }} />
-                            </div>
-                            <span style={{ fontSize: "6px", fontFamily: "monospace", color: seg.color, minWidth: 30, textAlign: "right" }}>{seg.val}ms</span>
+                  ))}
+                  {displayed.length === 0 && (
+                    <div className="text-center py-6 text-[9px] font-mono text-[#333]">NO PACKETS — START A CHAT</div>
+                  )}
+                </div>
+
+                {/* Detail pane */}
+                {showDetail && selected && (
+                  <div className="w-[330px] shrink-0 overflow-y-auto">
+                    {/* Header info */}
+                    <div className="px-2 py-1.5 border-b border-[#1a1a1a]">
+                      <div className="flex items-center gap-2 text-[9px] font-mono mb-1">
+                        <Lock size={8} className="text-[#22c55e]" /><span className="text-[#22c55e]">TLS 1.3</span>
+                        <span className="text-[#555]">·</span>
+                        <Globe size={8} className="text-[#00e5ff]" />
+                        <span className="text-[#555]">{selected.provider ?? "—"}</span>
+                        <span className="ml-auto" style={{ color: statusColor(selected.status) }}>
+                          {selected.status.toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-[8px] font-mono">
+                        {[
+                          ["MODEL",    shortModel(selected.model ?? "?")],
+                          ["LATENCY",  selected.latency ? `${selected.latency}ms` : "—"],
+                          ["TOKENS",   String(selected.tokens ?? 0)],
+                          ["START",    formatTime(selected.startTime)],
+                          ["PROVIDER", selected.provider ?? "—"],
+                          ["SESSION",  selected.id.slice(-8)],
+                        ].map(([k,v])=>(
+                          <div key={k} className="flex gap-1">
+                            <span className="text-[#444] w-14 shrink-0">{k}:</span>
+                            <span className="text-[#888] truncate">{v}</span>
                           </div>
-                        );
-                      })}
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
-
-              {/* ── RIGHT: Hex dump panel ── */}
-              {showDetail && selected && (
-                <div style={{ width: 290, flexShrink: 0, display: "flex", flexDirection: "column" }}>
-                  {/* Dump mode tabs */}
-                  <div style={{ display: "flex", borderBottom: "1px solid rgba(0,229,255,0.08)" }}>
-                    {(["request", "response"] as const).map(mode => (
-                      <button
-                        key={mode} onClick={() => setDumpMode(mode)}
-                        onMouseDown={e => e.stopPropagation()}
-                        style={{
-                          flex: 1, padding: "4px 0",
-                          background: dumpMode === mode ? "rgba(0,229,255,0.08)" : "transparent",
-                          border: "none", borderBottom: dumpMode === mode ? "2px solid #00e5ff" : "2px solid transparent",
-                          cursor: "pointer", fontSize: "7px", fontFamily: "monospace", fontWeight: 700,
-                          color: dumpMode === mode ? "#00e5ff" : "rgba(255,255,255,0.25)",
-                          letterSpacing: "0.8px",
-                        }}
-                      >
-                        {mode.toUpperCase()}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Hex dump content */}
-                  <div
-                    onMouseDown={e => e.stopPropagation()}
-                    style={{ flex: 1, overflowY: "auto", maxHeight: 200, padding: "4px 0" }}
-                  >
-                    {activeDump.length === 0 ? (
-                      <div style={{ padding: "20px 8px", textAlign: "center", fontSize: "7px", fontFamily: "monospace", color: "rgba(255,255,255,0.15)" }}>
-                        {dumpMode === "request" ? "NO REQUEST DATA" : "NO RESPONSE DATA"}
-                      </div>
-                    ) : activeDump.map((row, ri) => (
-                      <div key={ri} style={{ display: "flex", gap: 0, padding: "0 4px", fontFamily: "monospace" }}>
-                        {/* Offset */}
-                        <span style={{ fontSize: "6.5px", color: "rgba(0,229,255,0.3)", minWidth: 32, marginRight: 6 }}>
-                          {row.offset}
-                        </span>
-                        {/* Hex bytes */}
-                        <div style={{ display: "flex", gap: "2px", flex: 1 }}>
-                          {row.hex.map((b, bi) => (
-                            <span
-                              key={bi}
-                              onMouseEnter={() => setHoveredByte({ row: ri, col: bi })}
-                              onMouseLeave={() => setHoveredByte(null)}
-                              style={{
-                                fontSize: "6.5px", cursor: "default",
-                                color: (hoveredByte?.row === ri && hoveredByte?.col === bi)
-                                  ? "#fff"
-                                  : b === "7b" || b === "7d" ? "#22c55e"
-                                  : b === "22" ? "#f59e0b"
-                                  : b === "3a" ? "#00e5ff"
-                                  : "rgba(255,255,255,0.55)",
-                                background: (hoveredByte?.row === ri && hoveredByte?.col === bi)
-                                  ? "rgba(0,229,255,0.15)" : "transparent",
-                                borderRadius: 2, padding: "0 0.5px",
-                              }}
-                            >
-                              {b}
-                            </span>
-                          ))}
-                          {/* Padding for incomplete rows */}
-                          {Array.from({ length: 16 - row.hex.length }).map((_, pi) => (
-                            <span key={pi} style={{ fontSize: "6.5px", color: "transparent" }}>00</span>
-                          ))}
+                    {/* Hex dump */}
+                    {hexDump.length > 0 && (
+                      <div className="px-2 py-1.5">
+                        <div className="text-[8px] font-mono text-[#333] mb-1 flex items-center gap-1">
+                          <span>HEX DUMP</span>
+                          <span className="text-[#555]">— payload bytes</span>
                         </div>
-                        {/* ASCII */}
-                        <span style={{ fontSize: "6.5px", color: "rgba(255,255,255,0.3)", minWidth: 66, marginLeft: 4, borderLeft: "1px solid rgba(0,229,255,0.07)", paddingLeft: 4 }}>
-                          {row.ascii.split("").map((ch, ci) => (
-                            <span key={ci} style={{
-                              color: ch !== "." ? "rgba(0,229,255,0.7)" : "rgba(255,255,255,0.15)",
-                              background: (hoveredByte?.row === ri && hoveredByte?.col === ci) ? "rgba(0,229,255,0.15)" : "transparent",
-                            }}>{ch}</span>
-                          ))}
-                        </span>
+                        {hexDump.slice(0, 10).map((row, ri) => (
+                          <div key={ri} className="flex gap-2 text-[8px] font-mono">
+                            <span className="text-[#444] w-8 shrink-0">{row.offset}</span>
+                            <span className="flex gap-0.5 flex-1">
+                              {row.hex.map((b, bi) => (
+                                <span
+                                  key={bi}
+                                  className="cursor-pointer transition-colors w-[14px] text-center"
+                                  style={{
+                                    color: hoveredByte?.row === ri && hoveredByte.col === bi ? "#fff" : "#555",
+                                    background: hoveredByte?.row === ri && hoveredByte.col === bi ? "#e21227" : undefined,
+                                  }}
+                                  onMouseEnter={() => setHoveredByte({ row: ri, col: bi })}
+                                  onMouseLeave={() => setHoveredByte(null)}
+                                >
+                                  {b}
+                                </span>
+                              ))}
+                            </span>
+                            <span className="text-[#333] shrink-0 tracking-tighter">{row.ascii}</span>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                    {selected.payloadPreview && selected.payloadPreview.length > 512 * 2 && (
-                      <div style={{ padding: "4px 8px", fontSize: "6.5px", fontFamily: "monospace", color: "rgba(255,255,255,0.2)" }}>
-                        ... {Math.round(selected.bytesSent! / 1024 * 10) / 10}KB total (showing first 256B)
+                    )}
+                    {/* Timing bar */}
+                    {selected.latency && (
+                      <div className="px-2 py-1.5 border-t border-[#1a1a1a]">
+                        <div className="text-[8px] font-mono text-[#333] mb-1">TIMING</div>
+                        <div className="h-2 bg-[#0d0d0d] rounded overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${Math.min(100, (selected.latency / 5000) * 100)}%` }}
+                            transition={{ duration: 0.4 }}
+                            className="h-full rounded"
+                            style={{
+                              background: selected.latency < 1000
+                                ? "linear-gradient(90deg,#22c55e,#10b981)"
+                                : selected.latency < 3000
+                                ? "linear-gradient(90deg,#f59e0b,#d97706)"
+                                : "linear-gradient(90deg,#e21227,#dc2626)"
+                            }}
+                          />
+                        </div>
+                        <div className="text-[8px] font-mono text-[#555] mt-0.5">{selected.latency}ms end-to-end</div>
                       </div>
                     )}
                   </div>
-
-                  {/* Parsed JSON info */}
-                  {selected.payloadPreview && (
-                    <div style={{
-                      borderTop: "1px solid rgba(0,229,255,0.06)",
-                      padding: "5px 6px", background: "rgba(0,4,12,0.98)",
-                    }}>
-                      <div style={{ fontSize: "6.5px", fontFamily: "monospace", color: "rgba(0,229,255,0.4)", marginBottom: 3, letterSpacing: "0.8px" }}>
-                        PARSED FIELDS
-                      </div>
-                      {(() => {
-                        try {
-                          const parsed = JSON.parse(selected.payloadPreview);
-                          return [
-                            { k: "model",    v: parsed.model ?? "—" },
-                            { k: "provider", v: parsed.provider ?? "personal" },
-                            { k: "mode",     v: parsed.mode ?? "chat" },
-                            { k: "lang",     v: parsed.language ?? "en" },
-                            { k: "msgs",     v: `${(parsed.messages?.length ?? 0)} msg` },
-                          ].map(({ k, v }) => (
-                            <div key={k} style={{ display: "flex", gap: 4, marginBottom: 1 }}>
-                              <span style={{ fontSize: "6px", fontFamily: "monospace", color: "#00e5ff", minWidth: 48 }}>{k}:</span>
-                              <span style={{ fontSize: "6px", fontFamily: "monospace", color: "rgba(255,255,255,0.5)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 160 }}>{String(v)}</span>
-                            </div>
-                          ));
-                        } catch {
-                          return <span style={{ fontSize: "6px", fontFamily: "monospace", color: "rgba(255,255,255,0.2)" }}>invalid json</span>;
-                        }
-                      })()}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
+    </div>
   );
 }

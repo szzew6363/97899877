@@ -146,6 +146,8 @@ import { InteractiveGlobeWidget } from "./components/InteractiveGlobeWidget";
 import { NetworkTrafficPanel } from "./components/NetworkTrafficPanel";
 import { NetworkPacketInspector } from "./components/NetworkPacketInspector";
 import { ModelBenchmarkPanel } from "./components/ModelBenchmarkPanel";
+import { SessionRecorderWidget } from "./components/SessionRecorderWidget";
+import { IntelligenceCoreModal } from "./components/modals/IntelligenceCoreModal";
 
 const queryClient = new QueryClient();
 
@@ -327,6 +329,7 @@ function AppContent() {
   const [redTeamDashOpen, setRedTeamDashOpen] = useState(false);
   const [changelogOpen, setChangelogOpen] = useState(false);
   const [useCaseLibOpen, setUseCaseLibOpen] = useState(false);
+  const [intelligenceCoreOpen, setIntelligenceCoreOpen] = useState(false);
 
   const [pipelineKeyRef] = useState(() => ({ n: 0 }));
   const [ragPipelineDoc, setRagPipelineDoc] = useState<{ text: string; name: string; key: number } | undefined>();
@@ -436,6 +439,10 @@ function AppContent() {
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "u") {
         e.preventDefault();
         setUseCaseLibOpen(v => !v);
+      }
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "i") {
+        e.preventDefault();
+        setIntelligenceCoreOpen(v => !v);
       }
     }
     document.addEventListener("keydown", onKey);
@@ -706,6 +713,12 @@ function AppContent() {
 
       {/* AI model benchmark leaderboard */}
       <ModelBenchmarkPanel />
+
+      {/* Live session recorder widget */}
+      <SessionRecorderWidget />
+
+      {/* Intelligence Core — 16 engine modal */}
+      <IntelligenceCoreModal open={intelligenceCoreOpen} onOpenChange={setIntelligenceCoreOpen} />
 
       {/* Global HUD scan line — year 3090 effect */}
       <div className="hud-scan-line pointer-events-none" />

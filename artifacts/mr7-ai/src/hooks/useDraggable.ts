@@ -1,14 +1,8 @@
 import { useCallback, useRef, useState } from "react";
 
-/**
- * useDraggable — reliable drag for fixed-position widgets.
- *
- * Strategy: During drag we mutate DOM style directly (bypasses React 18 batching
- * which delays setPos re-renders). On mouseup / touchend we call setPos once to
- * sync React state and write to localStorage.
- *
- * Works with both mouse and touch events.
- */
+const GRID = 20;
+function snap(v: number): number { return Math.round(v / GRID) * GRID; }
+
 export function useDraggable(
   storageKey: string,
   defaultPos: { x: number; y: number }
@@ -21,20 +15,15 @@ export function useDraggable(
     return defaultPos;
   });
 
-  // Ref to the outermost widget div — we mutate its style during drag.
   const rootRef = useRef<HTMLDivElement>(null);
 
   const onDragMouseDown = useCallback((e: React.MouseEvent) => {
-    // Ignore right-click
     if (e.button !== 0) return;
     e.preventDefault();
     e.stopPropagation();
-
     const el = rootRef.current;
     if (!el) return;
-
     const rect = el.getBoundingClientRect();
-    // Offset from widget top-left to cursor — stays constant during drag
     const offX = e.clientX - rect.left;
     const offY = e.clientY - rect.top;
 
@@ -42,7 +31,6 @@ export function useDraggable(
       ev.preventDefault();
       const nx = Math.max(0, Math.min(window.innerWidth  - rect.width  - 4, ev.clientX - offX));
       const ny = Math.max(0, Math.min(window.innerHeight - 48,              ev.clientY - offY));
-      // Direct DOM mutation — no React re-render needed for smooth drag
       el.style.left = `${nx}px`;
       el.style.top  = `${ny}px`;
     };
@@ -50,8 +38,10 @@ export function useDraggable(
     const up = (ev: MouseEvent) => {
       document.removeEventListener("mousemove", move);
       document.removeEventListener("mouseup",   up);
-      const nx = Math.max(0, Math.min(window.innerWidth  - rect.width  - 4, ev.clientX - offX));
-      const ny = Math.max(0, Math.min(window.innerHeight - 48,              ev.clientY - offY));
+      const rawX = Math.max(0, Math.min(window.innerWidth  - rect.width  - 4, ev.clientX - offX));
+      const rawY = Math.max(0, Math.min(window.innerHeight - 48,              ev.clientY - offY));
+      const nx = snap(rawX); const ny = snap(rawY);
+      el.style.left = `${nx}px`; el.style.top = `${ny}px`;
       const newPos = { x: nx, y: ny };
       setPos(newPos);
       try { localStorage.setItem(storageKey, JSON.stringify(newPos)); } catch {}
@@ -65,7 +55,6 @@ export function useDraggable(
     e.stopPropagation();
     const el = rootRef.current;
     if (!el) return;
-
     const rect  = el.getBoundingClientRect();
     const t0    = e.touches[0];
     const offX  = t0.clientX - rect.left;
@@ -76,16 +65,17 @@ export function useDraggable(
       const t  = ev.touches[0];
       const nx = Math.max(0, Math.min(window.innerWidth  - rect.width  - 4, t.clientX - offX));
       const ny = Math.max(0, Math.min(window.innerHeight - 48,              t.clientY - offY));
-      el.style.left = `${nx}px`;
-      el.style.top  = `${ny}px`;
+      el.style.left = `${nx}px`; el.style.top = `${ny}px`;
     };
 
     const up = (ev: TouchEvent) => {
       document.removeEventListener("touchmove",  move);
       document.removeEventListener("touchend",   up);
-      const t  = ev.changedTouches[0];
-      const nx = Math.max(0, Math.min(window.innerWidth  - rect.width  - 4, t.clientX - offX));
-      const ny = Math.max(0, Math.min(window.innerHeight - 48,              t.clientY - offY));
+      const t   = ev.changedTouches[0];
+      const rawX = Math.max(0, Math.min(window.innerWidth  - rect.width  - 4, t.clientX - offX));
+      const rawY = Math.max(0, Math.min(window.innerHeight - 48,              t.clientY - offY));
+      const nx = snap(rawX); const ny = snap(rawY);
+      el.style.left = `${nx}px`; el.style.top = `${ny}px`;
       const newPos = { x: nx, y: ny };
       setPos(newPos);
       try { localStorage.setItem(storageKey, JSON.stringify(newPos)); } catch {}

@@ -1,514 +1,545 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { useDraggable } from "@/hooks/useDraggable";
 import { motion } from "framer-motion";
-import { Globe, Shield, Crosshair, Minimize2, Maximize2 } from "lucide-react";
+import { Globe, Shield, Crosshair, Minimize2, Maximize2, Radio } from "lucide-react";
 
-/* ═══════════════════════════════════════════════════════════════
-   GLOBAL THREAT MAP — Ultra 3D holographic Earth
-   Stars · Deep atmosphere · Volumetric arcs · Particle rings
-═══════════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════════════
+   GLOBAL THREAT MAP — Ultra 3D Holographic Earth v2
+   Continental dots · Dual orbital rings · Volumetric atmosphere
+   Gradient arc trails · Hex pulse · Deep space nebula
+═══════════════════════════════════════════════════════════════════════ */
 
 const GLOBE_R = 108;
-const W = 280; const H = 280;
+const W = 300; const H = 300;
 const CX = W / 2; const CY = H / 2;
 const STOR_KEY = "cyber-globe-pos";
 
-interface GeoNode { id: string; name: string; lat: number; lon: number; type: "attacker" | "target" | "relay"; color: string }
-interface AttackArc { srcId: string; dstId: string; progress: number; speed: number; color: string }
-interface Star { x: number; y: number; r: number; alpha: number; twinkle: number }
-interface Particle { angle: number; radius: number; speed: number; size: number; alpha: number; color: string }
+interface GeoNode { id: string; name: string; lat: number; lon: number; type: "attacker"|"target"|"relay"; color: string }
+interface AttackArc { srcId: string; dstId: string; progress: number; speed: number; color: string; trail: number[] }
+interface Star { x: number; y: number; r: number; alpha: number; twinkle: number; color: string }
+interface OrbParticle { angle: number; radius: number; speed: number; size: number; alpha: number; color: string }
+interface Explosion { x: number; y: number; r: number; alpha: number; color: string }
 
 const NODES: GeoNode[] = [
-  { id: "ru", name: "Russia",    lat: 55.75, lon:  37.62, type: "attacker", color: "#e21227" },
-  { id: "cn", name: "China",     lat: 39.93, lon: 116.39, type: "attacker", color: "#e21227" },
-  { id: "ir", name: "Iran",      lat: 35.69, lon:  51.39, type: "attacker", color: "#f59e0b" },
-  { id: "kp", name: "N.Korea",   lat: 39.02, lon: 125.75, type: "attacker", color: "#e21227" },
-  { id: "br", name: "Brazil",    lat:-15.78, lon: -47.93, type: "relay",    color: "#a78bfa" },
-  { id: "in", name: "India",     lat: 28.61, lon:  77.21, type: "relay",    color: "#a78bfa" },
-  { id: "us", name: "USA",       lat: 38.90, lon: -77.04, type: "target",   color: "#00e5ff" },
-  { id: "gb", name: "UK",        lat: 51.51, lon:  -0.13, type: "target",   color: "#00e5ff" },
-  { id: "de", name: "Germany",   lat: 52.52, lon:  13.41, type: "target",   color: "#22c55e" },
-  { id: "ua", name: "Ukraine",   lat: 50.45, lon:  30.52, type: "target",   color: "#22c55e" },
-  { id: "jp", name: "Japan",     lat: 35.68, lon: 139.69, type: "target",   color: "#22c55e" },
-  { id: "sa", name: "KSA",       lat: 24.68, lon:  46.72, type: "relay",    color: "#a78bfa" },
-  { id: "sg", name: "Singapore", lat:  1.35, lon: 103.82, type: "relay",    color: "#a78bfa" },
-  { id: "au", name: "Australia", lat:-33.87, lon: 151.21, type: "target",   color: "#22c55e" },
-  { id: "ca", name: "Canada",    lat: 45.42, lon: -75.70, type: "target",   color: "#00e5ff" },
+  { id:"ru", name:"Russia",    lat: 55.75, lon:  37.62, type:"attacker", color:"#e21227" },
+  { id:"cn", name:"China",     lat: 39.93, lon: 116.39, type:"attacker", color:"#e21227" },
+  { id:"ir", name:"Iran",      lat: 35.69, lon:  51.39, type:"attacker", color:"#f59e0b" },
+  { id:"kp", name:"N.Korea",   lat: 39.02, lon: 125.75, type:"attacker", color:"#e21227" },
+  { id:"br", name:"Brazil",    lat:-15.78, lon: -47.93, type:"relay",    color:"#a78bfa" },
+  { id:"in", name:"India",     lat: 28.61, lon:  77.21, type:"relay",    color:"#a78bfa" },
+  { id:"us", name:"USA",       lat: 38.90, lon: -77.04, type:"target",   color:"#00e5ff" },
+  { id:"gb", name:"UK",        lat: 51.51, lon:  -0.13, type:"target",   color:"#00e5ff" },
+  { id:"de", name:"Germany",   lat: 52.52, lon:  13.41, type:"target",   color:"#22c55e" },
+  { id:"ua", name:"Ukraine",   lat: 50.45, lon:  30.52, type:"target",   color:"#22c55e" },
+  { id:"jp", name:"Japan",     lat: 35.68, lon: 139.69, type:"target",   color:"#22c55e" },
+  { id:"sa", name:"KSA",       lat: 24.68, lon:  46.72, type:"relay",    color:"#a78bfa" },
+  { id:"sg", name:"Singapore", lat:  1.35, lon: 103.82, type:"relay",    color:"#a78bfa" },
+  { id:"au", name:"Australia", lat:-33.87, lon: 151.21, type:"target",   color:"#22c55e" },
+  { id:"ca", name:"Canada",    lat: 45.42, lon: -75.70, type:"target",   color:"#00e5ff" },
+  { id:"fr", name:"France",    lat: 48.85, lon:   2.35, type:"target",   color:"#22c55e" },
+  { id:"nl", name:"Nether.",   lat: 52.37, lon:   4.90, type:"target",   color:"#22c55e" },
+  { id:"tw", name:"Taiwan",    lat: 25.03, lon: 121.56, type:"target",   color:"#00e5ff" },
 ];
 
 const ARCS_INIT = [
-  { srcId: "ru", dstId: "us", speed: 0.0016, color: "#e21227" },
-  { srcId: "cn", dstId: "gb", speed: 0.0020, color: "#e21227" },
-  { srcId: "ir", dstId: "de", speed: 0.0013, color: "#f59e0b" },
-  { srcId: "kp", dstId: "jp", speed: 0.0018, color: "#e21227" },
-  { srcId: "ru", dstId: "ua", speed: 0.0022, color: "#ff4d4d" },
-  { srcId: "cn", dstId: "us", speed: 0.0012, color: "#f59e0b" },
-  { srcId: "br", dstId: "us", speed: 0.0017, color: "#a78bfa" },
-  { srcId: "in", dstId: "gb", speed: 0.0014, color: "#a78bfa" },
-  { srcId: "ru", dstId: "ca", speed: 0.0011, color: "#e21227" },
-  { srcId: "cn", dstId: "au", speed: 0.0015, color: "#f59e0b" },
+  { srcId:"ru", dstId:"us", speed:0.0016, color:"#e21227" },
+  { srcId:"cn", dstId:"gb", speed:0.0020, color:"#e21227" },
+  { srcId:"ir", dstId:"de", speed:0.0013, color:"#f59e0b" },
+  { srcId:"kp", dstId:"jp", speed:0.0018, color:"#e21227" },
+  { srcId:"ru", dstId:"ua", speed:0.0022, color:"#ff4d4d" },
+  { srcId:"cn", dstId:"us", speed:0.0012, color:"#f59e0b" },
+  { srcId:"br", dstId:"us", speed:0.0017, color:"#a78bfa" },
+  { srcId:"in", dstId:"gb", speed:0.0014, color:"#a78bfa" },
+  { srcId:"ru", dstId:"ca", speed:0.0011, color:"#e21227" },
+  { srcId:"cn", dstId:"au", speed:0.0015, color:"#f59e0b" },
+  { srcId:"kp", dstId:"tw", speed:0.0019, color:"#e21227" },
+  { srcId:"ir", dstId:"sa", speed:0.0013, color:"#f59e0b" },
 ];
 
+// Continental dot clouds — simplified land mass simulation
+const CONTINENT_DOTS: [number,number][] = [
+  // North America
+  [70,-140],[68,-120],[65,-100],[60,-95],[55,-80],[50,-85],[48,-70],[45,-75],[42,-83],[38,-77],[35,-78],
+  [30,-90],[25,-100],[20,-100],[60,-140],[58,-130],[55,-110],[50,-120],[47,-90],[35,-95],[32,-97],[28,-82],
+  // South America
+  [10,-75],[5,-60],[0,-50],[-5,-35],[-10,-37],[-15,-47],[-20,-43],[-25,-48],[-30,-52],[-35,-58],[-40,-63],
+  [-50,-68],[3,-60],[8,-65],[12,-72],[-8,-78],[-3,-44],[-22,-46],
+  // Europe
+  [60,10],[58,5],[55,10],[52,13],[50,8],[48,2],[46,7],[44,12],[40,22],[38,15],[36,14],
+  [54,18],[62,15],[65,25],[68,28],[58,24],[56,21],[52,21],[50,18],[46,14],[43,16],
+  // Africa
+  [37,10],[35,5],[30,-5],[25,-15],[20,-16],[15,-14],[10,-13],[5,-3],[0,12],[5,8],
+  [-5,12],[-10,15],[-15,14],[-20,14],[-25,15],[-30,18],[-34,18],[-28,22],[0,30],
+  [5,35],[10,40],[15,38],[20,33],[25,30],[30,30],[22,40],[12,44],
+  // Asia
+  [60,90],[55,82],[50,80],[45,72],[40,68],[35,62],[30,50],[25,45],[20,58],[15,44],
+  [10,77],[5,100],[0,104],[28,77],[32,74],[35,105],[40,116],[45,130],[50,128],[55,90],
+  [60,105],[65,95],[70,85],[25,121],[38,140],[35,136],[30,130],[25,110],[20,100],
+  // Australia
+  [-20,120],[-25,115],[-30,115],[-35,118],[-38,145],[-35,139],[-30,130],[-25,130],
+  [-20,138],[-15,130],[-15,145],[-22,150],[-28,152],[-32,150],[-35,148],
+  // Antarctica
+  [-70,0],[-72,30],[-75,60],[-72,90],[-70,150],[-70,-60],[-72,-90],[-72,-150],
+];
+
+const STARS: Star[] = Array.from({ length: 280 }, () => {
+  const palettes = ["#ffffff","#00e5ff","#a78bfa","#e21227","#22c55e"];
+  return {
+    x: Math.random() * W, y: Math.random() * H,
+    r: Math.random() * 1.4 + 0.2,
+    alpha: Math.random() * 0.8 + 0.1,
+    twinkle: Math.random() * Math.PI * 2,
+    color: palettes[Math.floor(Math.random() * palettes.length)],
+  };
+});
+
+const ORBT1: OrbParticle[] = Array.from({ length: 100 }, (_, i) => ({
+  angle: (i / 100) * Math.PI * 2,
+  radius: GLOBE_R + 10 + Math.random() * 12,
+  speed: 0.003 + Math.random() * 0.002,
+  size: Math.random() * 1.8 + 0.4,
+  alpha: Math.random() * 0.7 + 0.2,
+  color: Math.random() > 0.5 ? "#e21227" : "#00e5ff",
+}));
+
+const ORBT2: OrbParticle[] = Array.from({ length: 60 }, (_, i) => ({
+  angle: (i / 60) * Math.PI * 2,
+  radius: GLOBE_R + 22 + Math.random() * 8,
+  speed: 0.0018 + Math.random() * 0.0015,
+  size: Math.random() * 1.2 + 0.3,
+  alpha: Math.random() * 0.5 + 0.1,
+  color: "#a78bfa",
+}));
+
 function toRad(d: number) { return d * Math.PI / 180; }
-function lerp(a: number, b: number, t: number) { return a + (b - a) * t; }
 
 function project(lat: number, lon: number, rotLon: number, rotX = 0) {
-  const la = toRad(lat), lo = toRad(lon + rotLon);
+  const la = toRad(lat); const lo = toRad(lon + rotLon);
   const x0 = Math.cos(la) * Math.sin(lo);
   const y0 = Math.sin(la);
   const z0 = Math.cos(la) * Math.cos(lo);
   const rx = toRad(rotX);
-  const y = y0 * Math.cos(rx) - z0 * Math.sin(rx);
-  const z = y0 * Math.sin(rx) + z0 * Math.cos(rx);
+  const y  = y0 * Math.cos(rx) - z0 * Math.sin(rx);
+  const z  = y0 * Math.sin(rx) + z0 * Math.cos(rx);
   return { x: CX + GLOBE_R * x0, y: CY - GLOBE_R * y, z };
 }
 
-function qBez(x1: number, y1: number, cx: number, cy: number, x2: number, y2: number, t: number) {
+function getArcPoint(
+  ax: number, ay: number, az: number,
+  bx: number, by: number, bz: number,
+  t: number, lift: number
+) {
+  const mx = (ax + bx) / 2; const my = (ay + by) / 2; const mz = (az + bz) / 2;
+  const len = Math.sqrt(mx*mx + my*my + mz*mz);
+  const scale = (1 + lift) / len;
+  const cx3 = mx * scale; const cy3 = my * scale; const cz3 = mz * scale;
   const mt = 1 - t;
-  return { x: mt*mt*x1 + 2*mt*t*cx + t*t*x2, y: mt*mt*y1 + 2*mt*t*cy + t*t*y2 };
+  const px = mt*mt*ax + 2*mt*t*cx3 + t*t*bx;
+  const py = mt*mt*ay + 2*mt*t*cy3 + t*t*by;
+  const pz = mt*mt*az + 2*mt*t*cz3 + t*t*bz;
+  const len2 = Math.sqrt(px*px + py*py + pz*pz);
+  const ns = 1 / len2;
+  return { x: CX + GLOBE_R * px * ns, y: CY - GLOBE_R * py * ns, z: pz * ns };
 }
 
-// Generate stars once
-const STARS: Star[] = Array.from({ length: 220 }, () => ({
-  x: Math.random() * W, y: Math.random() * H,
-  r: Math.random() * 1.2 + 0.2,
-  alpha: Math.random() * 0.7 + 0.1,
-  twinkle: Math.random() * Math.PI * 2,
-}));
-
-// Equatorial particle ring
-const PARTICLES: Particle[] = Array.from({ length: 80 }, (_, i) => ({
-  angle: (i / 80) * Math.PI * 2,
-  radius: GLOBE_R + 8 + Math.random() * 14,
-  speed: 0.002 + Math.random() * 0.003,
-  size: Math.random() * 1.5 + 0.5,
-  alpha: Math.random() * 0.6 + 0.2,
-  color: Math.random() > 0.5 ? "#e21227" : "#00e5ff",
-}));
-
 export function CyberGlobeWidget() {
-  const canvasRef     = useRef<HTMLCanvasElement>(null);
-  const frameRef      = useRef<number>(0);
-  const rotRef        = useRef(0);
-  const rotXRef       = useRef(15);
-  const velYRef       = useRef(-0.10);
-  const velXRef       = useRef(0);
-  const globeDragRef  = useRef({ dragging: false, lastX: 0, lastY: 0 });
-  const arcsRef       = useRef<AttackArc[]>(ARCS_INIT.map(a => ({ ...a, progress: Math.random() })));
-  const tickRef       = useRef(0);
-  const particlesRef  = useRef<Particle[]>(PARTICLES.map(p => ({ ...p })));
+  const canvasRef    = useRef<HTMLCanvasElement>(null);
+  const frameRef     = useRef<number>(0);
+  const rotRef       = useRef(0);
+  const rotXRef      = useRef(15);
+  const velYRef      = useRef(-0.10);
+  const velXRef      = useRef(0);
+  const dragRef      = useRef({ dragging: false, lastX: 0, lastY: 0 });
+  const arcsRef      = useRef<AttackArc[]>(ARCS_INIT.map(a => ({ ...a, progress: Math.random(), trail: [] as number[] })));
+  const tickRef      = useRef(0);
+  const o1Ref        = useRef(ORBT1.map(p => ({ ...p })));
+  const o2Ref        = useRef(ORBT2.map(p => ({ ...p })));
+  const exploRef     = useRef<Explosion[]>([]);
 
+  const [minimized, setMinimized] = useState(false);
+  const [threatLevel] = useState(92);
   const [attackCount, setAttackCount] = useState(0);
-  const [topAttacker, setTopAttacker] = useState("Russia");
-  const [minimized, setMinimized]     = useState(false);
-  const [threatLevel, setThreatLevel] = useState(87);
 
   const { pos, rootRef, onDragMouseDown, onDragTouchStart } = useDraggable(STOR_KEY, { x: 12, y: 110 });
 
   const onCanvasMouseDown = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    let lastX = e.clientX, lastY = e.clientY;
-    globeDragRef.current = { dragging: true, lastX, lastY };
+    let lastX = e.clientX; let lastY = e.clientY;
+    dragRef.current = { dragging: true, lastX, lastY };
     velYRef.current = 0; velXRef.current = 0;
     const move = (ev: MouseEvent) => {
-      const dx = ev.clientX - lastX, dy = ev.clientY - lastY;
+      const dx = ev.clientX - lastX; const dy = ev.clientY - lastY;
       lastX = ev.clientX; lastY = ev.clientY;
-      velYRef.current = dx * 0.45; velXRef.current = dy * 0.35;
-      rotRef.current += dx * 0.45;
-      rotXRef.current = Math.max(-55, Math.min(55, rotXRef.current + dy * 0.35));
-      globeDragRef.current.lastX = ev.clientX; globeDragRef.current.lastY = ev.clientY;
+      velYRef.current = dx * 0.5; velXRef.current = dy * 0.4;
+      rotRef.current  += dx * 0.5;
+      rotXRef.current  = Math.max(-60, Math.min(60, rotXRef.current + dy * 0.4));
     };
     const up = () => {
-      globeDragRef.current.dragging = false;
-      setTimeout(() => { velYRef.current = -0.10; velXRef.current = 0; }, 2200);
-      window.removeEventListener("mousemove", move); window.removeEventListener("mouseup", up);
+      dragRef.current.dragging = false;
+      setTimeout(() => { velYRef.current = -0.10; velXRef.current = 0; }, 2000);
+      window.removeEventListener("mousemove", move);
+      window.removeEventListener("mouseup", up);
     };
-    window.addEventListener("mousemove", move); window.addEventListener("mouseup", up);
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", up);
   }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current; if (!canvas) return;
     const ctx = canvas.getContext("2d")!;
-    let attackTotal = 0;
-    const attackers = ["Russia", "China", "Iran", "N.Korea"];
+    let atkTotal = 0;
 
     function drawFrame() {
       ctx.clearRect(0, 0, W, H);
-      const t = tickRef.current;
+      const t = tickRef.current++;
+      if (!dragRef.current.dragging) {
+        rotRef.current  += velYRef.current * 0.18;
+        rotXRef.current = Math.max(-60, Math.min(60, rotXRef.current + velXRef.current * 0.12));
+        velYRef.current += (-0.10 - velYRef.current) * 0.004;
+        velXRef.current *= 0.97;
+      }
 
-      // ── Deep space background ──
-      const bg = ctx.createRadialGradient(CX, CY, 0, CX, CY, W * 0.8);
-      bg.addColorStop(0, "rgba(2,4,12,0.97)");
-      bg.addColorStop(0.5, "rgba(1,2,8,0.98)");
-      bg.addColorStop(1, "rgba(0,1,4,0.99)");
-      ctx.fillStyle = bg;
-      ctx.fillRect(0, 0, W, H);
+      // ── Deep space nebula ──
+      const bg = ctx.createRadialGradient(CX*0.3, CY*0.3, 0, CX, CY, W);
+      bg.addColorStop(0,   "rgba(4,2,16,1)");
+      bg.addColorStop(0.4, "rgba(2,4,14,1)");
+      bg.addColorStop(0.8, "rgba(1,2,8,1)");
+      bg.addColorStop(1,   "rgba(0,1,4,1)");
+      ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+      // nebula patches
+      [[CX*0.4,CY*0.3,"rgba(60,0,120,0.06)"],[CX*1.6,CY*1.5,"rgba(0,60,100,0.05)"],[CX*0.2,CY*1.4,"rgba(120,0,60,0.04)"]].forEach(([nx,ny,nc]) => {
+        const ng = ctx.createRadialGradient(nx as number,ny as number,0,nx as number,ny as number,80);
+        ng.addColorStop(0, nc as string); ng.addColorStop(1,"rgba(0,0,0,0)");
+        ctx.fillStyle = ng; ctx.fillRect(0,0,W,H);
+      });
 
       // ── Stars ──
       STARS.forEach(s => {
-        const tw = (Math.sin(t * 0.02 + s.twinkle) + 1) / 2;
-        ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255,255,255,${s.alpha * (0.4 + tw * 0.6)})`;
+        const tw = (Math.sin(t * 0.015 + s.twinkle) + 1) / 2;
+        ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+        ctx.fillStyle = s.color.replace(")", `,${s.alpha * (0.3 + tw * 0.7)})`).replace("rgb(","rgba(").replace("rgba(rgba(","rgba(");
+        ctx.globalAlpha = s.alpha * (0.3 + tw * 0.7);
+        ctx.fillStyle = s.color;
+        ctx.fill();
+      });
+      ctx.globalAlpha = 1;
+
+      // ── Outer atmosphere (8 rings) ──
+      const atmosConfigs: [number, string, string, string][] = [
+        [1.65, "rgba(0,30,60,0)",    "rgba(0,30,60,0.008)",  "rgba(0,80,160,0.02)"],
+        [1.5,  "rgba(0,229,255,0)",  "rgba(0,229,255,0.01)", "rgba(0,229,255,0.04)"],
+        [1.38, "rgba(226,18,39,0)",  "rgba(226,18,39,0.01)", "rgba(226,18,39,0.03)"],
+        [1.28, "rgba(0,160,220,0)",  "rgba(0,160,220,0.02)", "rgba(0,160,220,0.06)"],
+        [1.18, "rgba(226,18,39,0)",  "rgba(226,18,39,0.03)", "rgba(226,18,39,0.08)"],
+        [1.10, "rgba(0,229,255,0)",  "rgba(0,229,255,0.04)", "rgba(0,229,255,0.10)"],
+        [1.05, "rgba(0,100,200,0)",  "rgba(0,100,200,0.05)", "rgba(0,100,200,0.12)"],
+        [1.02, "rgba(0,60,120,0)",   "rgba(0,60,120,0.08)",  "rgba(0,80,180,0.18)"],
+      ];
+      atmosConfigs.forEach(([rm, c0, c1, c2]) => {
+        const inner = GLOBE_R * (rm - 0.08);
+        const atm = ctx.createRadialGradient(CX, CY, inner, CX, CY, GLOBE_R * rm);
+        atm.addColorStop(0, c0); atm.addColorStop(0.5, c1); atm.addColorStop(1, c2);
+        ctx.beginPath(); ctx.arc(CX, CY, GLOBE_R * rm, 0, Math.PI*2);
+        ctx.fillStyle = atm; ctx.fill();
+      });
+
+      // ── Globe sphere ──
+      const sph = ctx.createRadialGradient(CX-38, CY-38, 0, CX, CY, GLOBE_R);
+      sph.addColorStop(0,    "rgba(10,20,40,0.97)");
+      sph.addColorStop(0.4,  "rgba(5,10,24,0.97)");
+      sph.addColorStop(0.75, "rgba(2,4,12,0.98)");
+      sph.addColorStop(1,    "rgba(0,1,6,0.99)");
+      ctx.beginPath(); ctx.arc(CX, CY, GLOBE_R, 0, Math.PI*2);
+      ctx.fillStyle = sph; ctx.fill();
+
+      // ── Lat/lon grid ──
+      ctx.save();
+      ctx.clip();
+      ctx.strokeStyle = "rgba(0,229,255,0.05)";
+      ctx.lineWidth = 0.4;
+      for (let la = -80; la <= 80; la += 20) {
+        ctx.beginPath();
+        let first = true;
+        for (let lo = 0; lo <= 360; lo += 4) {
+          const p = project(la, lo, rotRef.current, rotXRef.current);
+          if (p.z > 0) { first ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y); first = false; }
+          else first = true;
+        }
+        ctx.stroke();
+      }
+      for (let lo = 0; lo < 360; lo += 20) {
+        ctx.beginPath();
+        let first = true;
+        for (let la = -85; la <= 85; la += 4) {
+          const p = project(la, lo, rotRef.current, rotXRef.current);
+          if (p.z > 0) { first ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y); first = false; }
+          else first = true;
+        }
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // ── Continental dots ──
+      ctx.save(); ctx.beginPath(); ctx.arc(CX, CY, GLOBE_R, 0, Math.PI*2); ctx.clip();
+      CONTINENT_DOTS.forEach(([lat, lon]) => {
+        const p = project(lat, lon, rotRef.current, rotXRef.current);
+        if (p.z > 0.05) {
+          const brightness = 0.3 + p.z * 0.7;
+          const size = 0.8 + p.z * 0.6;
+          ctx.beginPath(); ctx.arc(p.x, p.y, size, 0, Math.PI*2);
+          ctx.fillStyle = `rgba(40,180,120,${brightness * 0.55})`;
+          ctx.fill();
+          if (p.z > 0.6) {
+            ctx.beginPath(); ctx.arc(p.x, p.y, size * 1.8, 0, Math.PI*2);
+            ctx.fillStyle = `rgba(60,220,140,${brightness * 0.12})`;
+            ctx.fill();
+          }
+        }
+      });
+      ctx.restore();
+
+      // ── Nodes (back-facing, dim) ──
+      const nodeProj = NODES.map(n => ({
+        ...n, p: project(n.lat, n.lon, rotRef.current, rotXRef.current)
+      }));
+
+      nodeProj.filter(n => n.p.z <= 0).forEach(n => {
+        const alpha = 0.15 + (1 - n.p.z) * 0.1;
+        ctx.beginPath(); ctx.arc(n.p.x, n.p.y, 2, 0, Math.PI*2);
+        ctx.fillStyle = n.color.replace("rgb(","rgba(").replace(")",`,${alpha})`);
         ctx.fill();
       });
 
-      // ── Outer atmosphere (multi-ring) ──
-      [1.5, 1.35, 1.22, 1.12].forEach((rm, ri) => {
-        const atmos = ctx.createRadialGradient(CX, CY, GLOBE_R * (rm - 0.1), CX, CY, GLOBE_R * rm);
-        const colors = [
-          ["rgba(226,18,39,0.0)", "rgba(226,18,39,0.0)", "rgba(226,18,39,0.015)"],
-          ["rgba(0,229,255,0.0)", "rgba(0,229,255,0.012)", "rgba(0,229,255,0.03)"],
-          ["rgba(226,18,39,0.0)", "rgba(226,18,39,0.025)", "rgba(226,18,39,0.05)"],
-          ["rgba(0,180,255,0.0)", "rgba(0,180,255,0.03)", "rgba(0,180,255,0.08)"],
-        ][ri];
-        atmos.addColorStop(0, colors[0]); atmos.addColorStop(0.5, colors[1]); atmos.addColorStop(1, colors[2]);
-        ctx.beginPath(); ctx.arc(CX, CY, GLOBE_R * rm, 0, Math.PI * 2);
-        ctx.fillStyle = atmos; ctx.fill();
+      // ── Attack arcs ──
+      arcsRef.current.forEach(arc => {
+        const src = NODES.find(n => n.id === arc.srcId)!;
+        const dst = NODES.find(n => n.id === arc.dstId)!;
+        if (!src || !dst) return;
+
+        // store trail
+        arc.trail.unshift(arc.progress);
+        if (arc.trail.length > 18) arc.trail.pop();
+
+        // draw trail
+        arc.trail.forEach((tp, ti) => {
+          const alpha = (1 - ti / arc.trail.length) * 0.5;
+          const srcR = toRad(90 - src.lat); const srcL = toRad(src.lon + rotRef.current);
+          const dstR = toRad(90 - dst.lat); const dstL = toRad(dst.lon + rotRef.current);
+          const ax = Math.sin(srcR)*Math.cos(srcL); const ay = Math.cos(srcR); const az = Math.sin(srcR)*Math.sin(srcL);
+          const bx = Math.sin(dstR)*Math.cos(dstL); const by = Math.cos(dstR); const bz = Math.sin(dstR)*Math.sin(dstL);
+          const [axR, ayR, azR] = [ax, ay * Math.cos(toRad(rotXRef.current)) - az * Math.sin(toRad(rotXRef.current)), ay * Math.sin(toRad(rotXRef.current)) + az * Math.cos(toRad(rotXRef.current))];
+          const [bxR, byR, bzR] = [bx, by * Math.cos(toRad(rotXRef.current)) - bz * Math.sin(toRad(rotXRef.current)), by * Math.sin(toRad(rotXRef.current)) + bz * Math.cos(toRad(rotXRef.current))];
+          const pp = getArcPoint(axR, ayR, azR, bxR, byR, bzR, tp, 0.45);
+          if (pp.z > -0.1) {
+            ctx.beginPath(); ctx.arc(pp.x, pp.y, 1.2 * (1 - ti/arc.trail.length), 0, Math.PI*2);
+            ctx.fillStyle = arc.color;
+            ctx.globalAlpha = alpha;
+            ctx.fill();
+          }
+        });
+        ctx.globalAlpha = 1;
+
+        // draw arc head
+        const srcR = toRad(90 - src.lat); const srcL = toRad(src.lon + rotRef.current);
+        const dstR = toRad(90 - dst.lat); const dstL = toRad(dst.lon + rotRef.current);
+        const ax = Math.sin(srcR)*Math.cos(srcL); const ay = Math.cos(srcR); const az = Math.sin(srcR)*Math.sin(srcL);
+        const bx = Math.sin(dstR)*Math.cos(dstL); const by = Math.cos(dstR); const bz = Math.sin(dstR)*Math.sin(dstL);
+        const rotRad = toRad(rotXRef.current);
+        const axR = ax; const ayR = ay * Math.cos(rotRad) - az * Math.sin(rotRad); const azR = ay * Math.sin(rotRad) + az * Math.cos(rotRad);
+        const bxR = bx; const byR = by * Math.cos(rotRad) - bz * Math.sin(rotRad); const bzR = by * Math.sin(rotRad) + bz * Math.cos(rotRad);
+
+        const pp = getArcPoint(axR, ayR, azR, bxR, byR, bzR, arc.progress, 0.45);
+        if (pp.z > -0.1) {
+          const grd = ctx.createRadialGradient(pp.x, pp.y, 0, pp.x, pp.y, 6);
+          grd.addColorStop(0, arc.color);
+          grd.addColorStop(0.4, arc.color.replace("rgb(","rgba(").replace(")",",0.6)"));
+          grd.addColorStop(1, "rgba(0,0,0,0)");
+          ctx.fillStyle = grd;
+          ctx.beginPath(); ctx.arc(pp.x, pp.y, 6, 0, Math.PI*2);
+          ctx.fill();
+          ctx.beginPath(); ctx.arc(pp.x, pp.y, 2.5, 0, Math.PI*2);
+          ctx.fillStyle = "#fff";
+          ctx.globalAlpha = 0.9;
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+
+        // advance
+        arc.progress += arc.speed;
+        if (arc.progress >= 1) {
+          arc.progress = 0; arc.trail = [];
+          atkTotal++;
+          if (atkTotal % 8 === 0) setAttackCount(atkTotal);
+          // explosion
+          const dstP = project(dst.lat, dst.lon, rotRef.current, rotXRef.current);
+          if (dstP.z > 0) {
+            exploRef.current.push({ x: dstP.x, y: dstP.y, r: 1, alpha: 0.9, color: arc.color });
+          }
+        }
       });
 
-      // ── Globe sphere — deep dark ──
-      const sph = ctx.createRadialGradient(CX - 32, CY - 32, 0, CX, CY, GLOBE_R);
-      sph.addColorStop(0, "rgba(8,14,30,0.96)");
-      sph.addColorStop(0.5, "rgba(4,6,16,0.97)");
-      sph.addColorStop(0.85, "rgba(1,2,8,0.98)");
-      sph.addColorStop(1, "rgba(0,1,4,0.99)");
-      ctx.beginPath(); ctx.arc(CX, CY, GLOBE_R, 0, Math.PI * 2);
-      ctx.fillStyle = sph; ctx.fill();
-
-      // ── Globe rim highlight ──
-      const rim = ctx.createRadialGradient(CX, CY, GLOBE_R * 0.88, CX, CY, GLOBE_R);
-      rim.addColorStop(0, "transparent");
-      rim.addColorStop(0.7, "rgba(226,18,39,0.04)");
-      rim.addColorStop(1, "rgba(226,18,39,0.12)");
-      ctx.beginPath(); ctx.arc(CX, CY, GLOBE_R, 0, Math.PI * 2);
-      ctx.fillStyle = rim; ctx.fill();
-
-      // ── Specular highlight ──
-      const spec = ctx.createRadialGradient(CX - 38, CY - 38, 0, CX - 28, CY - 28, GLOBE_R * 0.6);
-      spec.addColorStop(0, "rgba(255,255,255,0.04)");
-      spec.addColorStop(1, "transparent");
-      ctx.beginPath(); ctx.arc(CX, CY, GLOBE_R, 0, Math.PI * 2);
-      ctx.fillStyle = spec; ctx.fill();
-
-      const rot = rotRef.current, rotX = rotXRef.current;
-
-      // ── Grid lines ──
-      // Latitude
-      for (let lat = -75; lat <= 75; lat += 15) {
-        const la = toRad(lat);
-        const r2 = GLOBE_R * Math.cos(la);
-        const yc = CY - GLOBE_R * Math.sin(la);
-        if (r2 < 2) continue;
-        ctx.beginPath();
-        ctx.ellipse(CX, yc, r2, r2 * 0.12, 0, 0, Math.PI * 2);
-        ctx.strokeStyle = lat === 0 ? "rgba(0,229,255,0.2)" : lat % 30 === 0 ? "rgba(0,229,255,0.06)" : "rgba(255,255,255,0.025)";
-        ctx.lineWidth = lat === 0 ? 0.9 : 0.35;
+      // ── Explosions ──
+      exploRef.current = exploRef.current.filter(ex => ex.alpha > 0.02);
+      exploRef.current.forEach(ex => {
+        ctx.beginPath(); ctx.arc(ex.x, ex.y, ex.r, 0, Math.PI*2);
+        ctx.strokeStyle = ex.color;
+        ctx.globalAlpha = ex.alpha;
+        ctx.lineWidth = 1.5;
         ctx.stroke();
-      }
-      // Longitude
-      for (let lon = 0; lon < 360; lon += 20) {
-        ctx.beginPath(); let started = false;
-        for (let lat = -90; lat <= 90; lat += 3) {
-          const p = project(lat, lon, rot, rotX);
-          if (p.z < 0) { started = false; continue; }
-          if (!started) { ctx.moveTo(p.x, p.y); started = true; } else ctx.lineTo(p.x, p.y);
+        ex.r += 1.5; ex.alpha *= 0.84;
+      });
+      ctx.globalAlpha = 1;
+
+      // ── Front-facing nodes ──
+      nodeProj.filter(n => n.p.z > 0).sort((a,b) => a.p.z - b.p.z).forEach(n => {
+        const sc = 0.5 + n.p.z * 0.9;
+        const r  = 4 * sc;
+
+        // outer glow ring
+        const glw = ctx.createRadialGradient(n.p.x, n.p.y, 0, n.p.x, n.p.y, r * 4.5);
+        glw.addColorStop(0, n.color + "55");
+        glw.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = glw;
+        ctx.beginPath(); ctx.arc(n.p.x, n.p.y, r * 4.5, 0, Math.PI*2);
+        ctx.fill();
+
+        // pulse ring
+        const pulse = (Math.sin(t * 0.04 + n.p.z * 3) + 1) / 2;
+        ctx.beginPath(); ctx.arc(n.p.x, n.p.y, r + 3 + pulse * 4, 0, Math.PI*2);
+        ctx.strokeStyle = n.color;
+        ctx.globalAlpha = 0.3 * pulse;
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+
+        // crosshair
+        ctx.strokeStyle = n.color;
+        ctx.lineWidth = 0.7;
+        ctx.globalAlpha = 0.6;
+        ctx.beginPath(); ctx.moveTo(n.p.x - r*1.8, n.p.y); ctx.lineTo(n.p.x - r*0.7, n.p.y); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(n.p.x + r*0.7, n.p.y); ctx.lineTo(n.p.x + r*1.8, n.p.y); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(n.p.x, n.p.y - r*1.8); ctx.lineTo(n.p.x, n.p.y - r*0.7); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(n.p.x, n.p.y + r*0.7); ctx.lineTo(n.p.x, n.p.y + r*1.8); ctx.stroke();
+        ctx.globalAlpha = 1;
+
+        // core
+        const cg = ctx.createRadialGradient(n.p.x - r*0.3, n.p.y - r*0.3, 0, n.p.x, n.p.y, r * 1.2);
+        cg.addColorStop(0, "#ffffff");
+        cg.addColorStop(0.4, n.color);
+        cg.addColorStop(1, n.color + "88");
+        ctx.beginPath(); ctx.arc(n.p.x, n.p.y, r, 0, Math.PI*2);
+        ctx.fillStyle = cg; ctx.fill();
+
+        // label
+        if (n.p.z > 0.3) {
+          ctx.fillStyle = n.color;
+          ctx.globalAlpha = Math.min(1, (n.p.z - 0.3) * 2.5);
+          ctx.font = `bold ${Math.round(7 + sc * 2)}px monospace`;
+          ctx.textAlign = "center";
+          ctx.fillText(n.name, n.p.x, n.p.y + r + 8);
+          ctx.globalAlpha = 1;
         }
-        ctx.strokeStyle = "rgba(0,229,255,0.04)";
-        ctx.lineWidth = 0.35; ctx.stroke();
-      }
+      });
 
-      // ── Equatorial ring glow ──
-      ctx.beginPath();
-      ctx.ellipse(CX, CY, GLOBE_R + 2, (GLOBE_R + 2) * 0.12, 0, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(0,229,255,0.2)"; ctx.lineWidth = 1.5; ctx.stroke();
-      ctx.beginPath();
-      ctx.ellipse(CX, CY, GLOBE_R + 2, (GLOBE_R + 2) * 0.12, 0, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(0,229,255,0.06)"; ctx.lineWidth = 4; ctx.stroke();
-
-      // ── Orbiting particles ──
-      particlesRef.current.forEach(p => {
-        p.angle += p.speed;
-        const px = CX + p.radius * Math.cos(p.angle);
-        const py = CY + p.radius * Math.sin(p.angle) * 0.22;
-        const depthAlpha = (Math.sin(p.angle) + 1) / 2;
-        ctx.beginPath(); ctx.arc(px, py, p.size, 0, Math.PI * 2);
-        ctx.fillStyle = p.color;
-        ctx.globalAlpha = p.alpha * depthAlpha;
-        ctx.shadowColor = p.color; ctx.shadowBlur = 6;
-        ctx.fill(); ctx.shadowBlur = 0;
+      // ── Orbital rings ──
+      const ringTilt1 = 20; const ringTilt2 = 65;
+      [o1Ref.current, o2Ref.current].forEach((ring, ri) => {
+        const tilt = ri === 0 ? ringTilt1 : ringTilt2;
+        const tiltR = toRad(tilt);
+        ring.forEach(p => {
+          p.angle += p.speed;
+          const rx = p.radius * Math.cos(p.angle);
+          const ry = p.radius * Math.sin(p.angle) * Math.cos(tiltR);
+          const rz = p.radius * Math.sin(p.angle) * Math.sin(tiltR);
+          if (rz + GLOBE_R * 0.3 > 0) {
+            const sc = 0.6 + rz / (p.radius * 2);
+            ctx.beginPath();
+            ctx.arc(CX + rx, CY - ry, p.size * sc, 0, Math.PI*2);
+            ctx.fillStyle = p.color;
+            ctx.globalAlpha = p.alpha * sc;
+            ctx.fill();
+          }
+        });
         ctx.globalAlpha = 1;
       });
 
-      // ── Terminator (day/night boundary) ──
-      ctx.beginPath(); let ts = false;
-      for (let lat = -90; lat <= 90; lat += 3) {
-        const p = project(lat, 90 + t * 0.03, rot, rotX);
-        if (p.z < -0.1) { ts = false; continue; }
-        if (!ts) { ctx.moveTo(p.x, p.y); ts = true; } else ctx.lineTo(p.x, p.y);
-      }
-      ctx.strokeStyle = "rgba(255,180,60,0.1)"; ctx.lineWidth = 1.2; ctx.stroke();
+      // ── Specular highlight ──
+      const spec1 = ctx.createRadialGradient(CX - 36, CY - 36, 0, CX - 36, CY - 36, 55);
+      spec1.addColorStop(0, "rgba(255,255,255,0.08)");
+      spec1.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = spec1;
+      ctx.beginPath(); ctx.arc(CX, CY, GLOBE_R, 0, Math.PI*2); ctx.clip();
+      ctx.fillRect(0, 0, W, H);
 
-      // ── Attack Arcs ──
-      arcsRef.current.forEach(arc => {
-        arc.progress += arc.speed;
-        if (arc.progress > 1) {
-          arc.progress = 0; attackTotal++;
-          if (attackTotal % 3 === 0) setTopAttacker(attackers[Math.floor(Math.random() * attackers.length)]);
-        }
-        const src = NODES.find(n => n.id === arc.srcId)!;
-        const dst = NODES.find(n => n.id === arc.dstId)!;
-        const ps = project(src.lat, src.lon, rot, rotX);
-        const pd = project(dst.lat, dst.lon, rot, rotX);
-        if (ps.z < -0.3 && pd.z < -0.3) return;
+      // ── Scan line ──
+      const scanY = ((t * 0.7) % H);
+      const scanG = ctx.createLinearGradient(0, scanY - 6, 0, scanY + 6);
+      scanG.addColorStop(0, "rgba(0,229,255,0)");
+      scanG.addColorStop(0.5, "rgba(0,229,255,0.08)");
+      scanG.addColorStop(1, "rgba(0,229,255,0)");
+      ctx.fillStyle = scanG;
+      ctx.fillRect(0, scanY - 6, W, 12);
 
-        const ctrlX = (ps.x + pd.x) / 2;
-        const ctrlY = (ps.y + pd.y) / 2 - GLOBE_R * 0.52;
-
-        // Arc trail (gradient fade)
-        const segs = 50;
-        const visible = ps.z > 0 && pd.z > 0;
-        for (let i = 0; i < segs; i++) {
-          const t0 = i / segs, t1 = (i + 1) / segs;
-          const p0 = qBez(ps.x, ps.y, ctrlX, ctrlY, pd.x, pd.y, t0);
-          const p1 = qBez(ps.x, ps.y, ctrlX, ctrlY, pd.x, pd.y, t1);
-          const fade = (i / segs) * (visible ? 0.22 : 0.07);
-          ctx.beginPath(); ctx.moveTo(p0.x, p0.y); ctx.lineTo(p1.x, p1.y);
-          ctx.strokeStyle = arc.color + Math.floor(fade * 255).toString(16).padStart(2, "0");
-          ctx.lineWidth = 0.8; ctx.stroke();
-        }
-
-        // Glowing head packet
-        const pkt = qBez(ps.x, ps.y, ctrlX, ctrlY, pd.x, pd.y, arc.progress);
-        for (let trail = 0; trail < 8; trail++) {
-          const tp = Math.max(0, arc.progress - trail * 0.015);
-          const gp = qBez(ps.x, ps.y, ctrlX, ctrlY, pd.x, pd.y, tp);
-          const sz = trail === 0 ? 3 : 1.5 - trail * 0.15;
-          ctx.beginPath(); ctx.arc(gp.x, gp.y, Math.max(0.3, sz), 0, Math.PI * 2);
-          ctx.fillStyle = arc.color + Math.floor((1 - trail / 8) * 220).toString(16).padStart(2, "0");
-          ctx.shadowColor = arc.color; ctx.shadowBlur = trail === 0 ? 14 : 4;
-          ctx.fill(); ctx.shadowBlur = 0;
-        }
-      });
-
-      // ── Geo Nodes ──
-      NODES.forEach(node => {
-        const p = project(node.lat, node.lon, rot, rotX);
-        if (p.z < 0) return;
-        const pulse = (Math.sin(t * 0.05 + node.lon * 0.04) + 1) / 2;
-
-        // Outer pulse rings (attacker nodes only)
-        if (node.type === "attacker") {
-          [8, 14].forEach((r, ri) => {
-            ctx.beginPath(); ctx.arc(p.x, p.y, r + pulse * 4, 0, Math.PI * 2);
-            ctx.strokeStyle = node.color + (ri === 0 ? "30" : "18");
-            ctx.lineWidth = ri === 0 ? 1 : 0.5; ctx.stroke();
-          });
-        }
-
-        // Glow halo
-        const halo = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 12);
-        halo.addColorStop(0, node.color + "60");
-        halo.addColorStop(1, "transparent");
-        ctx.fillStyle = halo;
-        ctx.beginPath(); ctx.arc(p.x, p.y, 12, 0, Math.PI * 2); ctx.fill();
-
-        // Node dot
-        ctx.beginPath(); ctx.arc(p.x, p.y, 3.5, 0, Math.PI * 2);
-        ctx.fillStyle = node.color;
-        ctx.shadowColor = node.color; ctx.shadowBlur = 14;
-        ctx.fill(); ctx.shadowBlur = 0;
-
-        // Inner bright core
-        ctx.beginPath(); ctx.arc(p.x, p.y, 1.5, 0, Math.PI * 2);
-        ctx.fillStyle = "#fff"; ctx.fill();
-
-        // Label
-        if (p.z > 0.25) {
-          ctx.font = "bold 7px 'SF Mono', monospace";
-          ctx.textAlign = "center";
-          ctx.fillStyle = node.type === "attacker" ? "rgba(226,18,39,0.95)" :
-                          node.type === "target" ? "rgba(0,229,255,0.9)" : "rgba(167,139,250,0.85)";
-          ctx.shadowColor = node.color; ctx.shadowBlur = 6;
-          ctx.fillText(node.name, p.x, p.y - 8); ctx.shadowBlur = 0;
-        }
-      });
-
-      // ── Globe border with glow ──
-      ctx.beginPath(); ctx.arc(CX, CY, GLOBE_R, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(226,18,39,0.3)"; ctx.lineWidth = 1.2; ctx.stroke();
-      ctx.beginPath(); ctx.arc(CX, CY, GLOBE_R, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(226,18,39,0.08)"; ctx.lineWidth = 3; ctx.stroke();
-
-      // ── Rotating scanner sweep ──
-      const sweepAngle = (t * 0.018) % (Math.PI * 2);
-      const sweepGrad = ctx.createLinearGradient(CX, CY, CX + Math.cos(sweepAngle) * GLOBE_R, CY + Math.sin(sweepAngle) * GLOBE_R);
-      sweepGrad.addColorStop(0, "rgba(0,229,255,0.0)");
-      sweepGrad.addColorStop(1, "rgba(0,229,255,0.04)");
-      ctx.save();
-      ctx.beginPath(); ctx.moveTo(CX, CY);
-      ctx.arc(CX, CY, GLOBE_R, sweepAngle, sweepAngle + 0.6);
-      ctx.closePath();
-      ctx.fillStyle = sweepGrad; ctx.globalAlpha = 0.4; ctx.fill();
-      ctx.restore(); ctx.globalAlpha = 1;
-
-      ctx.textAlign = "left";
+      frameRef.current = requestAnimationFrame(drawFrame);
     }
 
-    function frame() {
-      frameRef.current = requestAnimationFrame(frame);
-      tickRef.current++;
-      if (!globeDragRef.current.dragging) {
-        rotRef.current  += velYRef.current;
-        rotXRef.current += velXRef.current;
-        rotXRef.current  = Math.max(-55, Math.min(55, rotXRef.current));
-        velYRef.current  += (-0.10 - velYRef.current) * 0.035;
-        velXRef.current  *= 0.92;
-      }
-      drawFrame();
-      if (tickRef.current % 28 === 0) {
-        setAttackCount((c: number) => c + Math.floor(Math.random() * 4 + 1));
-        setThreatLevel((l: number) => Math.max(60, Math.min(99, l + Math.floor(Math.random() * 6 - 2))));
-      }
-    }
-
-    frame();
+    drawFrame();
     return () => cancelAnimationFrame(frameRef.current);
   }, []);
 
-  const threatColor = threatLevel > 90 ? "#e21227" : threatLevel > 75 ? "#f59e0b" : "#22c55e";
-
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.88, y: -10 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
-      ref={rootRef as any}
-      style={{ position: "fixed", left: pos.x, top: pos.y, zIndex: 96, width: W + 4, userSelect: "none" }}
-    >
-      {/* ── Drag strip ── */}
-      <div
-        onMouseDown={onDragMouseDown} onTouchStart={onDragTouchStart}
-        style={{
-          height: 10, borderRadius: "12px 12px 0 0", cursor: "grab",
-          background: "repeating-linear-gradient(90deg, rgba(226,18,39,0.3) 0px, rgba(226,18,39,0.3) 3px, transparent 3px, transparent 8px)",
-          borderTop: "1px solid rgba(226,18,39,0.55)", borderLeft: "1px solid rgba(226,18,39,0.2)", borderRight: "1px solid rgba(226,18,39,0.2)",
-          boxShadow: "0 0 14px rgba(226,18,39,0.25)",
-        }}
-      />
-      {/* ── Header ── */}
-      <div
-        onMouseDown={onDragMouseDown} onTouchStart={onDragTouchStart}
-        style={{
-          display: "flex", alignItems: "center", gap: "6px", padding: "8px 10px",
-          background: "linear-gradient(135deg, rgba(6,2,12,0.99), rgba(10,4,18,0.98))",
-          borderLeft: "1px solid rgba(226,18,39,0.2)", borderRight: "1px solid rgba(226,18,39,0.2)",
-          cursor: "grab",
-          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
-        }}
+    <div ref={rootRef} style={{ left: pos.x, top: pos.y }} className="fixed z-[96] select-none">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="rounded-2xl border border-[#1f1f1f] overflow-hidden shadow-[0_0_40px_rgba(226,18,39,0.2),0_0_80px_rgba(0,0,0,0.8)]"
+        style={{ background: "rgba(4,2,12,0.97)", backdropFilter: "blur(20px)" }}
       >
-        {/* Blinking threat dot */}
-        <motion.div
-          animate={{ opacity: [1, 0.3, 1], scale: [1, 1.3, 1] }}
-          transition={{ duration: 1.2, repeat: Infinity }}
-          style={{ width: 6, height: 6, borderRadius: "50%", background: "#e21227", boxShadow: "0 0 8px #e21227", flexShrink: 0 }}
-        />
-        <Globe style={{ width: 10, height: 10, color: "#e21227", flexShrink: 0 }} />
-        <span style={{ fontSize: "8.5px", fontFamily: "monospace", fontWeight: 800, color: "#e21227", letterSpacing: "1.8px", flex: 1 }}>
-          GLOBAL THREAT MAP
-        </span>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <span style={{ fontSize: "7px", fontFamily: "monospace", color: "#22c55e", letterSpacing: "1px" }}>● LIVE</span>
-          <button
-            onClick={() => setMinimized((v: boolean) => !v)} onMouseDown={(e: React.MouseEvent) => e.stopPropagation()}
-            style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.3)", padding: 0 }}
-          >
-            {minimized ? <Maximize2 style={{ width: 10, height: 10 }} /> : <Minimize2 style={{ width: 10, height: 10 }} />}
-          </button>
-        </div>
-      </div>
-
-      {/* ── Globe canvas ── */}
-      {!minimized && (
-        <div style={{
-          background: "rgba(2,2,8,0.99)",
-          border: "1px solid rgba(226,18,39,0.12)",
-          borderTop: "none", position: "relative", overflow: "hidden",
-        }}>
-          {/* Top scan line accent */}
-          <div style={{ height: 1, background: "linear-gradient(90deg, transparent, rgba(226,18,39,0.6) 50%, transparent)" }} />
-
-          <canvas
-            ref={canvasRef} width={W} height={H} style={{ display: "block", cursor: "grab" }}
-            onMouseDown={onCanvasMouseDown}
-          />
-
-          {/* HUD corners */}
-          <div style={{ position: "absolute", top: 5, left: 5, width: 14, height: 14, borderTop: "2px solid rgba(226,18,39,0.7)", borderLeft: "2px solid rgba(226,18,39,0.7)" }} />
-          <div style={{ position: "absolute", top: 5, right: 5, width: 14, height: 14, borderTop: "2px solid rgba(0,229,255,0.5)", borderRight: "2px solid rgba(0,229,255,0.5)" }} />
-          <div style={{ position: "absolute", bottom: 38, left: 5, width: 14, height: 14, borderBottom: "2px solid rgba(0,229,255,0.5)", borderLeft: "2px solid rgba(0,229,255,0.5)" }} />
-          <div style={{ position: "absolute", bottom: 38, right: 5, width: 14, height: 14, borderBottom: "2px solid rgba(226,18,39,0.7)", borderRight: "2px solid rgba(226,18,39,0.7)" }} />
-
-          {/* Drag hint */}
-          <div style={{ position: "absolute", bottom: 40, right: 8, fontSize: "6px", fontFamily: "monospace", color: "rgba(0,229,255,0.2)", letterSpacing: "0.5px", pointerEvents: "none" }}>
-            DRAG TO ROTATE
-          </div>
-
-          {/* Threat level bar */}
-          <div style={{ position: "absolute", top: 10, left: 10, right: 10 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
-              <span style={{ fontSize: "6px", fontFamily: "monospace", color: "rgba(255,255,255,0.2)", letterSpacing: "0.8px" }}>THREAT LEVEL</span>
-              <span style={{ fontSize: "7px", fontFamily: "monospace", color: threatColor, fontWeight: 700 }}>{threatLevel}%</span>
+        {/* Header */}
+        <div
+          className="flex items-center gap-2 px-3 py-1.5 cursor-grab border-b border-[#1f1f1f]"
+          onMouseDown={onDragMouseDown} onTouchStart={onDragTouchStart}
+        >
+          <Globe size={11} className="text-[#e21227]" />
+          <span className="text-[10px] font-mono font-bold tracking-[2px] text-[#e21227]">GLOBAL THREAT MAP</span>
+          <div className="ml-auto flex items-center gap-2">
+            <div className="flex items-center gap-1">
+              <motion.div animate={{ opacity:[1,0.3,1] }} transition={{ duration:1.4, repeat:Infinity }} className="w-1.5 h-1.5 rounded-full bg-[#e21227]" />
+              <span className="text-[9px] font-mono text-[#e21227]">LIVE</span>
             </div>
-            <div style={{ height: 2, background: "rgba(255,255,255,0.06)", borderRadius: 1, overflow: "hidden" }}>
-              <motion.div
-                animate={{ width: `${threatLevel}%` }} transition={{ duration: 0.8, ease: "easeInOut" }}
-                style={{ height: "100%", background: `linear-gradient(90deg, #22c55e, ${threatColor})`, boxShadow: `0 0 6px ${threatColor}` }}
-              />
-            </div>
-          </div>
-
-          {/* Stats bar */}
-          <div style={{
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-            padding: "6px 10px", background: "rgba(4,4,12,0.98)",
-            borderTop: "1px solid rgba(255,255,255,0.04)", height: 36,
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-              <Crosshair style={{ width: 9, height: 9, color: "#e21227" }} />
-              <span style={{ fontSize: "7.5px", fontFamily: "monospace", color: "rgba(255,255,255,0.3)" }}>ATTACKS:</span>
-              <span style={{ fontSize: "9px", fontFamily: "monospace", fontWeight: 800, color: "#e21227" }}>
-                {(247812 + attackCount).toLocaleString()}
-              </span>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-              <Shield style={{ width: 9, height: 9, color: "#22c55e" }} />
-              <span style={{ fontSize: "7.5px", fontFamily: "monospace", color: "rgba(255,255,255,0.3)" }}>TOP:</span>
-              <span style={{ fontSize: "9px", fontFamily: "monospace", fontWeight: 800, color: "#f59e0b" }}>{topAttacker}</span>
-            </div>
+            <span className="text-[9px] font-mono text-[#555]">TL:{threatLevel}%</span>
+            <button onClick={() => setMinimized(m => !m)} className="text-[#555] hover:text-white">
+              {minimized ? <Maximize2 size={11} /> : <Minimize2 size={11} />}
+            </button>
           </div>
         </div>
-      )}
 
-      {/* ── Legend ── */}
-      {!minimized && (
-        <div style={{
-          display: "flex", gap: "14px", padding: "6px 10px",
-          background: "rgba(4,4,12,0.98)",
-          border: "1px solid rgba(226,18,39,0.1)", borderTop: "none",
-          borderRadius: "0 0 12px 12px",
-          boxShadow: "0 8px 32px rgba(0,0,0,0.8)",
-        }}>
-          {[{ color: "#e21227", label: "Attacker" }, { color: "#00e5ff", label: "Target" }, { color: "#a78bfa", label: "Relay" }].map(l => (
-            <div key={l.label} style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-              <div style={{ width: 6, height: 6, borderRadius: "50%", background: l.color, boxShadow: `0 0 8px ${l.color}` }} />
-              <span style={{ fontSize: "7.5px", fontFamily: "monospace", color: "rgba(255,255,255,0.3)" }}>{l.label}</span>
+        {!minimized && (
+          <>
+            <canvas
+              ref={canvasRef} width={W} height={H}
+              className="block cursor-crosshair"
+              onMouseDown={onCanvasMouseDown}
+            />
+            {/* Footer stats */}
+            <div className="flex items-center gap-4 px-3 py-1 border-t border-[#1f1f1f]">
+              <div className="flex items-center gap-1">
+                <Shield size={9} className="text-[#e21227]" />
+                <span className="text-[9px] font-mono text-[#e21227]">{attackCount} ATTACKS</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Crosshair size={9} className="text-[#00e5ff]" />
+                <span className="text-[9px] font-mono text-[#00e5ff]">{NODES.filter(n=>n.type==="target").length} TARGETS</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Radio size={9} className="text-[#a78bfa]" />
+                <span className="text-[9px] font-mono text-[#555]">DRAG TO ROTATE</span>
+              </div>
             </div>
-          ))}
-          <div style={{ marginLeft: "auto", fontSize: "7px", fontFamily: "monospace", color: "rgba(255,255,255,0.15)" }}>
-            {NODES.length} NODES
-          </div>
-        </div>
-      )}
-    </motion.div>
+          </>
+        )}
+      </motion.div>
+    </div>
   );
 }
