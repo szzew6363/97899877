@@ -134,6 +134,7 @@ import { LiveThreatTicker } from "./components/LiveThreatTicker";
 import { SystemStatusWidget } from "./components/SystemStatusWidget";
 import { NetworkTopologyWidget } from "./components/NetworkTopologyWidget";
 import { AmbientParticleField } from "./components/AmbientParticleField";
+import { HoloDataStream } from "./components/HoloDataStream";
 
 const queryClient = new QueryClient();
 
@@ -642,6 +643,9 @@ function AppContent() {
 
       {/* Ambient particle field */}
       <AmbientParticleField density={0.5} />
+
+      {/* Holographic data stream on edges */}
+      <HoloDataStream side="both" />
 
       {/* Global HUD scan line — year 3090 effect */}
       <div className="hud-scan-line pointer-events-none" />
