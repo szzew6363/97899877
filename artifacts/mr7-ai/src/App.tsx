@@ -143,6 +143,7 @@ import { AmbientParticleField } from "./components/AmbientParticleField";
 import { HoloDataStream } from "./components/HoloDataStream";
 import { CyberGlobeWidget } from "./components/CyberGlobeWidget";
 import { InteractiveGlobeWidget } from "./components/InteractiveGlobeWidget";
+import { NetworkTrafficPanel } from "./components/NetworkTrafficPanel";
 
 const queryClient = new QueryClient();
 
@@ -694,6 +695,9 @@ function AppContent() {
 
       {/* 3D Cyber Globe — global attack map */}
       <CyberGlobeWidget />
+
+      {/* Network Traffic Analyzer — real-time API call visualizer */}
+      <NetworkTrafficPanel />
 
       {/* Global HUD scan line — year 3090 effect */}
       <div className="hud-scan-line pointer-events-none" />

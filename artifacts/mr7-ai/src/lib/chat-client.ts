@@ -1,3 +1,5 @@
+import { trafficBus } from "./trafficBus";
+
 export type ChatRole = "user" | "assistant";
 export type ChatMessage = { role: ChatRole; content: string };
 
@@ -32,48 +34,70 @@ export type ChatRequest = {
 };
 
 export async function streamChat(req: ChatRequest, onChunk: (text: string) => void, signal?: AbortSignal): Promise<string> {
-  const res = await fetch("/api/chat", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(req),
-    signal,
+  const body = JSON.stringify(req);
+  const callId = trafficBus.startCall({
+    model: req.model,
+    provider: req.provider ?? "personal",
+    endpoint: "/api/chat",
+    bytesSent: body.length,
   });
-  if (!res.ok || !res.body) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`Chat request failed (${res.status}): ${text.slice(0, 200)}`);
-  }
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buf = "";
-  let full = "";
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buf += decoder.decode(value, { stream: true });
-    let idx;
-    while ((idx = buf.indexOf("\n\n")) !== -1) {
-      const block = buf.slice(0, idx);
-      buf = buf.slice(idx + 2);
-      for (const line of block.split("\n")) {
-        const trimmed = line.trim();
-        if (!trimmed.startsWith("data:")) continue;
-        const payload = trimmed.slice(5).trim();
-        if (!payload) continue;
-        try {
-          const obj = JSON.parse(payload) as { content?: string; done?: boolean; error?: string };
-          if (obj.error) { onChunk(`\n\n[خطأ: ${obj.error}]`); return full; }
-          if (obj.content) {
-            full += obj.content;
-            onChunk(obj.content);
+
+  let bytesReceived = 0;
+  let tokenCount = 0;
+
+  try {
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body,
+      signal,
+    });
+    if (!res.ok || !res.body) {
+      const text = await res.text().catch(() => "");
+      trafficBus.failCall(callId);
+      throw new Error(`Chat request failed (${res.status}): ${text.slice(0, 200)}`);
+    }
+    trafficBus.updateCall(callId, { status: "streaming" });
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = "";
+    let full = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (value) bytesReceived += value.byteLength;
+      buf += decoder.decode(value, { stream: true });
+      let idx;
+      while ((idx = buf.indexOf("\n\n")) !== -1) {
+        const block = buf.slice(0, idx);
+        buf = buf.slice(idx + 2);
+        for (const line of block.split("\n")) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith("data:")) continue;
+          const payload = trimmed.slice(5).trim();
+          if (!payload) continue;
+          try {
+            const obj = JSON.parse(payload) as { content?: string; done?: boolean; error?: string; usage?: { total_tokens?: number; prompt_tokens?: number; completion_tokens?: number } };
+            if (obj.error) { onChunk(`\n\n[خطأ: ${obj.error}]`); trafficBus.failCall(callId); return full; }
+            if (obj.content) { full += obj.content; onChunk(obj.content); tokenCount += Math.ceil(obj.content.length / 4); }
+            if (obj.usage) tokenCount = obj.usage.total_tokens ?? tokenCount;
+            if (obj.done) {
+              trafficBus.completeCall(callId, { tokens: tokenCount, bytesReceived });
+              return full;
+            }
+          } catch (e) {
+            if (e instanceof Error && e.message) throw e;
           }
-          if (obj.done) return full;
-        } catch (e) {
-          if (e instanceof Error && e.message) throw e;
         }
       }
     }
+    trafficBus.completeCall(callId, { tokens: tokenCount, bytesReceived });
+    return full;
+  } catch (err) {
+    trafficBus.failCall(callId);
+    throw err;
   }
-  return full;
 }
 
 /**
