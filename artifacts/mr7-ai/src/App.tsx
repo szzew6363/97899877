@@ -135,6 +135,7 @@ import { SystemStatusWidget } from "./components/SystemStatusWidget";
 import { NetworkTopologyWidget } from "./components/NetworkTopologyWidget";
 import { AmbientParticleField } from "./components/AmbientParticleField";
 import { HoloDataStream } from "./components/HoloDataStream";
+import { CyberGlobeWidget } from "./components/CyberGlobeWidget";
 
 const queryClient = new QueryClient();
 
@@ -646,6 +647,9 @@ function AppContent() {
 
       {/* Holographic data stream on edges */}
       <HoloDataStream side="both" />
+
+      {/* 3D Cyber Globe — global attack map */}
+      <CyberGlobeWidget />
 
       {/* Global HUD scan line — year 3090 effect */}
       <div className="hud-scan-line pointer-events-none" />
