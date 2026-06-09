@@ -194,6 +194,54 @@ function CornerBrackets({ color }: { color: string }) {
   );
 }
 
+/* ── Neural Sphere Canvas ───────────────────────────────────────────── */
+function NeuralSphereCanvas({ col }: { col: string }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const canvas = ref.current; if (!canvas) return;
+    const ctx = canvas.getContext("2d")!;
+    const SZ = 46; const R = 17; const CX = 23; const CY = 23;
+    let raf = 0; let t = 0;
+    const N = 14;
+    const baseNodes: [number, number, number][] = Array.from({ length: N }, (_, i) => {
+      const y = 1 - (i / (N - 1)) * 2;
+      const r = Math.sqrt(Math.max(0, 1 - y * y));
+      const th = (i * 2.399963) % (Math.PI * 2);
+      return [r * Math.cos(th), y, r * Math.sin(th)];
+    });
+    function draw() {
+      raf = requestAnimationFrame(draw); t++;
+      ctx.clearRect(0, 0, SZ, SZ);
+      const ry = t * 0.02;
+      const cos = Math.cos(ry), sin = Math.sin(ry);
+      const proj = baseNodes.map(([x, y, z]) => {
+        const x1 = x * cos - z * sin;
+        const z1 = x * sin + z * cos;
+        const sc  = 110 / (110 + z1 * R);
+        return { px: CX + x1 * R * sc, py: CY - y * R * sc, z: z1 };
+      }).sort((a, b) => a.z - b.z);
+      proj.forEach((p1, i) => proj.forEach((p2, j) => {
+        if (j <= i) return;
+        const d = Math.hypot(p1.px - p2.px, p1.py - p2.py);
+        if (d > R * 1.1) return;
+        const a = (1 - d / (R * 1.1)) * ((p1.z + p2.z) / 2 + 1) * 0.2;
+        ctx.beginPath(); ctx.moveTo(p1.px, p1.py); ctx.lineTo(p2.px, p2.py);
+        ctx.strokeStyle = col + Math.floor(Math.min(255, a * 255)).toString(16).padStart(2, "0");
+        ctx.lineWidth = 0.6; ctx.stroke();
+      }));
+      proj.forEach(p => {
+        const v = Math.min(1, (p.z + 1) * 0.5 + 0.1);
+        ctx.beginPath(); ctx.arc(p.px, p.py, 1.8, 0, Math.PI * 2);
+        ctx.fillStyle = col; ctx.globalAlpha = v;
+        ctx.shadowColor = col; ctx.shadowBlur = 5; ctx.fill(); ctx.shadowBlur = 0;
+      });
+      ctx.globalAlpha = 1;
+    }
+    draw(); return () => cancelAnimationFrame(raf);
+  }, [col]);
+  return <canvas ref={ref} width={46} height={46} style={{ display: "block", borderRadius: "50%" }} />;
+}
+
 /* ── Main component ─────────────────────────────────────────────────── */
 interface ThinkingIndicatorProps { agentMode?: boolean }
 
@@ -202,6 +250,7 @@ export function ThinkingIndicator({ agentMode = false }: ThinkingIndicatorProps)
   const [phase,   setPhase]     = useState(0);
   const [tps,     setTps]       = useState(0);
   const [confidence, setConf]   = useState(7);
+  const [metrics, setMetrics]   = useState({ entropy: 0.78, latency: 142, sync: 97, bw: 38 });
   const startRef = useRef(Date.now());
 
   const phases       = agentMode ? AGENT_PHASES : CHAT_PHASES;
@@ -209,7 +258,7 @@ export function ThinkingIndicator({ agentMode = false }: ThinkingIndicatorProps)
   const PhaseIcon    = currentPhase.icon;
   const col          = currentPhase.color;
 
-  /* elapsed / tps ticker */
+  /* elapsed / tps / metrics ticker */
   useEffect(() => {
     startRef.current = Date.now();
     const id = setInterval(() => {
@@ -217,7 +266,13 @@ export function ThinkingIndicator({ agentMode = false }: ThinkingIndicatorProps)
       setElapsed(sec);
       setTps(prev => Math.round(prev + (18 + Math.random() * 24 - prev) * 0.28));
       setConf(prev => Math.min(97, prev + (Math.random() > 0.6 ? 1 : 0)));
-    }, 200);
+      setMetrics(prev => ({
+        entropy: Math.round((prev.entropy + (Math.random() * 0.04 - 0.02)) * 100) / 100,
+        latency: Math.round(prev.latency + (Math.random() * 20 - 10)),
+        sync: Math.min(100, prev.sync + (Math.random() > 0.7 ? 1 : 0)),
+        bw: Math.round(prev.bw + (Math.random() * 8 - 4)),
+      }));
+    }, 400);
     return () => clearInterval(id);
   }, []);
 
@@ -297,29 +352,15 @@ export function ThinkingIndicator({ agentMode = false }: ThinkingIndicatorProps)
                 borderLeftColor: `${col}18`,
               }}
             />
-            <motion.div
-              animate={{ scale: [1, 1.08, 1] }}
-              transition={{ duration: 1.3, repeat: Infinity }}
-              style={{
-                width: "32px", height: "32px", borderRadius: "50%",
-                background: `radial-gradient(circle, ${col}22 0%, ${col}06 70%)`,
-                border: `1px solid ${col}35`,
-                boxShadow: `0 0 16px ${col}35, inset 0 0 8px ${col}12`,
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }}
-            >
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={phase}
-                  initial={{ scale: 0.4, opacity: 0, rotate: -20 }}
-                  animate={{ scale: 1,   opacity: 1, rotate: 0   }}
-                  exit={{    scale: 0.4, opacity: 0, rotate: 20  }}
-                  transition={{ duration: 0.22 }}
-                >
-                  <Brain style={{ width: "15px", height: "15px", color: col }} />
-                </motion.div>
-              </AnimatePresence>
-            </motion.div>
+            <div style={{
+              width: "46px", height: "46px", borderRadius: "50%",
+              border: `1px solid ${col}28`,
+              boxShadow: `0 0 16px ${col}20, inset 0 0 10px ${col}08`,
+              background: `radial-gradient(circle, ${col}10 0%, transparent 70%)`,
+              overflow: "hidden", flexShrink: 0,
+            }}>
+              <NeuralSphereCanvas col={col} />
+            </div>
           </div>
 
           {/* Title row */}
@@ -407,6 +448,21 @@ export function ThinkingIndicator({ agentMode = false }: ThinkingIndicatorProps)
           }}>
             <NeuralBarCanvas phaseColor={col} active={true} />
           </div>
+        </div>
+
+        {/* ── Live metrics row ──────────────────────── */}
+        <div style={{ display: "flex", padding: "0 12px 8px", gap: "4px" }}>
+          {[
+            { label: "ENTROPY", val: metrics.entropy.toFixed(2) },
+            { label: "LATENCY", val: `${Math.max(50, metrics.latency)}ms` },
+            { label: "SYNC",    val: `${metrics.sync}%` },
+            { label: "B/W",     val: `${Math.max(10, Math.abs(metrics.bw))}Mb` },
+          ].map((m, i) => (
+            <div key={i} style={{ flex: 1, textAlign: "center", padding: "5px 2px", border: `1px solid ${col}10`, borderRadius: 5, background: `${col}05` }}>
+              <div style={{ fontSize: 9, fontFamily: "monospace", fontWeight: 800, color: col, letterSpacing: "0.2px" }}>{m.val}</div>
+              <div style={{ fontSize: "5.5px", fontFamily: "monospace", color: "rgba(255,255,255,0.22)", letterSpacing: "0.3px", marginTop: 1 }}>{m.label}</div>
+            </div>
+          ))}
         </div>
 
         {/* ── Confidence footer ─────────────────────── */}

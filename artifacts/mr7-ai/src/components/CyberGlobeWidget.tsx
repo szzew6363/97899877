@@ -63,13 +63,20 @@ const STOR_KEY = "cyber-globe-pos";
 
 function toRad(deg: number) { return (deg * Math.PI) / 180; }
 
-function project(lat: number, lon: number, rotLon: number): { x: number; y: number; z: number } {
+function project(lat: number, lon: number, rotLon: number, rotXDeg: number = 0): { x: number; y: number; z: number } {
   const la = toRad(lat);
   const lo = toRad(lon + rotLon);
+  const x0 = Math.cos(la) * Math.sin(lo);
+  const y0 = Math.sin(la);
+  const z0 = Math.cos(la) * Math.cos(lo);
+  // Apply X-axis tilt
+  const rx = toRad(rotXDeg);
+  const y  = y0 * Math.cos(rx) - z0 * Math.sin(rx);
+  const z  = y0 * Math.sin(rx) + z0 * Math.cos(rx);
   return {
-    x: CX + GLOBE_R * Math.cos(la) * Math.sin(lo),
-    y: CY - GLOBE_R * Math.sin(la),
-    z: Math.cos(la) * Math.cos(lo), // z>0 = visible
+    x: CX + GLOBE_R * x0,
+    y: CY - GLOBE_R * y,
+    z,
   };
 }
 
@@ -91,7 +98,11 @@ function quadBezier(
 export function CyberGlobeWidget() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const frameRef = useRef<number>(0);
-  const rotRef = useRef(0);
+  const rotRef   = useRef(0);
+  const rotXRef  = useRef(0); // tilt (up/down drag)
+  const velYRef  = useRef(-0.12); // longitude velocity (auto-spin)
+  const velXRef  = useRef(0);
+  const globeDragRef = useRef({ dragging: false, lastX: 0, lastY: 0 });
   const arcsRef = useRef<AttackArc[]>(INITIAL_ARCS.map(a => ({ ...a, progress: Math.random() })));
   const tickRef = useRef(0);
   const [attackCount, setAttackCount] = useState(0);
@@ -102,22 +113,47 @@ export function CyberGlobeWidget() {
     try { return JSON.parse(localStorage.getItem(STOR_KEY) ?? "null"); } catch { return null; }
   })();
   const [pos, setPos] = useState<{ x: number; y: number }>(savedPos ?? { x: 12, y: 120 });
-  const dragRef = useRef<{ startX: number; startY: number; ox: number; oy: number } | null>(null);
+  const widgetDragRef = useRef<{ startX: number; startY: number; ox: number; oy: number } | null>(null);
 
+  // Widget position drag (header only)
   const onPointerDown = useCallback((e: React.PointerEvent) => {
     const el = (e.currentTarget as HTMLElement);
     el.setPointerCapture(e.pointerId);
-    dragRef.current = { startX: e.clientX, startY: e.clientY, ox: pos.x, oy: pos.y };
+    widgetDragRef.current = { startX: e.clientX, startY: e.clientY, ox: pos.x, oy: pos.y };
   }, [pos]);
   const onPointerMove = useCallback((e: React.PointerEvent) => {
-    if (!dragRef.current) return;
-    const { startX, startY, ox, oy } = dragRef.current;
+    if (!widgetDragRef.current) return;
+    const { startX, startY, ox, oy } = widgetDragRef.current;
     const nx = Math.max(0, Math.min(window.innerWidth - 280, ox + e.clientX - startX));
     const ny = Math.max(0, Math.min(window.innerHeight - 320, oy + e.clientY - startY));
     setPos({ x: nx, y: ny });
     localStorage.setItem(STOR_KEY, JSON.stringify({ x: nx, y: ny }));
   }, []);
-  const onPointerUp = useCallback(() => { dragRef.current = null; }, []);
+  const onPointerUp = useCallback(() => { widgetDragRef.current = null; }, []);
+
+  // Globe rotation drag (canvas only)
+  const onCanvasPointerDown = useCallback((e: React.PointerEvent) => {
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    globeDragRef.current = { dragging: true, lastX: e.clientX, lastY: e.clientY };
+    velYRef.current = 0; velXRef.current = 0;
+    e.stopPropagation();
+  }, []);
+  const onCanvasPointerMove = useCallback((e: React.PointerEvent) => {
+    if (!globeDragRef.current.dragging) return;
+    const dx = e.clientX - globeDragRef.current.lastX;
+    const dy = e.clientY - globeDragRef.current.lastY;
+    velYRef.current = dx * 0.5;
+    velXRef.current = dy * 0.4;
+    rotRef.current  += dx * 0.5;
+    rotXRef.current = Math.max(-40, Math.min(40, rotXRef.current + dy * 0.4));
+    globeDragRef.current.lastX = e.clientX;
+    globeDragRef.current.lastY = e.clientY;
+  }, []);
+  const onCanvasPointerUp = useCallback(() => {
+    globeDragRef.current.dragging = false;
+    // Resume auto-spin after 2s
+    setTimeout(() => { velYRef.current = -0.12; velXRef.current = 0; }, 2000);
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current; if (!canvas) return;
@@ -156,6 +192,7 @@ export function CyberGlobeWidget() {
       ctx.stroke();
 
       const rot = rotRef.current;
+      const rotX = rotXRef.current;
 
       // ── Latitude lines ──
       [-60, -30, 0, 30, 60].forEach(lat => {
@@ -175,7 +212,7 @@ export function CyberGlobeWidget() {
         ctx.beginPath();
         let started = false;
         for (let lat = -90; lat <= 90; lat += 4) {
-          const p = project(lat, lon, rot);
+          const p = project(lat, lon, rot, rotX);
           if (p.z < 0) { started = false; continue; }
           if (!started) { ctx.moveTo(p.x, p.y); started = true; }
           else ctx.lineTo(p.x, p.y);
@@ -189,7 +226,7 @@ export function CyberGlobeWidget() {
       ctx.beginPath();
       let tStarted = false;
       for (let lat = -90; lat <= 90; lat += 3) {
-        const p = project(lat, 90, rot); // 90° offset for terminator
+        const p = project(lat, 90, rot, rotX); // 90° offset for terminator
         if (p.z < -0.1) { tStarted = false; continue; }
         if (!tStarted) { ctx.moveTo(p.x, p.y); tStarted = true; }
         else ctx.lineTo(p.x, p.y);
@@ -211,8 +248,8 @@ export function CyberGlobeWidget() {
 
         const src = NODES.find(n => n.id === arc.srcId)!;
         const dst = NODES.find(n => n.id === arc.dstId)!;
-        const ps = project(src.lat, src.lon, rot);
-        const pd = project(dst.lat, dst.lon, rot);
+        const ps = project(src.lat, src.lon, rot, rotX);
+        const pd = project(dst.lat, dst.lon, rot, rotX);
 
         // Skip if both endpoints are hidden
         if (ps.z < -0.2 && pd.z < -0.2) return;
@@ -262,7 +299,7 @@ export function CyberGlobeWidget() {
 
       // ── Geo Nodes ──
       NODES.forEach(node => {
-        const p = project(node.lat, node.lon, rot);
+        const p = project(node.lat, node.lon, rot, rotX);
         if (p.z < 0) return; // behind globe
 
         // Pulse ring (animate with tick)
@@ -299,7 +336,14 @@ export function CyberGlobeWidget() {
     function frame() {
       frameRef.current = requestAnimationFrame(frame);
       tickRef.current++;
-      rotRef.current -= 0.12; // slow rotation
+      if (!globeDragRef.current.dragging) {
+        rotRef.current  += velYRef.current;
+        rotXRef.current += velXRef.current;
+        rotXRef.current = Math.max(-40, Math.min(40, rotXRef.current));
+        // Damp inertia
+        velYRef.current += (-0.12 - velYRef.current) * 0.04;
+        velXRef.current *= 0.93;
+      }
       drawGlobe();
       if (tickRef.current % 30 === 0) {
         setAttackCount(c => c + Math.floor(Math.random() * 3 + 1));
@@ -365,7 +409,14 @@ export function CyberGlobeWidget() {
           overflow: "hidden",
           position: "relative",
         }}>
-          <canvas ref={canvasRef} width={W} height={H} style={{ display: "block" }} />
+          <canvas
+            ref={canvasRef} width={W} height={H}
+            style={{ display: "block", cursor: globeDragRef.current.dragging ? "grabbing" : "grab" }}
+            onPointerDown={onCanvasPointerDown}
+            onPointerMove={onCanvasPointerMove}
+            onPointerUp={onCanvasPointerUp}
+            onPointerLeave={onCanvasPointerUp}
+          />
 
           {/* Corner HUD decorations */}
           <div style={{ position: "absolute", top: "6px", left: "6px", width: "12px", height: "12px", borderTop: "1.5px solid rgba(226,18,39,0.6)", borderLeft: "1.5px solid rgba(226,18,39,0.6)" }} />

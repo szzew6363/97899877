@@ -165,6 +165,8 @@ export type Settings = {
   aiSystemTemplate: string;
   // Provider fallback chain: ordered list of provider+model to try on failure
   providerFallbackChain: Array<{ provider: string; model: string }>;
+  // Multi-key pool: additional API keys to rotate through on failure
+  apiKeyPool: Array<{ key: string; label: string; active: boolean }>;
 };
 
 export type ThemeAccent = "crimson" | "midnight" | "emerald" | "amber" | "violet" | "cyan" | "rose" | "lime" | "orange" | "slate";
@@ -324,6 +326,7 @@ const initial: AppState = {
     aiPresPenalty: 0.0,
     aiSystemTemplate: "",
     providerFallbackChain: [],
+    apiKeyPool: [],
   },
   themeAccent: "crimson",
   notifications: [

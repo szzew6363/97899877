@@ -140,6 +140,7 @@ import { NetworkTopologyWidget } from "./components/NetworkTopologyWidget";
 import { AmbientParticleField } from "./components/AmbientParticleField";
 import { HoloDataStream } from "./components/HoloDataStream";
 import { CyberGlobeWidget } from "./components/CyberGlobeWidget";
+import { InteractiveGlobeWidget } from "./components/InteractiveGlobeWidget";
 
 const queryClient = new QueryClient();
 
@@ -660,6 +661,9 @@ function AppContent() {
 
       {/* Network Topology Widget */}
       <NetworkTopologyWidget />
+
+      {/* Interactive Globe — drag-to-rotate GLOBAL MAP */}
+      <InteractiveGlobeWidget />
 
       {/* Ambient particle field */}
       <AmbientParticleField density={0.5} />

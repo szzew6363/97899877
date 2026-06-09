@@ -69,13 +69,22 @@ function drawDiamond(ctx: CanvasRenderingContext2D, x: number, y: number, r: num
   ctx.closePath();
 }
 
+function expandHex(color: string, alpha: string): string {
+  if (/^#[0-9a-fA-F]{3}$/.test(color)) {
+    const [, r, g, b] = color;
+    return `#${r}${r}${g}${g}${b}${b}${alpha}`;
+  }
+  if (/^#[0-9a-fA-F]{6}$/.test(color)) return color + alpha;
+  return color;
+}
+
 function loadPos(): { x: number; y: number } {
   try { const r = localStorage.getItem("net-topo-pos"); if (r) return JSON.parse(r); } catch {}
   return { x: 8, y: window.innerHeight - 300 };
 }
 
 export function NetworkTopologyWidget() {
-  const [collapsed, setCollapsed] = useState(true);
+  const [collapsed, setCollapsed] = useState(false);
   const [pos, setPos] = useState<{ x: number; y: number }>(loadPos);
   const [threatCount, setThreatCount] = useState(0);
   const [pps, setPps] = useState(0);
@@ -263,7 +272,7 @@ export function NetworkTopologyWidget() {
 
         // Glow fill
         const grd = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, sz * 2.5);
-        grd.addColorStop(0, baseColor + "40");
+        grd.addColorStop(0, expandHex(baseColor, "40"));
         grd.addColorStop(1, "transparent");
         ctx.fillStyle = grd;
         ctx.beginPath(); ctx.arc(node.x, node.y, sz * 2.5, 0, Math.PI * 2);
@@ -271,7 +280,7 @@ export function NetworkTopologyWidget() {
 
         // Node body
         ctx.shadowColor = baseColor; ctx.shadowBlur = glowR * pulse;
-        ctx.fillStyle = baseColor + "22";
+        ctx.fillStyle = expandHex(baseColor, "22");
         ctx.strokeStyle = baseColor;
         ctx.lineWidth = status === "compromised" ? 2 : 1.2;
         ctx.globalAlpha = node.external ? 0.7 : 1;

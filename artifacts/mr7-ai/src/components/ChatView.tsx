@@ -325,9 +325,19 @@ export function ChatView({ onShare, onOpenOsintDash }: { onShare?: () => void; o
     } catch (err) {
       const message = err instanceof Error ? err.message : "Stream failed.";
       if ((err as { name?: string })?.name !== "AbortError") {
-        acc += `\n\n[error: ${message}]`;
+        // ── Ensure ThinkingIndicator is visible for at least 600ms before error ──
+        const minDisplayMs = 600;
+        const elapsed = Date.now() - streamStart;
+        if (elapsed < minDisplayMs) {
+          await new Promise<void>(r => setTimeout(r, minDisplayMs - elapsed));
+        }
+        const is401 = message.includes("401") || message.toLowerCase().includes("api key");
+        const errLabel = is401
+          ? `API key not configured. Open Settings → Provider to add your API key, or press Ctrl+Shift+A for Admin Panel.`
+          : message;
+        acc += `\n\n> **[!]** ${errLabel}`;
         dispatch({ type: "PATCH_MSG", chatId, msgId: aId, patch: { content: acc } });
-        toast({ description: message });
+        toast({ description: is401 ? "API key missing — configure in Settings" : message });
       }
     } finally {
       if (acc) {
