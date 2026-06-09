@@ -98,6 +98,7 @@ import { HackingToolModal } from "./components/modals/HackingToolModal";
 import { GodMod3Modal } from "./components/modals/GodMod3Modal";
 import { GeminiResearchModal } from "./components/modals/GeminiResearchModal";
 import { OpenAntigravityModal } from "./components/modals/OpenAntigravityModal";
+import { ChangelogModal } from "./components/modals/ChangelogModal";
 import { DeepSearchModal } from "./components/modals/DeepSearchModal";
 import { ChainInvestigationModal } from "./components/modals/ChainInvestigationModal";
 // New modules from uploaded files
@@ -320,6 +321,7 @@ function AppContent() {
   const [deepSearchOpen, setDeepSearchOpen] = useState(false);
   const [chainInvestigationOpen, setChainInvestigationOpen] = useState(false);
   const [redTeamDashOpen, setRedTeamDashOpen] = useState(false);
+  const [changelogOpen, setChangelogOpen] = useState(false);
 
   const [pipelineKeyRef] = useState(() => ({ n: 0 }));
   const [ragPipelineDoc, setRagPipelineDoc] = useState<{ text: string; name: string; key: number } | undefined>();
@@ -418,6 +420,14 @@ function AppContent() {
         e.preventDefault();
         setAnalyticsOpen(v => !v);
       }
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "o") {
+        e.preventDefault();
+        setOsintDashOpen(v => !v);
+      }
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "l") {
+        e.preventDefault();
+        setChangelogOpen(v => !v);
+      }
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
@@ -458,6 +468,8 @@ function AppContent() {
         onOpenSearch={() => setSearchOpen(true)}
         onOpenCompare={() => setCompareOpen(true)}
         onOpenQRSync={() => setQrSyncOpen(true)}
+        onOpenChangelog={() => setChangelogOpen(true)}
+        onOpenOsint={() => setOsintDashOpen(true)}
       />
 
       <main className="flex-1 flex flex-col min-w-0 h-full relative">
@@ -524,6 +536,7 @@ function AppContent() {
       <LocalModelModal open={localModelOpen} onOpenChange={setLocalModelOpen} />
       <ProviderSettingsModal open={providerSettingsOpen} onClose={() => setProviderSettingsOpen(false)} />
       <OsintDashboard open={osintDashOpen} onOpenChange={setOsintDashOpen} />
+      <ChangelogModal open={changelogOpen} onOpenChange={setChangelogOpen} />
       <AdminPanel open={adminOpen} onOpenChange={setAdminOpen} />
       <ActivateModal open={activateOpen} onOpenChange={setActivateOpen} />
       <QRSyncModal open={qrSyncOpen} onClose={() => setQrSyncOpen(false)} />

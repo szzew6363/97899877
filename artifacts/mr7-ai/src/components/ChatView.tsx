@@ -1183,6 +1183,23 @@ export function ChatView({ onShare, onOpenOsintDash }: { onShare?: () => void; o
                 {!msg.council && !msg.godmode && streaming && msg.role === "assistant" && msg.id === chat?.messages[chat.messages.length - 1]?.id && msg.content.length > 0 && (
                   <NeuralStreamHUD tps={liveTps} tokenCount={liveTokens} agentMode={agentOn} />
                 )}
+                {/* Hallucination warning for AI responses with technical claims */}
+                {msg.role === "assistant" && !streaming && !msg.council && !msg.godmode && msg.content.length > 80 && (() => {
+                  const c = msg.content.toLowerCase();
+                  const hasTech = /\b(exploit|payload|cve-|shell|vulnerability|0day|zero.?day|poc|proof.of.concept|reverse shell|buffer overflow|rce|lfi|sqli|xss|bypass|privilege escalation)\b/.test(c);
+                  if (!hasTech) return null;
+                  const isAr = state.settings.language === "ar";
+                  return (
+                    <div className="mt-2 flex items-start gap-1.5 text-[10px] text-amber-400/80 bg-amber-400/5 border border-amber-400/15 rounded-lg px-2.5 py-1.5">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3 shrink-0 mt-0.5"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                      <span className="font-mono">
+                        {isAr
+                          ? "تحذير: هذا المحتوى التقني قد يحتوي على أخطاء أو ثغرات في المعلومات. تحقق دائماً من أي استغلالات أو CVEs باستخدام مصادر موثوقة قبل التطبيق."
+                          : "AI may hallucinate — verify exploits, CVE details, and technical claims against authoritative sources (NVD, vendor advisories) before use."}
+                      </span>
+                    </div>
+                  );
+                })()}
                 {msg.autoTune && msg.role === "assistant" && (
                   <div className="mt-2 flex items-center gap-1.5 text-[10px] font-mono text-muted-foreground">
                     <Sliders className="w-3 h-3 text-primary" />
