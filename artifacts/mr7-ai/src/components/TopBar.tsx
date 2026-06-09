@@ -112,16 +112,26 @@ export function TopBar({ onMenuClick, onOpenPricing, onOpenToolsHub, onOpenHelp,
   );
 
   return (
-    <header className="CHAT-GPT-topbar h-14 flex items-center justify-between px-2 sm:px-3 sticky top-0 z-30 relative"
+    <header className="CHAT-GPT-topbar h-14 flex items-center justify-between px-2 sm:px-3 sticky top-0 z-30 relative overflow-hidden"
       style={{
-        background: "linear-gradient(180deg, rgba(10,10,16,0.98) 0%, rgba(6,6,10,0.97) 100%)",
-        borderBottom: "1px solid rgba(226,18,39,0.15)",
-        boxShadow: "0 1px 0 rgba(226,18,39,0.12), 0 4px 30px rgba(0,0,0,0.5)",
-        backdropFilter: "blur(20px)",
+        background: "linear-gradient(180deg, rgba(10,10,18,0.99) 0%, rgba(7,7,12,0.98) 100%)",
+        borderBottom: "1px solid rgba(226,18,39,0.18)",
+        boxShadow: "0 1px 0 rgba(226,18,39,0.14), 0 4px 40px rgba(0,0,0,0.6), 0 0 80px rgba(226,18,39,0.03)",
+        backdropFilter: "blur(24px)",
       }}>
-      {/* Topbar bottom neon line */}
+      {/* Topbar bottom neon line — static */}
       <div className="absolute inset-x-0 bottom-0 h-px pointer-events-none"
-        style={{ background: "linear-gradient(90deg, transparent 0%, rgba(226,18,39,0.5) 25%, rgba(255,255,255,0.3) 50%, rgba(226,18,39,0.5) 75%, transparent 100%)" }} />
+        style={{ background: "linear-gradient(90deg, transparent 0%, rgba(226,18,39,0.45) 25%, rgba(255,255,255,0.25) 50%, rgba(226,18,39,0.45) 75%, transparent 100%)" }} />
+      {/* Topbar bottom neon line — animated travel */}
+      <div className="absolute bottom-0 h-px pointer-events-none"
+        style={{
+          left: "-30%", width: "30%",
+          background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.6), rgba(226,18,39,0.9), rgba(255,255,255,0.6), transparent)",
+          animation: "topbar-travel 4s linear infinite",
+        }} />
+      {/* Subtle scanline overlay */}
+      <div className="absolute inset-0 pointer-events-none opacity-[0.015]"
+        style={{ backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(226,18,39,0.5) 3px, rgba(226,18,39,0.5) 4px)", backgroundSize: "100% 4px" }} />
 
       {/* LEFT: menu + model selector */}
       <div className="flex items-center gap-1 flex-shrink-0">

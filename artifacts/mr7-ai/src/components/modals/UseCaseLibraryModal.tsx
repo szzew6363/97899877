@@ -301,38 +301,59 @@ export function UseCaseLibraryModal({ open, onOpenChange, onInject }: Props) {
       ctx.fillStyle = "#050505";
       ctx.fillRect(0, 0, W, H);
 
-      // 3D perspective grid
-      gridOffset = (gridOffset + 0.3) % 60;
+      // Enhanced 3D perspective grid with dual-color and depth
+      gridOffset = (gridOffset + 0.55) % 60;
       const vanishX = W / 2;
-      const vanishY = H * 0.35;
-      const gridLines = 20;
+      const vanishY = H * 0.28;
+      const gridLines = 28;
 
       ctx.save();
+      // Primary radial-perspective lines
       for (let i = 0; i <= gridLines; i++) {
         const t = i / gridLines;
         const xBottom = t * W;
-        const alpha = 0.03 + (1 - Math.abs(t - 0.5) * 2) * 0.06;
-        ctx.strokeStyle = `rgba(226,18,39,${alpha})`;
-        ctx.lineWidth = 0.5;
+        const center = Math.abs(t - 0.5) * 2; // 0 at center, 1 at edge
+        const alpha = 0.02 + (1 - center) * 0.09;
+        const useBlue = i % 7 === 0;
+        ctx.strokeStyle = useBlue ? `rgba(59,130,246,${alpha * 0.8})` : `rgba(226,18,39,${alpha})`;
+        ctx.lineWidth = i % 7 === 0 ? 0.8 : 0.4;
         ctx.beginPath();
         ctx.moveTo(xBottom, H);
         ctx.lineTo(vanishX, vanishY);
         ctx.stroke();
       }
 
-      const horizLines = 10;
+      // Horizontal perspective rings with scroll
+      const horizLines = 16;
       for (let j = 0; j <= horizLines; j++) {
-        const frac = (j / horizLines + gridOffset / (H * 0.65)) % 1;
+        const frac = (j / horizLines + gridOffset / (H * 0.72)) % 1;
         const perspY = vanishY + frac * (H - vanishY);
-        const halfW = ((perspY - vanishY) / (H - vanishY)) * (W / 2);
-        const alpha = frac * 0.08;
-        ctx.strokeStyle = `rgba(226,18,39,${alpha})`;
-        ctx.lineWidth = 0.5;
+        const halfW = ((perspY - vanishY) / (H - vanishY)) * (W * 0.54);
+        const alpha = frac * 0.14;
+        const accent = j % 4 === 0;
+        ctx.strokeStyle = accent ? `rgba(0,229,255,${alpha * 0.7})` : `rgba(226,18,39,${alpha})`;
+        ctx.lineWidth = accent ? 0.8 : 0.4;
         ctx.beginPath();
         ctx.moveTo(vanishX - halfW, perspY);
         ctx.lineTo(vanishX + halfW, perspY);
         ctx.stroke();
       }
+
+      // Vanishing point glow
+      const vpGrad = ctx.createRadialGradient(vanishX, vanishY, 0, vanishX, vanishY, 120);
+      vpGrad.addColorStop(0, "rgba(226,18,39,0.12)");
+      vpGrad.addColorStop(0.5, "rgba(226,18,39,0.04)");
+      vpGrad.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = vpGrad;
+      ctx.fillRect(vanishX - 120, vanishY - 80, 240, 200);
+
+      // Corner glows
+      const cg1 = ctx.createRadialGradient(0, H, 0, 0, H, W * 0.4);
+      cg1.addColorStop(0, "rgba(226,18,39,0.07)"); cg1.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = cg1; ctx.fillRect(0, 0, W, H);
+      const cg2 = ctx.createRadialGradient(W, H, 0, W, H, W * 0.4);
+      cg2.addColorStop(0, "rgba(59,130,246,0.05)"); cg2.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = cg2; ctx.fillRect(0, 0, W, H);
       ctx.restore();
 
       // Floating particles with connections
@@ -383,9 +404,9 @@ export function UseCaseLibraryModal({ open, onOpenChange, onInject }: Props) {
       ctx.fillStyle = scanGrad;
       ctx.fillRect(0, scanLine - 40, W, 45);
 
-      // Top hexagon grid overlay (subtle)
+      // Top hexagon grid overlay (more visible)
       ctx.save();
-      ctx.globalAlpha = 0.015;
+      ctx.globalAlpha = 0.04;
       ctx.strokeStyle = "#00e5ff";
       ctx.lineWidth = 0.5;
       const hexR = 30;
@@ -452,12 +473,17 @@ export function UseCaseLibraryModal({ open, onOpenChange, onInject }: Props) {
         onClick={(e) => { if (e.target === e.currentTarget) onOpenChange(false); }}
       >
         <motion.div
-          initial={{ opacity: 0, scale: 0.96, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.96, y: 20 }}
-          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+          initial={{ opacity: 0, scale: 0.93, y: 32, rotateX: -6 }}
+          animate={{ opacity: 1, scale: 1, y: 0, rotateX: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 20, rotateX: 3 }}
+          transition={{ type: "spring", stiffness: 280, damping: 28 }}
           className="relative w-full max-w-7xl m-4 rounded-2xl overflow-hidden flex flex-col"
-          style={{ border: "1px solid rgba(226,18,39,0.25)", boxShadow: "0 0 80px rgba(226,18,39,0.15), 0 0 20px rgba(0,0,0,0.8)", background: "#080808" }}
+          style={{
+            border: "1px solid rgba(226,18,39,0.3)",
+            boxShadow: "0 0 0 1px rgba(255,255,255,0.04), 0 0 120px rgba(226,18,39,0.18), 0 0 60px rgba(226,18,39,0.1), 0 40px 80px rgba(0,0,0,0.9)",
+            background: "#060606",
+            transformStyle: "preserve-3d",
+          }}
         >
           {/* Animated Canvas Background */}
           <canvas
@@ -548,39 +574,59 @@ export function UseCaseLibraryModal({ open, onOpenChange, onInject }: Props) {
                     <motion.div
                       key={uc.id}
                       layout
-                      initial={{ opacity: 0, y: 20, rotateX: -10 }}
-                      animate={{ opacity: 1, y: 0, rotateX: 0 }}
-                      exit={{ opacity: 0, scale: 0.9 }}
-                      transition={{ delay: i * 0.03, type: "spring", stiffness: 300, damping: 25 }}
+                      initial={{ opacity: 0, y: 24, rotateX: -12, scale: 0.96 }}
+                      animate={{ opacity: 1, y: 0, rotateX: 0, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.88, rotateX: 8 }}
+                      transition={{ delay: i * 0.028, type: "spring", stiffness: 320, damping: 26 }}
                       onMouseEnter={() => setHovered(uc.id)}
                       onMouseLeave={() => setHovered(null)}
                       style={{
                         transformStyle: "preserve-3d",
-                        perspective: "800px",
-                        transform: isHovered ? "translateY(-4px) rotateX(2deg)" : "translateY(0) rotateX(0)",
-                        transition: "transform 0.3s ease",
+                        perspective: "700px",
+                        transform: isHovered
+                          ? "translateY(-7px) rotateX(3.5deg) rotateY(-1.5deg) scale(1.025)"
+                          : "translateY(0) rotateX(0) rotateY(0) scale(1)",
+                        transition: "transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1)",
+                        willChange: "transform",
                       }}
                     >
                       <div
                         className="rounded-xl overflow-hidden cursor-pointer relative"
                         style={{
-                          border: `1px solid ${isHovered ? color + "50" : "rgba(255,255,255,0.06)"}`,
+                          border: `1px solid ${isHovered ? color + "55" : "rgba(255,255,255,0.07)"}`,
                           background: isHovered
-                            ? `linear-gradient(135deg, rgba(${hexToRgb(color)},0.08) 0%, rgba(8,8,8,0.95) 60%)`
-                            : "rgba(13,13,13,0.9)",
-                          boxShadow: isHovered ? `0 8px 30px ${color}20, 0 0 1px ${color}40` : "0 2px 10px rgba(0,0,0,0.5)",
-                          transition: "all 0.3s ease",
+                            ? `linear-gradient(145deg, rgba(${hexToRgb(color)},0.1) 0%, rgba(10,10,16,0.97) 55%, rgba(${hexToRgb(color)},0.04) 100%)`
+                            : "rgba(11,11,17,0.95)",
+                          boxShadow: isHovered
+                            ? `0 12px 40px ${color}28, 0 0 0 1px ${color}30, 0 2px 60px ${color}10, inset 0 1px 0 rgba(255,255,255,0.06)`
+                            : "0 2px 12px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.03)",
+                          transition: "all 0.32s ease",
                         }}
                         onClick={() => setExpanded(isExpanded ? null : uc.id)}
                       >
-                        {/* Glow corner on hover */}
+                        {/* Holographic shimmer on hover */}
                         {isHovered && (
                           <div
-                            className="absolute top-0 right-0 w-20 h-20 pointer-events-none"
-                            style={{
-                              background: `radial-gradient(circle at top right, ${color}25, transparent 70%)`,
-                            }}
-                          />
+                            className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden"
+                            style={{ zIndex: 1 }}
+                          >
+                            <div style={{
+                              position: "absolute", inset: 0,
+                              background: `linear-gradient(108deg, transparent 30%, ${color}14 50%, transparent 70%)`,
+                              backgroundSize: "200% 100%",
+                              animation: "shimmer-scan 2s linear infinite",
+                            }} />
+                          </div>
+                        )}
+
+                        {/* Multi-corner glows on hover */}
+                        {isHovered && (
+                          <>
+                            <div className="absolute top-0 right-0 w-28 h-28 pointer-events-none"
+                              style={{ background: `radial-gradient(circle at top right, ${color}22, transparent 70%)` }} />
+                            <div className="absolute bottom-0 left-0 w-20 h-20 pointer-events-none"
+                              style={{ background: `radial-gradient(circle at bottom left, ${color}15, transparent 70%)` }} />
+                          </>
                         )}
 
                         {/* Card Top Bar */}

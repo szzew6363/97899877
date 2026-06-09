@@ -325,7 +325,14 @@ export function Sidebar({ isOpen, onClose, onOpenPricing, onOpenApi, onOpenTool,
         {/* Tools Hub */}
         <button
           onClick={() => { onOpenToolsHub(); onClose(); }}
-          className="w-full flex items-center justify-between bg-gradient-to-r from-emerald-500/10 to-emerald-500/5 hover:from-emerald-500/20 hover:to-emerald-500/10 border border-emerald-500/30 rounded-xl px-3 py-2.5 transition-colors"
+          className="w-full flex items-center justify-between rounded-xl px-3 py-2.5 transition-all group relative overflow-hidden"
+          style={{
+            background: "linear-gradient(135deg, rgba(16,185,129,0.1), rgba(16,185,129,0.04))",
+            border: "1px solid rgba(16,185,129,0.28)",
+            boxShadow: "0 0 14px rgba(16,185,129,0.06), inset 0 1px 0 rgba(255,255,255,0.04)",
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = "linear-gradient(135deg, rgba(16,185,129,0.18), rgba(16,185,129,0.08))"; e.currentTarget.style.boxShadow = "0 0 20px rgba(16,185,129,0.14), inset 0 1px 0 rgba(255,255,255,0.06)"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = "linear-gradient(135deg, rgba(16,185,129,0.1), rgba(16,185,129,0.04))"; e.currentTarget.style.boxShadow = "0 0 14px rgba(16,185,129,0.06), inset 0 1px 0 rgba(255,255,255,0.04)"; e.currentTarget.style.transform = ""; }}
         >
           <div className="flex items-center gap-2">
             <LayoutGrid className="w-4 h-4 text-emerald-400" />
@@ -336,10 +343,18 @@ export function Sidebar({ isOpen, onClose, onOpenPricing, onOpenApi, onOpenTool,
 
         {/* Featured Tools */}
         <div className="space-y-2">
-          <h3 className="px-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Featured Tools</h3>
-          <button onClick={onOpenTool} className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-accent transition-colors">
+          <h3 className="px-2 text-[11px] font-semibold uppercase tracking-wider flex items-center gap-1.5"
+            style={{ color: "rgba(226,18,39,0.7)" }}>
+            <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#e21227", boxShadow: "0 0 6px rgba(226,18,39,0.8)", animation: "neon-pulse 2s ease-in-out infinite" }} />
+            Featured Tools
+          </h3>
+          <button onClick={onOpenTool} className="w-full flex items-center justify-between p-2 rounded-xl transition-all group"
+            style={{ border: "1px solid transparent" }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(16,185,129,0.06)"; e.currentTarget.style.borderColor = "rgba(16,185,129,0.15)"; e.currentTarget.style.transform = "translateX(2px)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = ""; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.transform = ""; }}>
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500 group-hover:scale-110 transition-transform"
+                style={{ border: "1px solid rgba(16,185,129,0.2)", boxShadow: "0 0 8px rgba(16,185,129,0.08)" }}>
                 <TerminalSquare className="w-4 h-4" />
               </div>
               <div className="text-left">
@@ -347,7 +362,7 @@ export function Sidebar({ isOpen, onClose, onOpenPricing, onOpenApi, onOpenTool,
                 <div className="text-[11px] text-muted-foreground">AI Pentest Automation</div>
               </div>
             </div>
-            <span className="bg-primary text-white text-[10px] font-bold px-1.5 py-0.5 rounded mr-1">HOT</span>
+            <span className="bg-primary text-white text-[10px] font-bold px-1.5 py-0.5 rounded mr-1" style={{ boxShadow: "0 0 8px rgba(226,18,39,0.4)" }}>HOT</span>
           </button>
 
           <button onClick={() => onOpenUtility("Agent IDE")} className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-accent transition-colors">
@@ -380,7 +395,11 @@ export function Sidebar({ isOpen, onClose, onOpenPricing, onOpenApi, onOpenTool,
         {/* AI Models */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between px-2">
-            <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">AI Models</h3>
+            <h3 className="text-[11px] font-semibold uppercase tracking-wider flex items-center gap-1.5"
+              style={{ color: "rgba(59,130,246,0.75)" }}>
+              <span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: "#3b82f6", boxShadow: "0 0 5px rgba(59,130,246,0.9)" }} />
+              AI Models
+            </h3>
             <span className="border border-emerald-500/60 text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded-full">{AI_MODELS.length}</span>
           </div>
           <div className="max-h-[min(60vh,560px)] overflow-y-auto pr-1 space-y-1">
@@ -391,17 +410,24 @@ export function Sidebar({ isOpen, onClose, onOpenPricing, onOpenApi, onOpenTool,
                 <button
                   key={m.id}
                   onClick={() => handleSelectModel(m.id)}
-                  className={`w-full flex items-center justify-between p-2 rounded-xl transition-colors ${active ? "bg-accent" : "hover:bg-accent"}`}
+                  className="w-full flex items-center justify-between p-2 rounded-xl transition-all"
+                  style={active ? {
+                    background: "rgba(226,18,39,0.08)",
+                    border: "1px solid rgba(226,18,39,0.25)",
+                    boxShadow: "0 0 12px rgba(226,18,39,0.08), inset 0 1px 0 rgba(255,255,255,0.04)",
+                  } : { border: "1px solid transparent" }}
+                  onMouseEnter={(e) => { if (!active) { e.currentTarget.style.background = "rgba(255,255,255,0.04)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)"; } }}
+                  onMouseLeave={(e) => { if (!active) { e.currentTarget.style.background = ""; e.currentTarget.style.borderColor = "transparent"; } }}
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className={`w-8 h-8 rounded-lg bg-card border border-border flex items-center justify-center flex-shrink-0 ${m.color}`}>
+                    <div className={`w-8 h-8 rounded-lg bg-card border flex items-center justify-center flex-shrink-0 transition-all ${m.color} ${active ? "border-primary/30 shadow-[0_0_8px_rgba(226,18,39,0.2)] scale-105" : "border-border"}`}>
                       <Icon className="w-4 h-4" />
                     </div>
-                    <span className="font-medium text-foreground text-[13px] truncate">{m.id}</span>
+                    <span className={`font-medium text-[13px] truncate transition-colors ${active ? "text-white" : "text-foreground"}`}>{m.id}</span>
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
                     {m.badge && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-primary/15 text-primary border border-primary/30">{m.badge}</span>}
-                    {active && <span className="w-2 h-2 rounded-full bg-primary mr-1" />}
+                    {active && <span className="w-2 h-2 rounded-full bg-primary mr-1" style={{ boxShadow: "0 0 6px rgba(226,18,39,0.8)" }} />}
                   </div>
                 </button>
               );
@@ -472,13 +498,27 @@ export function Sidebar({ isOpen, onClose, onOpenPricing, onOpenApi, onOpenTool,
             <button
               key={tool.label}
               onClick={() => { onOpenUtility(tool.label as UtilityTool); onClose(); }}
-              className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-accent transition-colors group"
+              className="w-full flex items-center justify-between p-2 rounded-xl transition-all group"
+              style={{ border: "1px solid transparent" }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "rgba(255,255,255,0.04)";
+                e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)";
+                e.currentTarget.style.transform = "translateX(2px) translateY(-1px)";
+                e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.3)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "";
+                e.currentTarget.style.borderColor = "transparent";
+                e.currentTarget.style.transform = "";
+                e.currentTarget.style.boxShadow = "";
+              }}
             >
               <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-lg bg-card border border-border flex items-center justify-center ${tool.color ?? "text-foreground/80"}`}>
+                <div className={`w-8 h-8 rounded-lg bg-card border border-border flex items-center justify-center transition-all group-hover:scale-110 group-hover:border-white/15 ${tool.color ?? "text-foreground/80"}`}
+                  style={{ boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)" }}>
                   <tool.icon className="w-4 h-4" />
                 </div>
-                <span className="font-medium text-foreground text-[13px]">{tool.label}</span>
+                <span className="font-medium text-foreground text-[13px] group-hover:text-white/90 transition-colors">{tool.label}</span>
               </div>
             </button>
           ))}
