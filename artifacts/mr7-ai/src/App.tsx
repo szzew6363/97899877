@@ -131,6 +131,7 @@ import { MonacoEditorModal } from "./components/modals/MonacoEditorModal";
 import { DefensiveAIModal } from "./components/modals/DefensiveAIModal";
 import { OpenSkynetModal } from "./components/modals/OpenSkynetModal";
 import { WarRoomModal } from "./components/modals/WarRoomModal";
+import { RedTeamDashboard } from "./components/modals/RedTeamDashboard";
 import { ExploitChainModal } from "./components/modals/ExploitChainModal";
 import { CyberHeatmapHUD } from "./components/CyberHeatmapHUD";
 import { LiveThreatTicker } from "./components/LiveThreatTicker";
@@ -317,6 +318,7 @@ function AppContent() {
   const [exploitChainOpen, setExploitChainOpen] = useState(false);
   const [deepSearchOpen, setDeepSearchOpen] = useState(false);
   const [chainInvestigationOpen, setChainInvestigationOpen] = useState(false);
+  const [redTeamDashOpen, setRedTeamDashOpen] = useState(false);
 
   const [pipelineKeyRef] = useState(() => ({ n: 0 }));
   const [ragPipelineDoc, setRagPipelineDoc] = useState<{ text: string; name: string; key: number } | undefined>();
@@ -475,6 +477,7 @@ function AppContent() {
           onOpenWarRoom={() => setWarRoomOpen(true)}
           onOpenDeepSearch={() => setDeepSearchOpen(true)}
           onOpenChainInvestigation={() => setChainInvestigationOpen(true)}
+          onOpenRedTeam={() => setRedTeamDashOpen(true)}
         />
         <ChatView onOpenOsintDash={() => setOsintDashOpen(true)} />
         {compareOpen && <CompareView onClose={() => setCompareOpen(false)} />}
@@ -614,6 +617,7 @@ function AppContent() {
       <DefensiveAIModal open={defensiveAIOpen} onOpenChange={setDefensiveAIOpen} />
       <OpenSkynetModal open={openSkynetOpen} onOpenChange={setOpenSkynetOpen} />
       <WarRoomModal open={warRoomOpen} onOpenChange={setWarRoomOpen} />
+      <RedTeamDashboard open={redTeamDashOpen} onOpenChange={setRedTeamDashOpen} />
       <ExploitChainModal open={exploitChainOpen} onOpenChange={setExploitChainOpen} />
       <DeepSearchModal open={deepSearchOpen} onOpenChange={setDeepSearchOpen} />
       <ChainInvestigationModal open={chainInvestigationOpen} onOpenChange={setChainInvestigationOpen} />

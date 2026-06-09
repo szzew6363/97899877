@@ -316,7 +316,7 @@ export function ChainInvestigationModal({ open, onOpenChange }: Props) {
     setIsAnalyzing(false);
   }, [nodes, links, toast]);
 
-  // ── export ────────────────────────────────────────────
+  // ── export MD ─────────────────────────────────────────
   function exportReport() {
     const lines = [
       "# تقرير تحقيق السلسلة",
@@ -331,6 +331,133 @@ export function ChainInvestigationModal({ open, onOpenChange }: Props) {
     const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "chain-investigation.md"; a.click();
   }
+
+  // ── export JSON ───────────────────────────────────────
+  function exportJSON() {
+    const data = {
+      exported: new Date().toISOString(),
+      title: "Chain Investigation Report",
+      stats: { totalNodes: nodes.length, totalLinks: links.length, overallRisk: totalRisk },
+      nodes: nodes.map((n) => ({
+        id: n.id, type: n.type, label: n.label, value: n.value || null,
+        notes: n.notes || null, risk: n.risk ?? "low",
+        position: n.x !== undefined ? { x: n.x, y: n.y } : null,
+        threatIntel: n.intel && !n.intel.loading ? {
+          geoCountry: n.intel.geoCountry, geoCity: n.intel.geoCity,
+          isp: n.intel.isp, asnumber: n.intel.asnumber,
+          reputationScore: n.intel.reputationScore,
+          openPorts: n.intel.openPorts ?? [],
+          cves: n.intel.cves ?? [],
+          malwareFamily: n.intel.malwareFamily,
+          lastSeen: n.intel.lastSeen,
+          indicators: n.intel.indicators ?? [],
+          summary: n.intel.summary,
+        } : null,
+      })),
+      connections: links.map((l) => {
+        const f = nodes.find((n) => n.id === l.from);
+        const t = nodes.find((n) => n.id === l.to);
+        return { fromId: l.from, toId: l.to, fromLabel: f?.label ?? "?", toLabel: t?.label ?? "?", relation: l.relation, strength: l.strength };
+      }),
+      aiAnalysis: analysis ? { riskScore: analysis.riskScore, summary: analysis.summary } : null,
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json;charset=utf-8" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `chain-investigation-${Date.now()}.json`; a.click();
+  }
+
+  // ── export PDF ────────────────────────────────────────
+  function exportPDF() {
+    const riskColor = (r: RiskLevel | undefined) => RISK_CONFIG[r ?? "low"].color;
+    const nodesHTML = nodes.map((n) => {
+      const cfg = getNodeCfg(n.type);
+      const intel = n.intel && !n.intel.loading;
+      return `<div class="node-card">
+        <div class="node-header" style="border-left:3px solid ${riskColor(n.risk)}">
+          <span class="node-type" style="color:${cfg.color}">[${cfg.label}]</span>
+          <span class="node-label">${n.label}</span>
+          <span class="node-risk" style="color:${riskColor(n.risk)}">${RISK_CONFIG[n.risk ?? "low"].label}</span>
+        </div>
+        ${n.value ? `<div class="node-value">${n.value}</div>` : ""}
+        ${n.notes ? `<div class="node-notes">${n.notes}</div>` : ""}
+        ${intel ? `<div class="intel-block">
+          ${n.intel!.geoCountry ? `<span class="intel-tag">📍 ${n.intel!.geoCountry}${n.intel!.geoCity ? ", " + n.intel!.geoCity : ""}</span>` : ""}
+          ${n.intel!.reputationScore !== undefined ? `<span class="intel-tag" style="color:${riskColor(n.risk)}">Score: ${n.intel!.reputationScore}/100</span>` : ""}
+          ${n.intel!.summary ? `<p class="intel-summary">${n.intel!.summary}</p>` : ""}
+        </div>` : ""}
+      </div>`;
+    }).join("");
+    const linksHTML = links.map((l) => {
+      const f = nodes.find((n) => n.id === l.from);
+      const t = nodes.find((n) => n.id === l.to);
+      return `<div class="link-row">
+        <span class="link-from">${f?.label ?? "؟"}</span>
+        <span class="link-arrow">→</span>
+        <span class="link-rel">[${l.relation}]</span>
+        <span class="link-arrow">→</span>
+        <span class="link-to">${t?.label ?? "؟"}</span>
+        <span class="link-strength">(${l.strength})</span>
+      </div>`;
+    }).join("");
+    const analysisHTML = analysis ? `<div class="analysis-block">
+      <div class="analysis-score" style="color:${totalRisk >= 65 ? "#e21227" : totalRisk >= 35 ? "#f59e0b" : "#10b981"}">
+        درجة الخطر: ${analysis.riskScore}/100
+      </div>
+      <pre class="analysis-text">${analysis.summary}</pre>
+    </div>` : "<p class='no-analysis'>لم يتم التحليل بعد</p>";
+
+    const html = `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
+<title>تقرير تحقيق السلسلة — ${new Date().toLocaleDateString("ar-SA")}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #fff; color: #111; padding: 32px; max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 22px; color: #e21227; border-bottom: 2px solid #e21227; padding-bottom: 8px; margin-bottom: 4px; }
+  .meta { font-size: 11px; color: #888; margin-bottom: 24px; }
+  .stats { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+  .stat { background: #f5f5f5; border-radius: 8px; padding: 10px 18px; text-align: center; }
+  .stat-val { font-size: 22px; font-weight: 900; }
+  .stat-lab { font-size: 10px; color: #888; text-transform: uppercase; }
+  h2 { font-size: 15px; color: #333; margin: 24px 0 10px; border-right: 3px solid #e21227; padding-right: 8px; }
+  .node-card { background: #fafafa; border: 1px solid #e5e5e5; border-radius: 8px; margin-bottom: 10px; padding: 12px; }
+  .node-header { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .node-type { font-size: 11px; font-weight: 700; }
+  .node-label { font-size: 13px; font-weight: 800; flex: 1; }
+  .node-risk { font-size: 11px; font-weight: 700; }
+  .node-value { font-size: 11px; color: #555; margin-bottom: 4px; font-family: monospace; }
+  .node-notes { font-size: 11px; color: #777; font-style: italic; }
+  .intel-block { background: #f0f0f0; border-radius: 6px; padding: 8px; margin-top: 8px; }
+  .intel-tag { display: inline-block; font-size: 10px; background: #e0e0e0; border-radius: 4px; padding: 2px 6px; margin: 2px; }
+  .intel-summary { font-size: 11px; color: #555; margin-top: 6px; line-height: 1.5; }
+  .link-row { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #f8f8f8; border-radius: 6px; margin-bottom: 6px; font-size: 12px; }
+  .link-from, .link-to { font-weight: 700; }
+  .link-arrow { color: #aaa; }
+  .link-rel { color: #3b82f6; font-style: italic; }
+  .link-strength { color: #888; font-size: 10px; }
+  .analysis-block { background: #fffbf0; border: 1px solid #fbbf24; border-radius: 8px; padding: 16px; }
+  .analysis-score { font-size: 18px; font-weight: 900; margin-bottom: 10px; }
+  .analysis-text { font-size: 12px; white-space: pre-wrap; line-height: 1.7; color: #333; }
+  .no-analysis { color: #aaa; font-style: italic; font-size: 12px; }
+  @media print { body { padding: 16px; } }
+</style></head><body>
+<h1>تقرير تحقيق السلسلة</h1>
+<div class="meta">التاريخ: ${new Date().toLocaleDateString("ar-SA")} · الوقت: ${new Date().toLocaleTimeString("ar-SA")} · منشئ: KaliGPT / CHAIN INVESTIGATION</div>
+<div class="stats">
+  <div class="stat"><div class="stat-val" style="color:#e21227">${nodes.length}</div><div class="stat-lab">عقد</div></div>
+  <div class="stat"><div class="stat-val" style="color:#3b82f6">${links.length}</div><div class="stat-lab">اتصالات</div></div>
+  <div class="stat"><div class="stat-val" style="color:${totalRisk >= 65 ? "#e21227" : totalRisk >= 35 ? "#f59e0b" : "#10b981"}">${totalRisk}%</div><div class="stat-lab">خطر</div></div>
+</div>
+<h2>العقد (${nodes.length})</h2>${nodesHTML || "<p style='color:#aaa;font-size:12px'>لا توجد عقد</p>"}
+<h2>الاتصالات (${links.length})</h2>${linksHTML || "<p style='color:#aaa;font-size:12px'>لا توجد اتصالات</p>"}
+<h2>التحليل الشامل بالذكاء الاصطناعي</h2>${analysisHTML}
+</body></html>`;
+
+    const win = window.open("", "_blank", "width=900,height=1100,scrollbars=yes");
+    if (!win) { toast({ description: "يُرجى السماح بالنوافذ المنبثقة لتصدير PDF" }); return; }
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    setTimeout(() => { win.print(); }, 600);
+  }
+
   function copyNodes() {
     void navigator.clipboard.writeText(nodes.map((n) => `[${getNodeCfg(n.type).label}] ${n.label}: ${n.value || ""}`).join("\n"));
     setCopied(true); setTimeout(() => setCopied(false), 2000);
@@ -384,9 +511,25 @@ export function ChainInvestigationModal({ open, onOpenChange }: Props) {
             <button onClick={copyNodes} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] bg-[#151515] border border-[#252525] text-[#666] hover:text-white transition-all">
               {copied ? <Check size={11} className="text-green-400" /> : <Copy size={11} />}
             </button>
+            <button onClick={exportJSON} disabled={nodes.length === 0}
+              title="تصدير JSON — العقد والاتصالات والذكاء الاصطناعي"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] border transition-all disabled:opacity-30 font-mono"
+              style={{ background: "rgba(59,130,246,0.08)", borderColor: "rgba(59,130,246,0.3)", color: "#3b82f6" }}>
+              <Download size={11} />
+              <span>JSON</span>
+            </button>
+            <button onClick={exportPDF} disabled={nodes.length === 0}
+              title="تصدير PDF — تقرير مطبوع كامل"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] border transition-all disabled:opacity-30 font-mono"
+              style={{ background: "rgba(226,18,39,0.08)", borderColor: "rgba(226,18,39,0.3)", color: "#e21227" }}>
+              <Download size={11} />
+              <span>PDF</span>
+            </button>
             <button onClick={exportReport} disabled={nodes.length === 0}
+              title="تصدير Markdown"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] bg-[#151515] border border-[#252525] text-[#666] hover:text-white transition-all disabled:opacity-30">
               <Download size={11} />
+              <span className="text-[10px]">MD</span>
             </button>
             <button onClick={() => onOpenChange(false)}
               className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#151515] border border-[#1f1f1f] text-[#555] hover:text-white hover:border-[#e21227] transition-all">

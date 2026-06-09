@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Menu, Sparkles, Coins, LayoutGrid, HelpCircle, Search, Zap, Brain, Server, Bot, Hexagon, Shield, Columns3, Crosshair, BarChart2, ChevronLeft, ChevronRight, Wifi, Target, GitBranch } from "lucide-react";
+import { Menu, Sparkles, Coins, LayoutGrid, HelpCircle, Search, Zap, Brain, Server, Bot, Hexagon, Shield, Columns3, Crosshair, BarChart2, ChevronLeft, ChevronRight, Wifi, Target, GitBranch, Bug } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useStore, ProviderName } from "@/lib/store";
 import { useT } from "@/lib/i18n";
@@ -50,9 +50,10 @@ interface TopBarProps {
   onOpenWarRoom?: () => void;
   onOpenDeepSearch?: () => void;
   onOpenChainInvestigation?: () => void;
+  onOpenRedTeam?: () => void;
 }
 
-export function TopBar({ onMenuClick, onOpenPricing, onOpenToolsHub, onOpenHelp, onOpenPersonaEditor, onOpenLocalModel, onOpenAgent, onOpenNexus, onOpenArsenal, onOpenProviderSettings, onOpenModelCompare, onOpenNeuralMatrix, onOpenAnalytics, onOpenWarRoom, onOpenDeepSearch, onOpenChainInvestigation }: TopBarProps) {
+export function TopBar({ onMenuClick, onOpenPricing, onOpenToolsHub, onOpenHelp, onOpenPersonaEditor, onOpenLocalModel, onOpenAgent, onOpenNexus, onOpenArsenal, onOpenProviderSettings, onOpenModelCompare, onOpenNeuralMatrix, onOpenAnalytics, onOpenWarRoom, onOpenDeepSearch, onOpenChainInvestigation, onOpenRedTeam }: TopBarProps) {
   const { state, dispatch } = useStore();
   const { t } = useT();
   const { toast } = useToast();
@@ -401,6 +402,30 @@ export function TopBar({ onMenuClick, onOpenPricing, onOpenToolsHub, onOpenHelp,
                 aria-label="Chain Investigation"
               >
                 <GitBranch className="w-4 h-4" />
+              </button>
+            </>
+          )}
+
+          {/* Red Team Dashboard */}
+          {onOpenRedTeam && (
+            <>
+              <button
+                onClick={onOpenRedTeam}
+                className="flex-shrink-0 hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black whitespace-nowrap tracking-wider transition-all hover:scale-105"
+                style={{ background: "rgba(226,18,39,0.18)", border: "1px solid rgba(226,18,39,0.65)", color: "#e21227", boxShadow: "0 0 20px rgba(226,18,39,0.3)" }}
+                aria-label="Red Team Dashboard"
+                title="AI Red Team Dashboard — لوحة الاختراق المتكاملة"
+              >
+                <Bug className="w-3.5 h-3.5" />
+                <span>Red Team</span>
+              </button>
+              <button
+                onClick={onOpenRedTeam}
+                className="flex-shrink-0 sm:hidden p-2 rounded-lg transition-colors"
+                style={{ color: "#e21227" }}
+                aria-label="Red Team Dashboard"
+              >
+                <Bug className="w-4 h-4" />
               </button>
             </>
           )}

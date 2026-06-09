@@ -39,6 +39,7 @@ import { HyperFusionModal } from "./modals/HyperFusionModal";
 import { NeuralPulseBackground } from "./NeuralPulseBackground";
 import { FuturisticBackground3D } from "./FuturisticBackground3D";
 import { ChatEmptyState } from "./ChatEmptyState";
+import { TokenCounter3D } from "./TokenCounter3D";
 
 const SLASH = [
   { cmd: "/code", hint: "Generate code for a task" },
@@ -1979,8 +1980,15 @@ export function ChatView({ onShare, onOpenOsintDash }: { onShare?: () => void; o
           </div>
 
           <div className="hidden sm:flex items-center gap-2 mb-1 justify-between">
-            <div className="text-[10px] text-muted-foreground font-mono">
-              {wordCount} word{wordCount === 1 ? "" : "s"} · {input.length}/4000 · ~{estimateTokens(input)} tok
+            <div className="flex items-center gap-3">
+              <TokenCounter3D
+                inputTokens={estimateTokens(input)}
+                totalTokens={totalTokens}
+                modelId={state.activeModel}
+              />
+              <span className="text-[9px] font-mono" style={{ color: "rgba(255,255,255,0.2)" }}>
+                {wordCount}w · {input.length}/4000
+              </span>
             </div>
             <div className="flex items-center gap-1.5">
               {state.settings.parseltongueCombo && (
