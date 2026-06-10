@@ -140,7 +140,6 @@ import { CyberWidgetsDock } from "./components/CyberWidgetsDock";
 import { SystemStatusWidget } from "./components/SystemStatusWidget";
 import { AmbientParticleField } from "./components/AmbientParticleField";
 import { HoloDataStream } from "./components/HoloDataStream";
-import { SessionRecorderWidget } from "./components/SessionRecorderWidget";
 import { IntelligenceCoreModal } from "./components/modals/IntelligenceCoreModal";
 
 const queryClient = new QueryClient();
@@ -690,8 +689,6 @@ function AppContent() {
       {/* Cyber Widgets Dock — single 3D button opening holographic 6-panel HUD */}
       <CyberWidgetsDock />
 
-      {/* Live session recorder widget */}
-      <SessionRecorderWidget />
 
       {/* Intelligence Core — 16 engine modal */}
       <IntelligenceCoreModal open={intelligenceCoreOpen} onOpenChange={setIntelligenceCoreOpen} />
