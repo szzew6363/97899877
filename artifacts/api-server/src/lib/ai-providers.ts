@@ -146,6 +146,10 @@ export function listProviders(): ProviderInfo[] {
         available = true;
       } else if (id === "custom") {
         available = !!(process.env.CUSTOM_API_KEY || process.env.CUSTOM_API_BASE_URL);
+      } else if (id === "openai") {
+        available = !!(process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY);
+      } else if (id === "anthropic") {
+        available = !!(process.env.ANTHROPIC_API_KEY || process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY);
       } else {
         available = !!process.env[cfg.envKey];
       }
@@ -174,6 +178,9 @@ export function getOpenAICompatibleClient(provider: ProviderName): OpenAI {
   } else if (provider === "personal") {
     apiKey = getPersonalKey();
     baseURL = getPersonalBase();
+  } else if (provider === "openai") {
+    apiKey = process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+    baseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || cfg.baseURL;
   } else {
     apiKey = process.env[cfg.envKey];
   }
@@ -205,7 +212,7 @@ export function getPersonalOpenAI(): OpenAI {
 
 export function getAnthropicClient(): Anthropic {
   if (_anthropic) return _anthropic;
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.ANTHROPIC_API_KEY || process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set. Add it in Secrets.");
   _anthropic = new Anthropic({ apiKey });
   return _anthropic;
