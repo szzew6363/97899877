@@ -3,8 +3,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Globe, Network, Activity, Package, BarChart3, X, Monitor,
   Layers, Radar, Wifi, Cpu, Shield, Maximize2,
-  ChevronLeft, LayoutGrid, Thermometer, Clock, Zap,
+  ChevronLeft, ChevronUp, ChevronDown, LayoutGrid, Thermometer, Clock, Zap,
   AlertTriangle, Keyboard, Radio, Square, FileJson, Download, Printer,
+  Eye, ArrowUpDown, TerminalSquare,
 } from "lucide-react";
 import { CyberGlobeWidget }       from "./CyberGlobeWidget";
 import { InteractiveGlobeWidget } from "./InteractiveGlobeWidget";
@@ -16,6 +17,7 @@ import { SysMonitorWidget }       from "./SysMonitorWidget";
 import { IdleWidget }             from "./IdleWidget";
 import { NetworkActivityPage }    from "./NetworkActivityPage";
 import { trafficBus }             from "@/lib/trafficBus";
+import type { TrafficEvent }      from "@/lib/trafficBus";
 import { sessionRecorder }        from "@/lib/sessionRecorder";
 import type { SessionEvent }      from "@/lib/sessionRecorder";
 
@@ -313,7 +315,7 @@ function DataArcCanvas({ cpu, api, thr }: { cpu: number; api: number; thr: numbe
    SATELLITE PANEL  — combined SYS MONITOR + IDLE TRACK + NET TOPOLOGY
    All three sections visible simultaneously, stacked vertically
 ══════════════════════════════════════════════════════════════════ */
-function SatellitePanel() {
+function SatellitePanel({ onExpandRec, onExpandPacket }: { onExpandRec?: () => void; onExpandPacket?: () => void }) {
   /* NET TOPO live stats */
   const [topoStats, setTopoStats] = useState({ nodes: 20, active: 14, packets: 8421, threats: 6 });
 
@@ -588,6 +590,22 @@ function SatellitePanel() {
             </span>
             <span style={{ fontSize: "7.5px", fontFamily: "monospace", color: recording ? "#e21227" : "#444", letterSpacing: "1px" }}>{fmtElapsed}</span>
             <span style={{ fontSize: "6px", fontFamily: "monospace", color: "#333", marginLeft: "2px" }}>{evCount} EV</span>
+            {/* Expand button */}
+            <button
+              onClick={e => { e.stopPropagation(); onExpandRec?.(); }}
+              title="Expand Session Recorder"
+              style={{
+                width: "16px", height: "16px", borderRadius: "4px", flexShrink: 0,
+                background: "rgba(226,18,39,0.08)", border: "1px solid rgba(226,18,39,0.25)",
+                color: "#e21227", cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                transition: "all 0.15s",
+              }}
+              onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background = "rgba(226,18,39,0.22)"; b.style.boxShadow = "0 0 8px rgba(226,18,39,0.35)"; }}
+              onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background = "rgba(226,18,39,0.08)"; b.style.boxShadow = "none"; }}
+            >
+              <ChevronUp style={{ width: "9px", height: "9px" }} />
+            </button>
           </div>
 
           {/* ── RESP / ERR / EV / SESSION ── */}
@@ -692,6 +710,468 @@ function SatellitePanel() {
         <div style={{ position: "absolute", top: 5, left: 5, width: 8, height: 8, borderTop: "1px solid rgba(0,229,255,0.35)", borderLeft: "1px solid rgba(0,229,255,0.35)", pointerEvents: "none" }} />
         <div style={{ position: "absolute", bottom: 5, right: 5, width: 8, height: 8, borderBottom: "1px solid rgba(168,85,247,0.35)", borderRight: "1px solid rgba(168,85,247,0.35)", pointerEvents: "none" }} />
       </div>
+    </motion.div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   SESSION RECORDER FULL VIEW  — expanded overlay matching screenshot
+   3D holographic · fixed floating · IDLE/REC · stats · event log
+══════════════════════════════════════════════════════════════════ */
+function SessionRecorderFullView({ onClose }: { onClose: () => void }) {
+  const [recording, setRecording] = useState(false);
+  const [events,    setEvents]    = useState<SessionEvent[]>([]);
+  const [elapsed,   setElapsed]   = useState(0);
+  const [scanY,     setScanY]     = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    const unsub = sessionRecorder.subscribe((evs: SessionEvent[]) => {
+      setEvents(evs);
+      setRecording(sessionRecorder.isRecording);
+    });
+    return unsub;
+  }, []);
+
+  useEffect(() => {
+    if (recording) {
+      timerRef.current = setInterval(() => setElapsed(Date.now() - sessionRecorder.sessionStart), 100);
+    } else {
+      if (timerRef.current) clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [recording]);
+
+  useEffect(() => {
+    const iv = setInterval(() => setScanY(p => (p + 1.2) % 100), 18);
+    return () => clearInterval(iv);
+  }, []);
+
+  const fmtT = (ms: number) => {
+    const s = Math.floor(ms / 1000);
+    return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+  };
+  const msgCount = events.filter(e => e.type === "message_received").length;
+  const errCount = events.filter(e => e.type === "error").length;
+  const evCount  = sessionRecorder.eventCount;
+
+  function dlBlob(blob: Blob, name: string) {
+    const url = URL.createObjectURL(blob); const a = document.createElement("a");
+    a.href = url; a.download = name; a.click(); URL.revokeObjectURL(url);
+  }
+  function handleToggle() { if (recording) sessionRecorder.stop(); else { sessionRecorder.start(); setElapsed(0); } }
+  function handleJSON()   { dlBlob(new Blob([sessionRecorder.exportJSON()], { type: "application/json" }), `kaligpt-${sessionRecorder.sessionId}.json`); }
+  function handleLog()    { dlBlob(sessionRecorder.exportHTMLBlob(), `kaligpt-${sessionRecorder.sessionId}.html`); }
+  function handlePdf()    { const url = URL.createObjectURL(sessionRecorder.exportHTMLBlob()); const w = window.open(url, "_blank"); if (w) { w.onload = () => { w.print(); URL.revokeObjectURL(url); }; } }
+
+  const EV_LABEL: Record<string, string> = { message_sent: "TX", message_received: "RX", model_switch: "MDL", mode_switch: "MOD", tool_use: "TOOL", error: "ERR", session_start: "START", session_stop: "STOP" };
+  const EV_COLOR: Record<string, string> = { message_sent: "#00e5ff", message_received: "#22c55e", model_switch: "#a78bfa", mode_switch: "#f59e0b", tool_use: "#fb923c", error: "#e21227", session_start: "#10b981", session_stop: "#666666" };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.88, y: 18 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.88, y: 14 }}
+      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+      style={{ position: "fixed", right: "110px", bottom: "110px", zIndex: 300, width: "348px", pointerEvents: "auto", perspective: "700px" }}
+    >
+      <motion.div
+        animate={{ rotateX: [0, 0.6, 0, -0.6, 0], rotateY: [-0.4, 0.4, -0.4] }}
+        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+        style={{ transformStyle: "preserve-3d" }}
+      >
+        {/* Outer glow ring */}
+        <motion.div
+          animate={{ opacity: [0.2, 0.5, 0.2] }}
+          transition={{ duration: 2.2, repeat: Infinity }}
+          style={{ position: "absolute", inset: "-4px", borderRadius: "18px", border: "1px solid rgba(226,18,39,0.3)", pointerEvents: "none", zIndex: -1, boxShadow: "0 0 40px rgba(226,18,39,0.12)" }}
+        />
+
+        <div style={{
+          background: "linear-gradient(160deg, rgba(10,2,4,0.99) 0%, rgba(16,3,6,0.99) 50%, rgba(8,2,4,0.99) 100%)",
+          border: "1px solid rgba(226,18,39,0.3)",
+          borderRadius: "16px", overflow: "hidden",
+          boxShadow: "0 16px 80px rgba(0,0,0,0.97), 0 0 50px rgba(226,18,39,0.1), inset 0 1px 0 rgba(255,255,255,0.04)",
+          position: "relative",
+        }}>
+          {/* Scan line */}
+          <div style={{ position: "absolute", left: 0, right: 0, top: `${scanY}%`, height: "1px", background: "linear-gradient(90deg, transparent, rgba(226,18,39,0.22), transparent)", pointerEvents: "none", zIndex: 1 }} />
+          {/* Hex grid */}
+          <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(circle, rgba(226,18,39,0.03) 1px, transparent 1px)", backgroundSize: "12px 12px", pointerEvents: "none", zIndex: 0 }} />
+
+          {/* Top stripe */}
+          <motion.div animate={{ opacity: [0.6, 1, 0.6] }} transition={{ duration: 1.8, repeat: Infinity }}
+            style={{ height: "2px", background: "linear-gradient(90deg, transparent, rgba(226,18,39,0.9), rgba(255,80,60,0.5), transparent)" }} />
+
+          {/* ── TOP BAR ── */}
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 14px 8px", borderBottom: "1px solid rgba(226,18,39,0.12)", position: "relative", zIndex: 2 }}>
+            {/* Grip dots */}
+            <div style={{ display: "grid", gridTemplateColumns: "3px 3px 3px", gap: "2px", opacity: 0.3, flexShrink: 0 }}>
+              {Array.from({ length: 9 }, (_, i) => (
+                <div key={i} style={{ width: "2px", height: "2px", borderRadius: "50%", background: "#e21227" }} />
+              ))}
+            </div>
+
+            {/* IDLE / REC indicator */}
+            {recording ? (
+              <motion.div animate={{ opacity: [1, 0.15, 1] }} transition={{ duration: 0.85, repeat: Infinity }}
+                style={{ width: "5px", height: "5px", borderRadius: "50%", background: "#e21227", boxShadow: "0 0 10px #e21227", flexShrink: 0 }} />
+            ) : (
+              <div style={{ width: "5px", height: "5px", borderRadius: "50%", border: "1.5px solid #555", flexShrink: 0 }} />
+            )}
+
+            <span style={{ fontSize: "12px", fontFamily: "monospace", fontWeight: 900, color: "#e21227", letterSpacing: "2.5px", textShadow: "0 0 16px rgba(226,18,39,0.7)" }}>
+              {recording ? "REC" : "IDLE"}
+            </span>
+
+            <span style={{ fontSize: "13px", fontFamily: "monospace", fontWeight: 700, color: recording ? "#e21227" : "#555", letterSpacing: "2px", flex: 1 }}>
+              {fmtT(elapsed)}
+            </span>
+
+            <span style={{ fontSize: "10px", fontFamily: "monospace", color: "#444", letterSpacing: "1px" }}>{evCount} EV</span>
+
+            {/* Close ^ */}
+            <button
+              onClick={onClose}
+              style={{ width: "24px", height: "24px", borderRadius: "6px", background: "rgba(226,18,39,0.1)", border: "1px solid rgba(226,18,39,0.35)", color: "#e21227", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s", flexShrink: 0 }}
+              onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background = "rgba(226,18,39,0.25)"; b.style.boxShadow = "0 0 10px rgba(226,18,39,0.4)"; }}
+              onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background = "rgba(226,18,39,0.1)"; b.style.boxShadow = "none"; }}
+            >
+              <ChevronDown style={{ width: "12px", height: "12px" }} />
+            </button>
+          </div>
+
+          {/* ── STATS ROW ── */}
+          <div style={{ display: "flex", gap: "0", borderBottom: "1px solid rgba(226,18,39,0.1)", position: "relative", zIndex: 2 }}>
+            {[
+              { label: "RESPONSES", val: msgCount, color: "#22c55e" },
+              { label: "ERRORS",    val: errCount, color: "#e21227" },
+              { label: "EVENTS",    val: evCount,  color: "#00e5ff" },
+            ].map(({ label, val, color: c }, i) => (
+              <div key={label} style={{ flex: 1, textAlign: "center", padding: "10px 4px", borderRight: i < 2 ? "1px solid rgba(226,18,39,0.08)" : "none" }}>
+                <div style={{ fontSize: "8px", fontFamily: "monospace", color: "rgba(255,255,255,0.28)", letterSpacing: "0.8px", marginBottom: "5px" }}>{label}</div>
+                <motion.div
+                  key={val}
+                  initial={{ scale: 1.3, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  style={{
+                    display: "inline-flex", alignItems: "center", justifyContent: "center",
+                    width: "28px", height: "28px", borderRadius: "8px",
+                    border: `1.5px solid ${c}55`, background: `${c}12`,
+                    fontSize: "14px", fontFamily: "monospace", fontWeight: 900,
+                    color: c, textShadow: `0 0 10px ${c}`,
+                  }}
+                >{val}</motion.div>
+              </div>
+            ))}
+            <div style={{ flex: 1.5, padding: "10px 10px", borderLeft: "1px solid rgba(226,18,39,0.08)" }}>
+              <div style={{ fontSize: "8px", fontFamily: "monospace", color: "rgba(255,255,255,0.28)", letterSpacing: "0.8px", marginBottom: "5px" }}>SESSION</div>
+              <div style={{ fontSize: "9px", fontFamily: "monospace", color: "#555", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                {sessionRecorder.sessionId || "—"}
+              </div>
+            </div>
+          </div>
+
+          {/* ── EVENT LOG / EMPTY STATE ── */}
+          <div style={{ minHeight: "140px", maxHeight: "200px", overflow: "hidden auto", padding: "10px 14px", position: "relative", zIndex: 2 }}>
+            {events.length === 0 ? (
+              <motion.div
+                animate={{ opacity: [0.3, 0.55, 0.3] }}
+                transition={{ duration: 2.4, repeat: Infinity }}
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "120px", flexDirection: "column", gap: "8px" }}
+              >
+                <motion.div
+                  animate={{ scale: [0.9, 1.05, 0.9], opacity: [0.3, 0.6, 0.3] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  style={{ width: "32px", height: "32px", borderRadius: "50%", border: "1.5px solid rgba(226,18,39,0.3)", display: "flex", alignItems: "center", justifyContent: "center" }}
+                >
+                  <Radio style={{ width: "14px", height: "14px", color: "rgba(226,18,39,0.4)" }} />
+                </motion.div>
+                <span style={{ fontSize: "10px", fontFamily: "monospace", color: "rgba(255,255,255,0.18)", letterSpacing: "2px" }}>PRESS REC TO START</span>
+              </motion.div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                <AnimatePresence mode="popLayout">
+                  {events.slice(0, 20).map((ev, i) => (
+                    <motion.div
+                      key={ev.id}
+                      initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ delay: i * 0.02 }}
+                      style={{ display: "flex", alignItems: "center", gap: "7px", padding: "4px 8px", borderRadius: "6px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}
+                    >
+                      <span style={{ fontSize: "8px", fontFamily: "monospace", fontWeight: 700, color: EV_COLOR[ev.type] ?? "#666", padding: "1px 4px", background: `${EV_COLOR[ev.type] ?? "#666"}18`, borderRadius: "3px", flexShrink: 0 }}>
+                        {EV_LABEL[ev.type] ?? "EVT"}
+                      </span>
+                      <span style={{ fontSize: "8px", fontFamily: "monospace", color: "rgba(255,255,255,0.4)", flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {ev.data["model"] ? String(ev.data["model"]).slice(0, 24)
+                          : ev.data["content"] ? String(ev.data["content"]).slice(0, 28)
+                          : ev.data["mode"] ? String(ev.data["mode"]) : "—"}
+                      </span>
+                      <span style={{ fontSize: "7px", fontFamily: "monospace", color: "#333", flexShrink: 0 }}>
+                        {new Date(ev.ts).toLocaleTimeString("en", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                      </span>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+            )}
+          </div>
+
+          {/* ── BUTTONS ── */}
+          <div style={{ display: "flex", gap: "6px", padding: "8px 14px 12px", borderTop: "1px solid rgba(226,18,39,0.1)", position: "relative", zIndex: 2 }}>
+            <motion.button
+              onClick={handleToggle}
+              whileTap={{ scale: 0.94 }}
+              style={{
+                display: "flex", alignItems: "center", gap: "6px",
+                padding: "8px 16px", borderRadius: "8px", cursor: "pointer", flex: 1.5,
+                fontSize: "11px", fontFamily: "monospace", fontWeight: 900, letterSpacing: "1.5px",
+                background: recording ? "rgba(18,0,0,0.95)" : "linear-gradient(135deg, #e21227, #c00018)",
+                border: recording ? "1px solid #e21227" : "none",
+                color: recording ? "#e21227" : "#fff",
+                boxShadow: recording ? "0 0 16px rgba(226,18,39,0.3)" : "0 4px 20px rgba(226,18,39,0.45)",
+                transition: "all 0.15s",
+              }}
+            >
+              {recording
+                ? <><Square style={{ width: "10px", height: "10px" }} />STOP</>
+                : <><Radio style={{ width: "10px", height: "10px" }} />REC</>}
+            </motion.button>
+            {[
+              { label: "JSON", fn: handleJSON, icon: FileJson,  hoverC: "#00e5ff" },
+              { label: "LOG",  fn: handleLog,  icon: Download,  hoverC: "#a78bfa" },
+              { label: "PDF",  fn: handlePdf,  icon: Printer,   hoverC: "#22c55e" },
+            ].map(({ label, fn, icon: Ic, hoverC }) => (
+              <button
+                key={label}
+                onClick={fn}
+                disabled={evCount === 0}
+                style={{
+                  display: "flex", alignItems: "center", gap: "4px",
+                  padding: "8px 10px", borderRadius: "8px", cursor: evCount === 0 ? "not-allowed" : "pointer", flex: 1,
+                  fontSize: "9px", fontFamily: "monospace", letterSpacing: "0.8px",
+                  background: "transparent", border: "1px solid rgba(255,255,255,0.08)",
+                  color: "rgba(255,255,255,0.35)", opacity: evCount === 0 ? 0.25 : 1, transition: "all 0.15s",
+                }}
+                onMouseEnter={e => { if (evCount > 0) { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = hoverC; b.style.color = hoverC; b.style.boxShadow = `0 0 12px ${hoverC}30`; } }}
+                onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = "rgba(255,255,255,0.08)"; b.style.color = "rgba(255,255,255,0.35)"; b.style.boxShadow = "none"; }}
+              >
+                <Ic style={{ width: "9px", height: "9px" }} />{label}
+              </button>
+            ))}
+          </div>
+
+          {/* Corner brackets */}
+          <div style={{ position: "absolute", top: 6, left: 6, width: 10, height: 10, borderTop: "1.5px solid rgba(226,18,39,0.5)", borderLeft: "1.5px solid rgba(226,18,39,0.5)", pointerEvents: "none", zIndex: 3 }} />
+          <div style={{ position: "absolute", bottom: 6, right: 6, width: 10, height: 10, borderBottom: "1.5px solid rgba(226,18,39,0.5)", borderRight: "1.5px solid rgba(226,18,39,0.5)", pointerEvents: "none", zIndex: 3 }} />
+
+          {/* Bottom stripe */}
+          <motion.div animate={{ opacity: [0.3, 0.8, 0.3] }} transition={{ duration: 2, repeat: Infinity }}
+            style={{ height: "1.5px", background: "linear-gradient(90deg, transparent, rgba(226,18,39,0.7), rgba(255,80,60,0.4), transparent)" }} />
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   PACKET INSPECTOR FULL VIEW  — 3D holographic AI call inspector
+   Real-time request/response viewer · syntax highlighted · 3D tilt
+══════════════════════════════════════════════════════════════════ */
+function PacketInspectorFullView({ onClose }: { onClose: () => void }) {
+  const [calls,     setCalls]     = useState<TrafficEvent[]>([]);
+  const [activeId,  setActiveId]  = useState<string | null>(null);
+  const [tab,       setTab]       = useState<"response" | "request">("response");
+  const [scanY,     setScanY]     = useState(0);
+
+  useEffect(() => {
+    const hist = trafficBus.history.filter(e => e.status === "success" || e.status === "error" || e.status === "streaming");
+    setCalls(hist.slice(0, 15));
+    if (hist.length > 0) setActiveId(hist[0].id);
+    const unsub = trafficBus.subscribe(ev => {
+      if (ev.status === "success" || ev.status === "error") {
+        setCalls(prev => { const d = prev.filter(c => c.id !== ev.id); return [ev, ...d].slice(0, 15); });
+        setActiveId(ev.id);
+      }
+    });
+    return unsub;
+  }, []);
+
+  useEffect(() => {
+    const iv = setInterval(() => setScanY(p => (p + 1.4) % 100), 18);
+    return () => clearInterval(iv);
+  }, []);
+
+  const active = calls.find(c => c.id === activeId) ?? calls[0] ?? null;
+
+  /* Simple JSON/text color tokenizer */
+  function colorText(txt: string): { text: string; color: string }[] {
+    if (!txt) return [{ text: "— no data —", color: "rgba(255,255,255,0.2)" }];
+    return txt.split(/(\{|\}|\[|\]|"[^"]*"|-?\d+\.?\d*|true|false|null|,|:)/).filter(Boolean).map(tok => {
+      if (/^"/.test(tok)) return { text: tok, color: "#a78bfa" };
+      if (/^-?\d/.test(tok)) return { text: tok, color: "#f59e0b" };
+      if (/^(true|false)$/.test(tok)) return { text: tok, color: "#22c55e" };
+      if (tok === "null") return { text: tok, color: "#e21227" };
+      if (/[{}[\]]/.test(tok)) return { text: tok, color: "#00e5ff" };
+      if (tok === ":") return { text: tok, color: "rgba(255,255,255,0.4)" };
+      return { text: tok, color: "rgba(255,255,255,0.55)" };
+    });
+  }
+
+  const STATUS_COLOR: Record<string, string> = { success: "#22c55e", error: "#e21227", pending: "#f59e0b", streaming: "#00e5ff" };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.88, y: 18 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.88, y: 14 }}
+      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1], delay: 0.06 }}
+      style={{ position: "fixed", right: "470px", bottom: "110px", zIndex: 300, width: "380px", pointerEvents: "auto", perspective: "700px" }}
+    >
+      <motion.div
+        animate={{ rotateX: [0, 0.5, 0, -0.5, 0], rotateY: [0.3, -0.3, 0.3] }}
+        transition={{ duration: 11, repeat: Infinity, ease: "easeInOut" }}
+        style={{ transformStyle: "preserve-3d" }}
+      >
+        {/* Outer glow */}
+        <motion.div animate={{ opacity: [0.15, 0.4, 0.15] }} transition={{ duration: 2.5, repeat: Infinity }}
+          style={{ position: "absolute", inset: "-4px", borderRadius: "18px", border: "1px solid rgba(0,229,255,0.25)", pointerEvents: "none", zIndex: -1, boxShadow: "0 0 40px rgba(0,229,255,0.08)" }} />
+
+        <div style={{
+          background: "linear-gradient(160deg, rgba(2,6,14,0.99) 0%, rgba(4,10,20,0.99) 50%, rgba(2,6,12,0.99) 100%)",
+          border: "1px solid rgba(0,229,255,0.22)",
+          borderRadius: "16px", overflow: "hidden",
+          boxShadow: "0 16px 80px rgba(0,0,0,0.97), 0 0 50px rgba(0,229,255,0.07), inset 0 1px 0 rgba(255,255,255,0.04)",
+          position: "relative",
+        }}>
+          {/* Scan line */}
+          <div style={{ position: "absolute", left: 0, right: 0, top: `${scanY}%`, height: "1px", background: "linear-gradient(90deg, transparent, rgba(0,229,255,0.18), transparent)", pointerEvents: "none", zIndex: 1 }} />
+          <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(circle, rgba(0,229,255,0.025) 1px, transparent 1px)", backgroundSize: "12px 12px", pointerEvents: "none", zIndex: 0 }} />
+
+          {/* Top stripe */}
+          <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1.9, repeat: Infinity }}
+            style={{ height: "2px", background: "linear-gradient(90deg, transparent, rgba(0,229,255,0.8), rgba(168,85,247,0.5), transparent)" }} />
+
+          {/* ── TOP BAR ── */}
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 14px 8px", borderBottom: "1px solid rgba(0,229,255,0.1)", position: "relative", zIndex: 2 }}>
+            <Eye style={{ width: "11px", height: "11px", color: "#00e5ff", flexShrink: 0 }} />
+            <span style={{ fontSize: "11px", fontFamily: "monospace", fontWeight: 900, color: "#00e5ff", letterSpacing: "2px", textShadow: "0 0 14px rgba(0,229,255,0.7)", flex: 1 }}>
+              PACKET INSPECTOR
+            </span>
+            <motion.span animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 0.9, repeat: Infinity }}
+              style={{ fontSize: "7px", fontFamily: "monospace", color: "#00e5ff", padding: "1px 5px", borderRadius: "3px", background: "rgba(0,229,255,0.1)", border: "1px solid rgba(0,229,255,0.25)" }}>
+              LIVE
+            </motion.span>
+            <span style={{ fontSize: "8px", fontFamily: "monospace", color: "#333" }}>{calls.length} calls</span>
+            <button
+              onClick={onClose}
+              style={{ width: "24px", height: "24px", borderRadius: "6px", background: "rgba(0,229,255,0.08)", border: "1px solid rgba(0,229,255,0.25)", color: "#00e5ff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s", flexShrink: 0 }}
+              onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background = "rgba(0,229,255,0.2)"; }}
+              onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background = "rgba(0,229,255,0.08)"; }}
+            >
+              <X style={{ width: "10px", height: "10px" }} />
+            </button>
+          </div>
+
+          <div style={{ display: "flex", height: "320px", position: "relative", zIndex: 2 }}>
+            {/* ── Call list sidebar ── */}
+            <div style={{ width: "110px", flexShrink: 0, borderRight: "1px solid rgba(0,229,255,0.08)", overflow: "hidden auto", padding: "6px 4px" }}>
+              {calls.length === 0 ? (
+                <div style={{ padding: "12px 8px", fontSize: "8px", fontFamily: "monospace", color: "rgba(255,255,255,0.2)", textAlign: "center" }}>No calls yet</div>
+              ) : calls.map(c => (
+                <motion.div
+                  key={c.id}
+                  onClick={() => { setActiveId(c.id); setTab("response"); }}
+                  whileHover={{ x: 2 }}
+                  style={{
+                    padding: "5px 7px", borderRadius: "6px", cursor: "pointer", marginBottom: "3px",
+                    background: activeId === c.id ? "rgba(0,229,255,0.1)" : "transparent",
+                    border: `1px solid ${activeId === c.id ? "rgba(0,229,255,0.25)" : "transparent"}`,
+                    transition: "all 0.14s",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "4px", marginBottom: "2px" }}>
+                    <div style={{ width: "4px", height: "4px", borderRadius: "50%", background: STATUS_COLOR[c.status] ?? "#666", flexShrink: 0 }} />
+                    <span style={{ fontSize: "6.5px", fontFamily: "monospace", color: "rgba(255,255,255,0.55)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {c.model.slice(0, 12)}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: "6px", fontFamily: "monospace", color: "rgba(255,255,255,0.2)" }}>
+                    {c.latency ? `${c.latency}ms` : "—"}
+                    {c.tokens ? ` · ${c.tokens}tk` : ""}
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* ── Detail panel ── */}
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+              {active ? (
+                <>
+                  {/* Metadata */}
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", padding: "7px 10px", borderBottom: "1px solid rgba(0,229,255,0.07)" }}>
+                    {[
+                      { label: "MODEL",    val: active.model.slice(0, 16) },
+                      { label: "STATUS",   val: active.status.toUpperCase(), color: STATUS_COLOR[active.status] },
+                      { label: "LATENCY",  val: active.latency ? `${active.latency}ms` : "—" },
+                      { label: "TOKENS",   val: active.tokens ? String(active.tokens) : "—" },
+                    ].map(({ label, val, color: c }) => (
+                      <div key={label} style={{ padding: "2px 6px", borderRadius: "4px", background: "rgba(0,229,255,0.05)", border: "1px solid rgba(0,229,255,0.1)" }}>
+                        <span style={{ fontSize: "6px", fontFamily: "monospace", color: "rgba(255,255,255,0.25)" }}>{label} </span>
+                        <span style={{ fontSize: "7px", fontFamily: "monospace", fontWeight: 700, color: c ?? "#00e5ff" }}>{val}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Tabs */}
+                  <div style={{ display: "flex", borderBottom: "1px solid rgba(0,229,255,0.07)", flexShrink: 0 }}>
+                    {(["response", "request"] as const).map(t => (
+                      <button key={t} onClick={() => setTab(t)}
+                        style={{
+                          padding: "5px 12px", cursor: "pointer", background: "transparent",
+                          border: "none", borderBottom: tab === t ? "2px solid #00e5ff" : "2px solid transparent",
+                          fontSize: "8px", fontFamily: "monospace", fontWeight: 700,
+                          color: tab === t ? "#00e5ff" : "rgba(255,255,255,0.25)",
+                          letterSpacing: "1.2px", transition: "all 0.14s",
+                        }}
+                      >
+                        {t === "response" ? "RESPONSE" : "REQUEST"}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Content */}
+                  <div style={{ flex: 1, overflow: "hidden auto", padding: "8px 10px" }}>
+                    <div style={{ fontSize: "8.5px", fontFamily: "monospace", lineHeight: "1.65", whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
+                      {colorText(tab === "response" ? (active.responsePreview ?? "") : (active.payloadPreview ?? "")).map((tok, i) => (
+                        <span key={i} style={{ color: tok.color }}>{tok.text}</span>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", flex: 1, flexDirection: "column", gap: "8px" }}>
+                  <motion.div animate={{ opacity: [0.2, 0.5, 0.2] }} transition={{ duration: 2, repeat: Infinity }}
+                    style={{ width: "32px", height: "32px", borderRadius: "50%", border: "1.5px solid rgba(0,229,255,0.3)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <ArrowUpDown style={{ width: "14px", height: "14px", color: "rgba(0,229,255,0.4)" }} />
+                  </motion.div>
+                  <span style={{ fontSize: "9px", fontFamily: "monospace", color: "rgba(255,255,255,0.18)", letterSpacing: "1.5px" }}>AWAITING AI CALLS</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Corner brackets */}
+          <div style={{ position: "absolute", top: 6, left: 6, width: 10, height: 10, borderTop: "1.5px solid rgba(0,229,255,0.45)", borderLeft: "1.5px solid rgba(0,229,255,0.45)", pointerEvents: "none", zIndex: 3 }} />
+          <div style={{ position: "absolute", bottom: 6, right: 6, width: 10, height: 10, borderBottom: "1.5px solid rgba(0,229,255,0.45)", borderRight: "1.5px solid rgba(0,229,255,0.45)", pointerEvents: "none", zIndex: 3 }} />
+
+          {/* Bottom stripe */}
+          <motion.div animate={{ opacity: [0.25, 0.7, 0.25] }} transition={{ duration: 2.3, repeat: Infinity }}
+            style={{ height: "1.5px", background: "linear-gradient(90deg, transparent, rgba(0,229,255,0.65), rgba(168,85,247,0.4), transparent)" }} />
+        </div>
+      </motion.div>
     </motion.div>
   );
 }
@@ -1090,9 +1570,11 @@ function DockButton({
   stats: { cpu: number; mem: number; api: number; thr: number };
 }) {
   const [pos,      setPos]      = useState(getInitialPos);
-  const [hovered,  setHovered]  = useState(false);
-  const [dragging, setDragging] = useState(false);
-  const [tilt,     setTilt]     = useState({ x: 0, y: 0 });
+  const [hovered,          setHovered]          = useState(false);
+  const [dragging,         setDragging]         = useState(false);
+  const [tilt,             setTilt]             = useState({ x: 0, y: 0 });
+  const [showFullRec,      setShowFullRec]      = useState(false);
+  const [showPacketInsp,   setShowPacketInsp]   = useState(false);
   const posRef  = useRef(pos);
   const dragRef = useRef({ active: false, sx: 0, sy: 0, spx: 0, spy: 0, moved: false });
   const btnRef  = useRef<HTMLDivElement>(null);
@@ -1182,12 +1664,23 @@ function DockButton({
       onMouseLeave={() => { setHovered(false); setTilt({ x: 0, y: 0 }); }}
       onMouseMove={handleMouseMove}
     >
+      {/* Full view overlays (fixed, outside orb positioning) */}
+      <AnimatePresence>
+        {showFullRec && <SessionRecorderFullView onClose={() => setShowFullRec(false)} />}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showPacketInsp && <PacketInspectorFullView onClose={() => setShowPacketInsp(false)} />}
+      </AnimatePresence>
+
       {/* Satellite panels */}
       <AnimatePresence>
         {(hovered || showSatellites) && !dragging && (
           <>
             <ThreatFeedPanel />
-            <SatellitePanel />
+            <SatellitePanel
+              onExpandRec={() => setShowFullRec(v => !v)}
+              onExpandPacket={() => setShowPacketInsp(v => !v)}
+            />
           </>
         )}
       </AnimatePresence>
