@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Radio, AlertTriangle, Play, ExternalLink, RefreshCw } from "lucide-react";
+import { X, Radio, AlertTriangle, Play, ExternalLink, RefreshCw, Zap } from "lucide-react";
+import { ExploitChainModal } from "./ExploitChainModal";
 
 interface Props { open: boolean; onOpenChange: (v: boolean) => void; }
 
@@ -36,6 +37,8 @@ export function LiveCVEModal({ open, onOpenChange }: Props) {
   const [simRunning, setSimRunning] = useState(false);
   const [filterZero, setFilterZero] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(new Date());
+  const [chainCVE, setChainCVE] = useState<CVEEntry | null>(null);
+  const [chainOpen, setChainOpen] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
 
@@ -85,6 +88,14 @@ export function LiveCVEModal({ open, onOpenChange }: Props) {
 
   if (!open) return null;
   return (
+    <>
+    {chainCVE && (
+      <ExploitChainModal
+        open={chainOpen}
+        onOpenChange={(v) => { setChainOpen(v); if (!v) setChainCVE(null); }}
+        initialCVE={{ id: chainCVE.id, title: chainCVE.title, cvss: chainCVE.cvss, type: chainCVE.type, product: chainCVE.product }}
+      />
+    )}
     <AnimatePresence>
       <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4"
         style={{ background: "rgba(0,0,0,0.92)" }}
@@ -159,11 +170,20 @@ export function LiveCVEModal({ open, onOpenChange }: Props) {
                         <div key={k as string}><div style={{ color: "#2a2a2a" }}>{k}</div><div style={{ color: "#666" }}>{v}</div></div>
                       ))}
                     </div>
-                    <motion.button onClick={() => simulateCVE(selected)} disabled={simRunning} whileTap={{ scale: 0.97 }}
-                      className="w-full py-2 rounded-xl text-[10px] font-bold tracking-widest flex items-center justify-center gap-2"
-                      style={{ background: "rgba(226,18,39,0.12)", border: "1px solid rgba(226,18,39,0.35)", color: "#e21227" }}>
-                      <Play className="w-3.5 h-3.5" />{simRunning ? "SIMULATING..." : "SIMULATE EXPLOIT"}
-                    </motion.button>
+                    <div className="flex gap-2">
+                      <motion.button onClick={() => simulateCVE(selected)} disabled={simRunning} whileTap={{ scale: 0.97 }}
+                        className="flex-1 py-2 rounded-xl text-[10px] font-bold tracking-widest flex items-center justify-center gap-2"
+                        style={{ background: "rgba(226,18,39,0.12)", border: "1px solid rgba(226,18,39,0.35)", color: "#e21227" }}>
+                        <Play className="w-3.5 h-3.5" />{simRunning ? "SIMULATING..." : "SIMULATE"}
+                      </motion.button>
+                      <motion.button
+                        whileTap={{ scale: 0.97 }}
+                        onClick={() => { setChainCVE(selected); setChainOpen(true); }}
+                        className="flex-1 py-2 rounded-xl text-[10px] font-bold tracking-widest flex items-center justify-center gap-2"
+                        style={{ background: "rgba(168,85,247,0.12)", border: "1px solid rgba(168,85,247,0.38)", color: "#a855f7" }}>
+                        <Zap className="w-3.5 h-3.5" /> CHAIN EXPLOIT
+                      </motion.button>
+                    </div>
                   </div>
                   <div ref={logRef} className="flex-1 overflow-y-auto p-3 font-mono text-[9px] space-y-0.5" style={{ background: "#030303", minHeight: 0 }}>
                     {simLog.map((l, i) => (
@@ -185,5 +205,6 @@ export function LiveCVEModal({ open, onOpenChange }: Props) {
         </motion.div>
       </motion.div>
     </AnimatePresence>
+    </>
   );
 }

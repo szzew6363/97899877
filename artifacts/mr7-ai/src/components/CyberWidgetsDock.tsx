@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Globe, Network, Activity, Package, BarChart3, X, Monitor,
   Layers, Radar, Wifi, Cpu, Shield, Maximize2,
-  ChevronLeft, ChevronUp, ChevronDown, LayoutGrid, Thermometer, Clock, Zap,
+  ChevronLeft, ChevronRight, ChevronUp, ChevronDown, LayoutGrid, Thermometer, Clock, Zap,
   AlertTriangle, Keyboard, Radio, Square, FileJson, Download, Printer,
   Eye, ArrowUpDown, TerminalSquare,
 } from "lucide-react";
@@ -52,6 +52,78 @@ function getInitialPos(): { x: number; y: number } {
     x: typeof window !== "undefined" ? window.innerWidth  - 96 : 900,
     y: typeof window !== "undefined" ? window.innerHeight - 96 : 600,
   };
+}
+
+/* ── Draggable hook for floating HUD panel (mirrors NET INTRUSION) ── */
+const HUD_PANEL_POS_KEY = "cyber-hud-panel-pos-v1";
+
+function useDraggableHUD(dx: number, dy: number) {
+  const [pos, setPos] = useState<{ x: number; y: number }>(() => {
+    try {
+      const s = localStorage.getItem(HUD_PANEL_POS_KEY);
+      if (s) return JSON.parse(s) as { x: number; y: number };
+    } catch {}
+    return { x: dx, y: dy };
+  });
+  const posRef  = useRef(pos);
+  const dragRef = useRef({ active: false, sx: 0, sy: 0, spx: 0, spy: 0, moved: false });
+
+  useEffect(() => { posRef.current = pos; }, [pos]);
+
+  const onMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    const d = dragRef.current;
+    d.active = true; d.moved = false;
+    d.sx = e.clientX; d.sy = e.clientY;
+    d.spx = posRef.current.x; d.spy = posRef.current.y;
+    function onMove(ev: MouseEvent) {
+      const dx2 = ev.clientX - d.sx, dy2 = ev.clientY - d.sy;
+      if (!d.moved && (Math.abs(dx2) > 4 || Math.abs(dy2) > 4)) d.moved = true;
+      if (d.moved) {
+        const nx = Math.max(0, Math.min(d.spx + dx2, window.innerWidth  - 300));
+        const ny = Math.max(0, Math.min(d.spy + dy2, window.innerHeight - 120));
+        posRef.current = { x: nx, y: ny };
+        setPos({ x: nx, y: ny });
+      }
+    }
+    function onUp() {
+      d.active = false;
+      localStorage.setItem(HUD_PANEL_POS_KEY, JSON.stringify(posRef.current));
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    }
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  }, []);
+
+  const onTouchStart = useCallback((e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    const d = dragRef.current;
+    d.active = true; d.moved = false;
+    d.sx = touch.clientX; d.sy = touch.clientY;
+    d.spx = posRef.current.x; d.spy = posRef.current.y;
+    function onMove(ev: TouchEvent) {
+      const tt = ev.touches[0];
+      const dx2 = tt.clientX - d.sx, dy2 = tt.clientY - d.sy;
+      if (!d.moved && (Math.abs(dx2) > 4 || Math.abs(dy2) > 4)) d.moved = true;
+      if (d.moved) {
+        const nx = Math.max(0, Math.min(d.spx + dx2, window.innerWidth  - 300));
+        const ny = Math.max(0, Math.min(d.spy + dy2, window.innerHeight - 120));
+        posRef.current = { x: nx, y: ny };
+        setPos({ x: nx, y: ny });
+      }
+    }
+    function onUp() {
+      d.active = false;
+      localStorage.setItem(HUD_PANEL_POS_KEY, JSON.stringify(posRef.current));
+      window.removeEventListener("touchmove", onMove as EventListener);
+      window.removeEventListener("touchend", onUp);
+    }
+    window.addEventListener("touchmove", onMove as EventListener);
+    window.addEventListener("touchend", onUp);
+  }, []);
+
+  return { pos, onMouseDown, onTouchStart };
 }
 
 /* ── Live stats hook — CPU · API calls · Threat count ───────────── */
@@ -2206,269 +2278,321 @@ function HUDClock() {
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   MAIN HUD OVERLAY  — 6-panel grid (Panel 7+8 in orb)
+   CYBER PANEL FOCUS VIEW  — full-screen single-panel expansion
 ══════════════════════════════════════════════════════════════════ */
-function CyberHUDOverlay({ onClose }: { onClose: () => void }) {
-  const [loaded,           setLoaded]           = useState(false);
-  const [focusedPanel,     setFocusedPanel]     = useState<string | null>(null);
-  const [focusAnim,        setFocusAnim]        = useState(false);
-  const [showNetActivity,  setShowNetActivity]  = useState(false);
+function CyberPanelFocusView({ id, onClose }: { id: string; onClose: () => void }) {
+  const allPanels = [
+    ...PANELS,
+    { id: "sysmon", label: "SYS MONITOR",    icon: Thermometer, color: "#10b981", desc: "System resources"  },
+    { id: "idle",   label: "IDLE / ACTIVITY", icon: Clock,       color: "#f472b6", desc: "Session tracker"   },
+  ];
+  const meta  = allPanels.find(p => p.id === id);
+  const color = meta?.color ?? "#00e5ff";
+  const Icon  = (meta?.icon ?? Layers) as React.ComponentType<{ style?: React.CSSProperties }>;
 
-  useEffect(() => { const tt = setTimeout(() => setLoaded(true), 80); return () => clearTimeout(tt); }, []);
+  if (id === "topology") return <NetworkActivityPage onClose={onClose} />;
 
-  const handleExpand = useCallback((id: string) => {
-    if (id === "topology") {
-      setShowNetActivity(true);
-      return;
-    }
-    setFocusAnim(false); setFocusedPanel(id);
-    setTimeout(() => setFocusAnim(true), 30);
-  }, []);
-  const handleBack = useCallback(() => {
-    setFocusAnim(false);
-    setTimeout(() => setFocusedPanel(null), 150);
-  }, []);
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.97 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.97 }}
+      transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+      style={{ position: "fixed", inset: 0, zIndex: 210, display: "flex", flexDirection: "column", overflow: "hidden", background: "rgba(0,0,4,0.98)" }}
+    >
+      <HUDBackground />
+      <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 1,
+        backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.006) 2px, rgba(255,255,255,0.006) 4px)" }} />
 
-  const focusedMeta = focusedPanel ? [...PANELS,
-    { id: "sysmon", label: "SYS MONITOR", icon: Thermometer, color: "#10b981", desc: "System resources" },
-    { id: "idle",   label: "IDLE / ACTIVITY", icon: Clock, color: "#f472b6", desc: "Session tracker" },
-  ].find(p => p.id === focusedPanel)! : null;
-
-  const wrapper = (children: React.ReactNode) => (
-    <>
-      <AnimatePresence>
-        {showNetActivity && <NetworkActivityPage onClose={() => setShowNetActivity(false)} />}
-      </AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0, scale: 0.98 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.98 }}
-        transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
-        style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex", flexDirection: "column", overflow: "hidden" }}
-      >
-        <HUDBackground />
-        <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 1,
-          backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.007) 2px, rgba(255,255,255,0.007) 4px)" }} />
-        <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 1,
-          background: "radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.6) 100%)" }} />
-        {children}
-      </motion.div>
-    </>
-  );
-
-  /* ── Focused single panel ── */
-  if (focusedPanel && focusedMeta) {
-    const { color, icon: Icon, label, desc } = focusedMeta;
-    return wrapper(
-      <>
-        <div style={{
-          position: "relative", zIndex: 10,
-          display: "flex", alignItems: "center", gap: "12px",
-          padding: "10px 18px",
-          borderBottom: `1px solid ${color}20`,
-          background: "rgba(3,3,12,0.9)", backdropFilter: "blur(22px)", flexShrink: 0,
-        }}>
-          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "1px", background: `linear-gradient(90deg, transparent, ${color}55, transparent)` }} />
-
-          <motion.button onClick={handleBack} whileHover={{ x: -3 }} whileTap={{ scale: 0.95 }}
-            style={{ display: "flex", alignItems: "center", gap: "6px", padding: "5px 12px", borderRadius: "8px",
-              background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)",
-              color: "rgba(255,255,255,0.55)", cursor: "pointer", fontSize: "9px", fontFamily: "monospace", fontWeight: 700, letterSpacing: "1px" }}
-          >
-            <ChevronLeft style={{ width: "11px", height: "11px" }} /> BACK TO HUD
-          </motion.button>
-
-          <div style={{ width: "1px", height: "24px", background: "rgba(255,255,255,0.07)" }} />
-
-          <div style={{ width: "34px", height: "34px", borderRadius: "10px",
-            background: `radial-gradient(circle, ${color}20, rgba(0,0,0,0.8))`,
-            border: `1px solid ${color}35`, display: "flex", alignItems: "center", justifyContent: "center",
-            boxShadow: `0 0 22px ${color}22` }}>
-            <Icon style={{ width: "16px", height: "16px", color, filter: `drop-shadow(0 0 8px ${color})` }} />
-          </div>
-
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ fontSize: "12px", fontFamily: "monospace", fontWeight: 900, color: "#fff", letterSpacing: "2.5px", textShadow: `0 0 16px ${color}80` }}>{label}</span>
-              <motion.div animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1.2, repeat: Infinity }}
-                style={{ width: "5px", height: "5px", borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 8px #22c55e" }} />
-            </div>
-            <div style={{ fontSize: "7.5px", fontFamily: "monospace", color: "rgba(255,255,255,0.2)", letterSpacing: "1px" }}>{desc} · FULL SCREEN</div>
-          </div>
-
-          <div style={{ flex: 1 }} />
-          <HUDClock />
-
-          <button onClick={handleBack}
-            style={{ padding: "4px 10px", borderRadius: "6px", display: "flex", alignItems: "center", gap: "4px",
-              background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)",
-              color: "rgba(255,255,255,0.3)", cursor: "pointer", fontSize: "8.5px", fontFamily: "monospace" }}>
-            <LayoutGrid style={{ width: "9px", height: "9px" }} /> ALL PANELS
-          </button>
-
-          <button onClick={onClose}
-            style={{ width: "32px", height: "32px", borderRadius: "8px", background: "rgba(226,18,39,0.07)",
-              border: "1px solid rgba(226,18,39,0.2)", color: "rgba(255,255,255,0.45)", cursor: "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s" }}
-            onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background = "rgba(226,18,39,0.24)"; b.style.color = "#fff"; }}
-            onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background = "rgba(226,18,39,0.07)"; b.style.color = "rgba(255,255,255,0.45)"; }}
-          >
-            <X style={{ width: "14px", height: "14px" }} />
-          </button>
-        </div>
-
-        <motion.div
-          initial={{ opacity: 0, scale: 0.97, y: 10 }}
-          animate={{ opacity: focusAnim ? 1 : 0, scale: focusAnim ? 1 : 0.97, y: focusAnim ? 0 : 10 }}
-          transition={{ duration: 0.28, ease: "easeOut" }}
-          style={{ position: "relative", zIndex: 5, flex: 1,
-            margin: "10px", borderRadius: "16px", overflow: "hidden",
-            border: `1px solid ${color}25`,
-            boxShadow: `0 0 70px ${color}15, 0 0 0 1px rgba(255,255,255,0.025), inset 0 1px 0 rgba(255,255,255,0.04)` }}
-        >
-          <div style={{ height: "2px", background: `linear-gradient(90deg, transparent, ${color}dd, ${color}, transparent)` }} />
-          <div style={{ flex: 1, height: "calc(100% - 2px)", overflow: "hidden" }}>
-            <RenderWidget id={focusedPanel} full={false} />
-          </div>
-          <Brackets color={color} size={20} thickness={1.8} />
-        </motion.div>
-      </>
-    );
-  }
-
-  /* ── 6-panel grid ── */
-  return wrapper(
-    <>
-      {/* Header */}
+      {/* Top bar */}
       <div style={{
-        position: "relative", zIndex: 10,
-        display: "flex", alignItems: "center", gap: "12px",
-        padding: "10px 18px",
-        borderBottom: "1px solid rgba(255,255,255,0.05)",
-        background: "rgba(3,3,12,0.9)", backdropFilter: "blur(24px)", flexShrink: 0,
+        position: "relative", zIndex: 10, display: "flex", alignItems: "center", gap: "12px",
+        padding: "10px 18px", borderBottom: `1px solid ${color}20`,
+        background: "rgba(3,3,12,0.92)", backdropFilter: "blur(22px)", flexShrink: 0,
       }}>
-        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "1px",
-          background: "linear-gradient(90deg, transparent, rgba(226,18,39,0.5), rgba(0,229,255,0.3), rgba(226,18,39,0.5), transparent)" }} />
-
-        <motion.div
-          animate={{ boxShadow: ["0 0 16px rgba(226,18,39,0.2)", "0 0 32px rgba(226,18,39,0.42)", "0 0 16px rgba(226,18,39,0.2)"] }}
-          transition={{ duration: 2.8, repeat: Infinity }}
-          style={{ width: "36px", height: "36px", borderRadius: "11px", flexShrink: 0,
-            background: "radial-gradient(circle at 35% 35%, rgba(226,18,39,0.25), rgba(59,130,246,0.12), rgba(0,0,0,0.9))",
-            border: "1px solid rgba(226,18,39,0.35)", display: "flex", alignItems: "center", justifyContent: "center" }}
-        >
-          <Layers style={{ width: "17px", height: "17px", color: "#e21227", filter: "drop-shadow(0 0 8px #e21227)" }} />
-        </motion.div>
-
-        <div style={{ flex: 1 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <span style={{ fontSize: "13px", fontFamily: "monospace", fontWeight: 900, color: "#fff", letterSpacing: "3.5px", textShadow: "0 0 20px rgba(226,18,39,0.45)" }}>CYBER HUD</span>
-            <motion.span animate={{ opacity: [0.7, 1, 0.7] }} transition={{ duration: 1.2, repeat: Infinity }}
-              style={{ fontSize: "7px", fontFamily: "monospace", fontWeight: 700, color: "#22c55e", letterSpacing: "1px", padding: "2px 7px", borderRadius: "4px",
-                background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.28)", boxShadow: "0 0 8px rgba(34,197,94,0.2)" }}>LIVE</motion.span>
-            <span style={{ fontSize: "7px", fontFamily: "monospace", color: "rgba(0,229,255,0.4)" }}>v5.0</span>
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "1px", background: `linear-gradient(90deg, transparent, ${color}55, transparent)` }} />
+        <motion.button onClick={onClose} whileHover={{ x: -3 }} whileTap={{ scale: 0.95 }}
+          style={{ display: "flex", alignItems: "center", gap: "6px", padding: "5px 12px", borderRadius: "8px",
+            background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)",
+            color: "rgba(255,255,255,0.55)", cursor: "pointer", fontSize: "9px", fontFamily: "monospace", fontWeight: 700, letterSpacing: "1px" }}>
+          <ChevronLeft style={{ width: "11px", height: "11px" }} /> BACK TO HUD
+        </motion.button>
+        <div style={{ width: "1px", height: "24px", background: "rgba(255,255,255,0.07)" }} />
+        <div style={{ width: "34px", height: "34px", borderRadius: "10px",
+          background: `radial-gradient(circle, ${color}20, rgba(0,0,0,0.8))`,
+          border: `1px solid ${color}35`, display: "flex", alignItems: "center", justifyContent: "center",
+          boxShadow: `0 0 22px ${color}22` }}>
+          <Icon style={{ width: "16px", height: "16px", color, filter: `drop-shadow(0 0 8px ${color})` }} />
+        </div>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <span style={{ fontSize: "12px", fontFamily: "monospace", fontWeight: 900, color: "#fff", letterSpacing: "2.5px", textShadow: `0 0 16px ${color}80` }}>
+              {meta?.label ?? id.toUpperCase()}
+            </span>
+            <motion.div animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1.2, repeat: Infinity }}
+              style={{ width: "5px", height: "5px", borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 8px #22c55e" }} />
           </div>
-          <div style={{ fontSize: "8px", fontFamily: "monospace", color: "rgba(255,255,255,0.2)", letterSpacing: "1.2px", marginTop: "2px" }}>
-            6 INTELLIGENCE PANELS · SYS + IDLE LIVE IN ORB
+          <div style={{ fontSize: "7.5px", fontFamily: "monospace", color: "rgba(255,255,255,0.2)", letterSpacing: "1px" }}>
+            {meta?.desc ?? ""} · FULL SCREEN
           </div>
         </div>
-
-        {/* Panel dots + SYS/IDLE quick-launch */}
-        <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
-          {PANELS.map((p, i) => (
-            <motion.button key={p.id} title={p.label}
-              onClick={() => handleExpand(p.id)}
-              animate={{ opacity: [0.4, 1, 0.4] }}
-              transition={{ duration: 2.0, repeat: Infinity, delay: i * 0.2 }}
-              whileHover={{ scale: 2.0 }}
-              style={{ width: "6px", height: "6px", borderRadius: "50%", background: p.color, boxShadow: `0 0 6px ${p.color}`, cursor: "pointer", border: "none" }}
-            />
-          ))}
-          <div style={{ width: "1px", height: "12px", background: "rgba(255,255,255,0.1)" }} />
-          <motion.button title="SYS MONITOR"
-            onClick={() => handleExpand("sysmon")}
-            whileHover={{ scale: 2 }}
-            animate={{ opacity: [0.4, 1, 0.4] }}
-            transition={{ duration: 1.4, repeat: Infinity }}
-            style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#10b981", boxShadow: "0 0 6px #10b981", cursor: "pointer", border: "none" }}
-          />
-          <motion.button title="IDLE / ACTIVITY"
-            onClick={() => handleExpand("idle")}
-            whileHover={{ scale: 2 }}
-            animate={{ opacity: [0.4, 1, 0.4] }}
-            transition={{ duration: 1.8, repeat: Infinity, delay: 0.5 }}
-            style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#f472b6", boxShadow: "0 0 6px #f472b6", cursor: "pointer", border: "none" }}
-          />
-        </div>
-
+        <div style={{ flex: 1 }} />
         <HUDClock />
-
         <button onClick={onClose}
-          style={{ width: "34px", height: "34px", borderRadius: "9px", background: "rgba(226,18,39,0.07)",
-            border: "1px solid rgba(226,18,39,0.2)", color: "rgba(255,255,255,0.4)", cursor: "pointer",
-            display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.22s" }}
-          onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background = "rgba(226,18,39,0.24)"; b.style.color = "#fff"; b.style.boxShadow = "0 0 14px rgba(226,18,39,0.4)"; }}
-          onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background = "rgba(226,18,39,0.07)"; b.style.color = "rgba(255,255,255,0.4)"; b.style.boxShadow = ""; }}
+          style={{ width: "32px", height: "32px", borderRadius: "8px", background: "rgba(226,18,39,0.07)",
+            border: "1px solid rgba(226,18,39,0.2)", color: "rgba(255,255,255,0.45)", cursor: "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s" }}
+          onMouseEnter={e => { const b = e.currentTarget; b.style.background = "rgba(226,18,39,0.24)"; b.style.color = "#fff"; }}
+          onMouseLeave={e => { const b = e.currentTarget; b.style.background = "rgba(226,18,39,0.07)"; b.style.color = "rgba(255,255,255,0.45)"; }}
         >
           <X style={{ width: "14px", height: "14px" }} />
         </button>
       </div>
 
-      {/* 3×2 panel grid (6 panels) */}
-      <div style={{
-        position: "relative", zIndex: 5, flex: 1, display: "grid",
-        gridTemplateColumns: "repeat(3, 1fr)",
-        gridTemplateRows: "repeat(2, 1fr)",
-        gap: "8px", padding: "10px", overflow: "hidden",
-      }}>
-        {loaded && PANELS.map((panel, i) => (
-          <motion.div key={panel.id}
-            initial={{ opacity: 0, y: 20, scale: 0.92, rotateX: -10 }}
-            animate={{ opacity: 1, y: 0, scale: 1, rotateX: 0 }}
-            transition={{ delay: i * 0.07, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            style={{ display: "flex", flexDirection: "column", minHeight: 0 }}
-          >
-            <WidgetCard id={panel.id} label={panel.label} icon={panel.icon} color={panel.color} desc={panel.desc}
-              onExpand={() => handleExpand(panel.id)}>
-              <div style={{ position: "relative", height: "100%", overflow: "hidden" }}>
-                <RenderWidget id={panel.id} />
-              </div>
-            </WidgetCard>
-          </motion.div>
-        ))}
-      </div>
+      {/* Panel content */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.06, duration: 0.28, ease: "easeOut" }}
+        style={{ position: "relative", zIndex: 5, flex: 1, margin: "10px", borderRadius: "16px", overflow: "hidden",
+          border: `1px solid ${color}25`,
+          boxShadow: `0 0 70px ${color}12, 0 0 0 1px rgba(255,255,255,0.02), inset 0 1px 0 rgba(255,255,255,0.04)` }}
+      >
+        <div style={{ height: "2px", background: `linear-gradient(90deg, transparent, ${color}dd, ${color}, transparent)` }} />
+        <div style={{ height: "calc(100% - 2px)", overflow: "hidden" }}>
+          <RenderWidget id={id} full={false} />
+        </div>
+        <Brackets color={color} size={20} thickness={1.8} />
+      </motion.div>
+    </motion.div>
+  );
+}
 
-      {/* Footer — includes SYS + IDLE status */}
-      <div style={{
-        position: "relative", zIndex: 10,
-        display: "flex", alignItems: "center", gap: "14px",
-        padding: "7px 18px",
-        borderTop: "1px solid rgba(255,255,255,0.04)",
-        background: "rgba(3,3,12,0.82)", backdropFilter: "blur(14px)", flexShrink: 0,
-        overflowX: "auto",
-      }}>
-        {[
-          { icon: Wifi,        label: "FEEDS",    val: "6/6",    color: "#22c55e" },
-          { icon: Cpu,         label: "LATENCY",  val: "12ms",   color: "#3b82f6" },
-          { icon: Shield,      label: "THREATS",  val: "ACTIVE", color: "#e21227" },
-          { icon: Monitor,     label: "PANELS",   val: "6 LIVE", color: "#a855f7" },
-          { icon: Zap,         label: "NEURAL",   val: "ONLINE", color: "#f59e0b" },
-          { icon: Thermometer, label: "SYS MON",  val: "IN ORB", color: "#10b981" },
-          { icon: Clock,       label: "IDLE TRK", val: "IN ORB", color: "#f472b6" },
-        ].map(({ icon: Icon, label, val, color }) => (
-          <div key={label} style={{ display: "flex", alignItems: "center", gap: "5px", flexShrink: 0 }}>
-            <motion.div animate={{ opacity: [0.6, 1, 0.6] }} transition={{ duration: 1.8 + Math.random(), repeat: Infinity }}>
-              <Icon style={{ width: "9px", height: "9px", color }} />
-            </motion.div>
-            <span style={{ fontSize: "6.5px", fontFamily: "monospace", color: "rgba(255,255,255,0.18)", letterSpacing: "0.7px" }}>{label}</span>
-            <span style={{ fontSize: "8px", fontFamily: "monospace", fontWeight: 700, color, textShadow: `0 0 6px ${color}` }}>{val}</span>
+/* ══════════════════════════════════════════════════════════════════
+   CYBER HUD OVERLAY  — small draggable floating panel
+   Same spring animation + 3D tilt + drag as NET INTRUSION
+══════════════════════════════════════════════════════════════════ */
+function CyberHUDOverlay({ onClose }: { onClose: () => void }) {
+  const [focusedPanel,    setFocusedPanel]    = useState<string | null>(null);
+  const [showNetActivity, setShowNetActivity] = useState(false);
+  const [scanY, setScanY] = useState(0);
+  const [tilt,  setTilt]  = useState({ x: 0, y: 0 });
+  const [hov,   setHov]   = useState(false);
+  const stats    = useLiveStats();
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  const defaultX = typeof window !== "undefined" ? window.innerWidth - 360 : 900;
+  const { pos, onMouseDown, onTouchStart } = useDraggableHUD(defaultX, 100);
+
+  /* Animated scan line */
+  useEffect(() => {
+    const iv = setInterval(() => setScanY(p => (p + 1.8) % 100), 20);
+    return () => clearInterval(iv);
+  }, []);
+
+  function handleMouseMove(e: React.MouseEvent) {
+    const el = panelRef.current; if (!el) return;
+    const r = el.getBoundingClientRect();
+    setTilt({
+      x: ((e.clientX - r.left) / r.width  - 0.5) * 8,
+      y: ((e.clientY - r.top)  / r.height - 0.5) * -8,
+    });
+  }
+
+  function handleExpand(id: string) {
+    if (id === "topology") { setShowNetActivity(true); return; }
+    setFocusedPanel(id);
+  }
+
+  const allPanels = [
+    ...PANELS,
+    { id: "sysmon", label: "SYS MONITOR",    icon: Thermometer, color: "#10b981", desc: "System resources"  },
+    { id: "idle",   label: "IDLE / ACTIVITY", icon: Clock,       color: "#f472b6", desc: "Session tracker"   },
+  ];
+
+  return (
+    <>
+      <AnimatePresence>
+        {showNetActivity && <NetworkActivityPage onClose={() => setShowNetActivity(false)} />}
+        {focusedPanel && (
+          <CyberPanelFocusView key={focusedPanel} id={focusedPanel} onClose={() => setFocusedPanel(null)} />
+        )}
+      </AnimatePresence>
+
+      {/* ── Floating panel — identical spring/tilt/drag to NET INTRUSION ── */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.75, y: 24 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.75, y: 24 }}
+        transition={{ type: "spring", damping: 24, stiffness: 210 }}
+        style={{
+          position: "fixed", left: pos.x, top: pos.y,
+          zIndex: 200, width: "310px",
+          pointerEvents: "auto", perspective: "700px",
+        }}
+      >
+        <motion.div
+          ref={panelRef}
+          onMouseMove={handleMouseMove}
+          onMouseLeave={() => { setTilt({ x: 0, y: 0 }); setHov(false); }}
+          onMouseEnter={() => setHov(true)}
+          animate={{ rotateX: tilt.y, rotateY: tilt.x }}
+          transition={{ type: "spring", stiffness: 240, damping: 24 }}
+          style={{ transformStyle: "preserve-3d" }}
+        >
+          {/* Outer glow — pulses on hover */}
+          <motion.div
+            animate={{ opacity: hov ? [0.4, 0.85, 0.4] : [0.12, 0.3, 0.12] }}
+            transition={{ duration: 2.5, repeat: Infinity }}
+            style={{
+              position: "absolute", inset: "-5px", borderRadius: "20px",
+              border: `1px solid rgba(226,18,39,${hov ? "0.45" : "0.18"})`,
+              pointerEvents: "none", zIndex: -1,
+              boxShadow: `0 0 ${hov ? 64 : 36}px rgba(226,18,39,${hov ? "0.16" : "0.07"})`,
+              transition: "all 0.4s ease",
+            }}
+          />
+
+          <div style={{
+            background: "linear-gradient(160deg, rgba(2,4,14,0.99) 0%, rgba(7,3,13,0.99) 50%, rgba(2,4,10,0.99) 100%)",
+            border: "1px solid rgba(226,18,39,0.22)",
+            borderRadius: "16px", overflow: "hidden",
+            boxShadow: "0 18px 80px rgba(0,0,0,0.97), 0 0 50px rgba(226,18,39,0.06), inset 0 1px 0 rgba(255,255,255,0.04)",
+            position: "relative",
+          }}>
+            {/* Scan line */}
+            <div style={{ position: "absolute", left: 0, right: 0, top: `${scanY}%`, height: "1px",
+              background: "linear-gradient(90deg, transparent, rgba(226,18,39,0.22), transparent)",
+              pointerEvents: "none", zIndex: 1 }} />
+            {/* Dot grid */}
+            <div style={{ position: "absolute", inset: 0,
+              backgroundImage: "radial-gradient(circle, rgba(226,18,39,0.025) 1px, transparent 1px)",
+              backgroundSize: "12px 12px", pointerEvents: "none", zIndex: 0 }} />
+
+            {/* Top accent stripe */}
+            <motion.div
+              animate={{ opacity: [0.5, 1, 0.5] }}
+              transition={{ duration: 1.9, repeat: Infinity }}
+              style={{ height: "2px", background: "linear-gradient(90deg, transparent, rgba(226,18,39,0.9), rgba(0,229,255,0.45), transparent)" }}
+            />
+
+            {/* ── HEADER / drag handle ── */}
+            <div
+              onMouseDown={onMouseDown}
+              onTouchStart={onTouchStart}
+              style={{
+                display: "flex", alignItems: "center", gap: "8px",
+                padding: "10px 14px 8px",
+                borderBottom: "1px solid rgba(226,18,39,0.1)",
+                cursor: "grab", position: "relative", zIndex: 2, userSelect: "none",
+              }}
+            >
+              <motion.div
+                animate={{ filter: ["drop-shadow(0 0 4px #e21227)", "drop-shadow(0 0 12px #e21227)", "drop-shadow(0 0 4px #e21227)"] }}
+                transition={{ duration: 2.2, repeat: Infinity }}
+              >
+                <Layers style={{ width: "11px", height: "11px", color: "#e21227", flexShrink: 0 }} />
+              </motion.div>
+              <span style={{
+                fontSize: "11px", fontFamily: "monospace", fontWeight: 900,
+                color: "#e21227", letterSpacing: "2px",
+                textShadow: "0 0 14px rgba(226,18,39,0.75)", flex: 1,
+              }}>CYBER HUD</span>
+              <motion.span
+                animate={{ opacity: [0.3, 1, 0.3] }}
+                transition={{ duration: 0.9, repeat: Infinity }}
+                style={{ fontSize: "7px", fontFamily: "monospace", color: "#22c55e", padding: "1px 5px", borderRadius: "3px", background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.28)" }}
+              >LIVE</motion.span>
+              <HUDClock />
+              <button
+                onClick={onClose}
+                style={{ width: "24px", height: "24px", borderRadius: "6px", background: "rgba(226,18,39,0.08)", border: "1px solid rgba(226,18,39,0.28)", color: "#e21227", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s", flexShrink: 0 }}
+                onMouseEnter={e => { e.currentTarget.style.background = "rgba(226,18,39,0.22)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "rgba(226,18,39,0.08)"; }}
+              >
+                <X style={{ width: "10px", height: "10px" }} />
+              </button>
+            </div>
+
+            {/* ── STATS ROW ── */}
+            <div style={{
+              display: "flex", gap: "5px", padding: "7px 12px 6px",
+              borderBottom: "1px solid rgba(255,255,255,0.04)",
+              background: "rgba(0,0,0,0.22)", position: "relative", zIndex: 2,
+            }}>
+              {([ 
+                { label: "CPU", val: `${stats.cpu}%`, color: stats.cpu > 70 ? "#e21227" : "#00e5ff" },
+                { label: "MEM", val: `${stats.mem}%`, color: "#a855f7" },
+                { label: "API", val: String(stats.api), color: "#22c55e" },
+                { label: "THR", val: String(stats.thr), color: stats.thr > 4 ? "#e21227" : "#f59e0b" },
+              ] as { label: string; val: string; color: string }[]).map(({ label, val, color }) => (
+                <div key={label} style={{ flex: 1, textAlign: "center", padding: "5px 0", borderRadius: "7px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                  <div style={{ fontSize: "6px", fontFamily: "monospace", color: "rgba(255,255,255,0.2)", letterSpacing: "1px", marginBottom: "2px" }}>{label}</div>
+                  <div style={{ fontSize: "11px", fontFamily: "monospace", fontWeight: 900, color, textShadow: `0 0 8px ${color}80` }}>{val}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* ── PANEL LIST ── */}
+            <div style={{ padding: "7px 10px 9px", display: "flex", flexDirection: "column", gap: "3px", position: "relative", zIndex: 2 }}>
+              {allPanels.map((panel) => {
+                const Icon = panel.icon as React.ComponentType<{ style?: React.CSSProperties }>;
+                return (
+                  <motion.button
+                    key={panel.id}
+                    whileHover={{ x: 2 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => handleExpand(panel.id)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: "7px",
+                      padding: "6px 9px", borderRadius: "8px",
+                      background: "rgba(255,255,255,0.02)",
+                      border: `1px solid ${panel.color}14`,
+                      cursor: "pointer", width: "100%", textAlign: "left",
+                      transition: "all 0.15s",
+                    }}
+                    onMouseEnter={e => {
+                      const b = e.currentTarget;
+                      b.style.background   = `${panel.color}0e`;
+                      b.style.borderColor  = `${panel.color}35`;
+                      b.style.boxShadow    = `0 0 14px ${panel.color}10`;
+                    }}
+                    onMouseLeave={e => {
+                      const b = e.currentTarget;
+                      b.style.background   = "rgba(255,255,255,0.02)";
+                      b.style.borderColor  = `${panel.color}14`;
+                      b.style.boxShadow    = "none";
+                    }}
+                  >
+                    <motion.div
+                      animate={{ opacity: [0.4, 1, 0.4], scale: [0.85, 1.15, 0.85] }}
+                      transition={{ duration: 1.8, repeat: Infinity, delay: Math.random() * 1.5 }}
+                      style={{ width: "5px", height: "5px", borderRadius: "50%", background: panel.color, boxShadow: `0 0 6px ${panel.color}`, flexShrink: 0 }}
+                    />
+                    <Icon style={{ width: "10px", height: "10px", color: panel.color, flexShrink: 0 }} />
+                    <span style={{ fontSize: "9px", fontFamily: "monospace", fontWeight: 700, color: "rgba(255,255,255,0.72)", letterSpacing: "1.2px", flex: 1 }}>
+                      {panel.label}
+                    </span>
+                    <span style={{ fontSize: "6.5px", fontFamily: "monospace", color: "rgba(255,255,255,0.18)" }}>{panel.desc}</span>
+                    <ChevronRight style={{ width: "9px", height: "9px", color: "rgba(255,255,255,0.22)", flexShrink: 0 }} />
+                  </motion.button>
+                );
+              })}
+            </div>
+
+            {/* Corner brackets */}
+            <div style={{ position: "absolute", top: 6, left: 6, width: 10, height: 10, borderTop: "1.5px solid rgba(226,18,39,0.5)", borderLeft: "1.5px solid rgba(226,18,39,0.5)", pointerEvents: "none", zIndex: 3 }} />
+            <div style={{ position: "absolute", bottom: 6, right: 6, width: 10, height: 10, borderBottom: "1.5px solid rgba(226,18,39,0.5)", borderRight: "1.5px solid rgba(226,18,39,0.5)", pointerEvents: "none", zIndex: 3 }} />
+
+            {/* Bottom accent stripe */}
+            <motion.div
+              animate={{ opacity: [0.25, 0.75, 0.25] }}
+              transition={{ duration: 2.3, repeat: Infinity }}
+              style={{ height: "1.5px", background: "linear-gradient(90deg, transparent, rgba(226,18,39,0.7), rgba(0,229,255,0.4), transparent)" }}
+            />
           </div>
-        ))}
-        <div style={{ flex: 1 }} />
-        <span style={{ fontSize: "7px", fontFamily: "monospace", color: "rgba(255,255,255,0.1)", letterSpacing: "1px", flexShrink: 0 }}>
-          ESC · CTRL+SHIFT+H · ⊞ EXPAND
-        </span>
-      </div>
+        </motion.div>
+      </motion.div>
     </>
   );
 }
