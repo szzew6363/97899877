@@ -368,27 +368,66 @@ function AppContent() {
     return !hasKey;
   });
 
-  // Silent auto-init — runs every load, selects configured provider without showing modal
+  // ── Silent auto-init ─────────────────────────────────────────────────────────
+  // Runs on every load: server providers → localStorage keys → personal key.
+  // No modal, no interruption. Sets optimal settings silently.
   useEffect(() => {
-    if (autoSetupVisible) return; // modal handles it
     const P_KEY = "mr7-ai-p-key-";
+    const P_URL = "mr7-ai-p-url-";
     const PRIORITY = [
-      { id: "groq", baseURL: "https://api.groq.com/openai/v1", model: "llama-3.3-70b-versatile" },
-      { id: "openai", baseURL: "https://api.openai.com/v1", model: "gpt-4o" },
-      { id: "anthropic", baseURL: "https://api.anthropic.com/v1", model: "claude-sonnet-4-5" },
-      { id: "gemini", baseURL: "https://generativelanguage.googleapis.com/v1beta/openai", model: "gemini-2.5-flash" },
-      { id: "openrouter", baseURL: "https://openrouter.ai/api/v1", model: "deepseek/deepseek-chat-v3-0324" },
-      { id: "deepseek", baseURL: "https://api.deepseek.com/v1", model: "deepseek-chat" },
-      { id: "xai", baseURL: "https://api.x.ai/v1", model: "grok-3-mini" },
-      { id: "mistral", baseURL: "https://api.mistral.ai/v1", model: "mistral-large-latest" },
+      { id: "groq",       baseURL: "https://api.groq.com/openai/v1",                          model: "llama-3.3-70b-versatile"        },
+      { id: "openai",     baseURL: "https://api.openai.com/v1",                               model: "gpt-4o"                         },
+      { id: "anthropic",  baseURL: "https://api.anthropic.com/v1",                            model: "claude-sonnet-4-5"              },
+      { id: "gemini",     baseURL: "https://generativelanguage.googleapis.com/v1beta/openai", model: "gemini-2.5-flash"               },
+      { id: "openrouter", baseURL: "https://openrouter.ai/api/v1",                            model: "deepseek/deepseek-chat-v3-0324" },
+      { id: "deepseek",   baseURL: "https://api.deepseek.com/v1",                             model: "deepseek-chat"                  },
+      { id: "xai",        baseURL: "https://api.x.ai/v1",                                    model: "grok-3-mini"                    },
+      { id: "mistral",    baseURL: "https://api.mistral.ai/v1",                               model: "mistral-large-latest"           },
     ] as const;
-    for (const p of PRIORITY) {
-      const key = localStorage.getItem(P_KEY + p.id)?.trim();
-      if (key && key.length > 10) {
-        dispatch({ type: "SET_PROVIDER", provider: p.id as never, providerModel: p.model });
-        return;
+
+    async function silentInit() {
+      // 1. Check server-configured providers
+      try {
+        const res = await fetch("/api/providers");
+        if (res.ok) {
+          const data = await res.json() as { providers?: { id: string; available: boolean }[] };
+          for (const p of PRIORITY) {
+            if (data.providers?.find((sp: { id: string; available: boolean }) => sp.id === p.id && sp.available)) {
+              dispatch({ type: "SET_PROVIDER", provider: p.id as never, providerModel: p.model });
+              dispatch({ type: "SET_SETTINGS", patch: { streaming: true, autoTitle: true, showTokenMeter: true } as never });
+              setAutoSetupVisible(false);
+              localStorage.setItem("mr7-ai-autoinit-done", "1");
+              return;
+            }
+          }
+        }
+      } catch { /* network issue — try localStorage */ }
+
+      // 2. Check localStorage personal keys
+      for (const p of PRIORITY) {
+        const key = localStorage.getItem(P_KEY + p.id)?.trim();
+        if (key && key.length > 10) {
+          const url = localStorage.getItem(P_URL + p.id)?.trim() || p.baseURL;
+          dispatch({ type: "SET_SETTINGS", patch: { personalApiKey: key, personalApiBaseURL: url, streaming: true, autoTitle: true, showTokenMeter: true } as never });
+          dispatch({ type: "SET_PROVIDER", provider: "personal", providerModel: p.model });
+          setAutoSetupVisible(false);
+          localStorage.setItem("mr7-ai-autoinit-done", "1");
+          return;
+        }
       }
+
+      // 3. Check personalApiKey already in persisted store
+      try {
+        const s = JSON.parse(localStorage.getItem("mr7-ai-state-v2") || "{}");
+        if ((s?.settings?.personalApiKey?.trim()?.length ?? 0) > 10) {
+          dispatch({ type: "SET_SETTINGS", patch: { streaming: true, autoTitle: true, showTokenMeter: true } as never });
+          setAutoSetupVisible(false);
+          localStorage.setItem("mr7-ai-autoinit-done", "1");
+        }
+      } catch { /* ignore */ }
     }
+
+    silentInit();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -561,7 +600,7 @@ function AppContent() {
       }
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "a" && !e.altKey) {
         e.preventDefault();
-        setAnalyticsOpen(v => !v);
+        window.dispatchEvent(new CustomEvent("kali:trigger-auto-setup"));
       }
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "o") {
         e.preventDefault();

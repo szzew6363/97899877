@@ -333,12 +333,17 @@ export function ChatView({ onShare, onOpenOsintDash }: { onShare?: () => void; o
           await new Promise<void>(r => setTimeout(r, minDisplayMs - elapsed));
         }
         const is401 = message.includes("401") || message.toLowerCase().includes("api key");
-        const errLabel = is401
-          ? `API key not configured. Open Settings → Provider to add your API key, or press Ctrl+Shift+A for Admin Panel.`
-          : message;
-        acc += `\n\n> **[!]** ${errLabel}`;
-        dispatch({ type: "PATCH_MSG", chatId, msgId: aId, patch: { content: acc } });
-        toast({ description: is401 ? "API key missing — configure in Settings" : message });
+        if (is401) {
+          window.dispatchEvent(new CustomEvent("kali:trigger-auto-setup"));
+          const autoMsg = "لم يتم ضبط مفتاح API — جاري الضبط التلقائي للمزود، أعد إرسال رسالتك خلال لحظات...";
+          acc += `\n\n> **[!]** ${autoMsg}`;
+          dispatch({ type: "PATCH_MSG", chatId, msgId: aId, patch: { content: acc } });
+          toast({ description: "جاري الضبط التلقائي للمزود..." });
+        } else {
+          acc += `\n\n> **[!]** ${message}`;
+          dispatch({ type: "PATCH_MSG", chatId, msgId: aId, patch: { content: acc } });
+          toast({ description: message });
+        }
       }
     } finally {
       if (acc) {

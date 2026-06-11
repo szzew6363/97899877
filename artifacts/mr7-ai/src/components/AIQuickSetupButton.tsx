@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Wand2, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useStore, ProviderName } from "@/lib/store";
@@ -10,7 +10,6 @@ const URL_PREFIX = "mr7-ai-p-url-";
 interface ProviderConfig {
   id: string;
   name: string;
-  color: string;
   baseURL: string;
   bestModel: string;
   bestModelLabel: string;
@@ -18,23 +17,19 @@ interface ProviderConfig {
 }
 
 const PROVIDER_PRIORITY: ProviderConfig[] = [
-  { id: "groq",       name: "Groq",       color: "#8b5cf6", baseURL: "https://api.groq.com/openai/v1",                          bestModel: "llama-3.3-70b-versatile",        bestModelLabel: "Llama 3.3 70B",      providerName: "groq"       },
-  { id: "openai",     name: "OpenAI",     color: "#10b981", baseURL: "https://api.openai.com/v1",                               bestModel: "gpt-4o",                         bestModelLabel: "GPT-4o",             providerName: "openai"     },
-  { id: "anthropic",  name: "Anthropic",  color: "#f59e0b", baseURL: "https://api.anthropic.com/v1",                            bestModel: "claude-sonnet-4-5",              bestModelLabel: "Claude Sonnet 4.5",  providerName: "anthropic"  },
-  { id: "gemini",     name: "Gemini",     color: "#3b82f6", baseURL: "https://generativelanguage.googleapis.com/v1beta/openai", bestModel: "gemini-2.5-flash",               bestModelLabel: "Gemini 2.5 Flash",   providerName: "gemini"     },
-  { id: "openrouter", name: "OpenRouter", color: "#ef4444", baseURL: "https://openrouter.ai/api/v1",                            bestModel: "deepseek/deepseek-chat-v3-0324", bestModelLabel: "DeepSeek V3",        providerName: "openrouter" },
-  { id: "deepseek",   name: "DeepSeek",   color: "#f97316", baseURL: "https://api.deepseek.com/v1",                             bestModel: "deepseek-chat",                  bestModelLabel: "DeepSeek V3",        providerName: "personal"   },
-  { id: "xai",        name: "xAI Grok",   color: "#06b6d4", baseURL: "https://api.x.ai/v1",                                    bestModel: "grok-3-mini",                    bestModelLabel: "Grok 3 Mini",        providerName: "personal"   },
-  { id: "mistral",    name: "Mistral",    color: "#ec4899", baseURL: "https://api.mistral.ai/v1",                               bestModel: "mistral-large-latest",           bestModelLabel: "Mistral Large",      providerName: "personal"   },
+  { id: "groq",       name: "Groq",       baseURL: "https://api.groq.com/openai/v1",                          bestModel: "llama-3.3-70b-versatile",        bestModelLabel: "Llama 3.3 70B",     providerName: "groq"       },
+  { id: "openai",     name: "OpenAI",     baseURL: "https://api.openai.com/v1",                               bestModel: "gpt-4o",                         bestModelLabel: "GPT-4o",            providerName: "openai"     },
+  { id: "anthropic",  name: "Anthropic",  baseURL: "https://api.anthropic.com/v1",                            bestModel: "claude-sonnet-4-5",              bestModelLabel: "Claude Sonnet 4.5", providerName: "anthropic"  },
+  { id: "gemini",     name: "Gemini",     baseURL: "https://generativelanguage.googleapis.com/v1beta/openai", bestModel: "gemini-2.5-flash",               bestModelLabel: "Gemini 2.5 Flash",  providerName: "gemini"     },
+  { id: "openrouter", name: "OpenRouter", baseURL: "https://openrouter.ai/api/v1",                            bestModel: "deepseek/deepseek-chat-v3-0324", bestModelLabel: "DeepSeek V3",       providerName: "openrouter" },
+  { id: "deepseek",   name: "DeepSeek",   baseURL: "https://api.deepseek.com/v1",                             bestModel: "deepseek-chat",                  bestModelLabel: "DeepSeek V3",       providerName: "personal"   },
+  { id: "xai",        name: "xAI Grok",   baseURL: "https://api.x.ai/v1",                                    bestModel: "grok-3-mini",                    bestModelLabel: "Grok 3 Mini",       providerName: "personal"   },
+  { id: "mistral",    name: "Mistral",    baseURL: "https://api.mistral.ai/v1",                               bestModel: "mistral-large-latest",           bestModelLabel: "Mistral Large",     providerName: "personal"   },
 ];
 
 type Phase = "idle" | "scanning" | "done" | "fail";
 
-interface Props {
-  onOpenProviderSettings?: () => void;
-}
-
-export function AIQuickSetupButton({ onOpenProviderSettings }: Props) {
+export function AIQuickSetupButton() {
   const { state, dispatch } = useStore();
   const { toast } = useToast();
   const [phase, setPhase] = useState<Phase>("idle");
@@ -57,10 +52,10 @@ export function AIQuickSetupButton({ onOpenProviderSettings }: Props) {
             }
           }
         }
-      } catch { /* network issue, continue to fallbacks */ }
+      } catch { /* continue */ }
 
       if (matched) {
-        applyProvider(matched, matched.providerName !== "personal" ? undefined : matched.baseURL, undefined);
+        applyProvider(matched);
         toast({ description: `تم الإعداد التلقائي — ${matched.name} · ${matched.bestModelLabel}` });
         return;
       }
@@ -88,34 +83,53 @@ export function AIQuickSetupButton({ onOpenProviderSettings }: Props) {
       }
 
       if (localMatch) {
-        applyProvider(localMatch, localMatch.url, localMatch.key);
+        dispatch({
+          type: "SET_SETTINGS",
+          patch: {
+            personalApiKey: localMatch.key,
+            personalApiBaseURL: localMatch.url,
+            streaming: true,
+            autoTitle: true,
+            showTokenMeter: true,
+          },
+        });
+        dispatch({ type: "SET_PROVIDER", provider: "personal", providerModel: localMatch.bestModel });
+        setPhase("done");
         toast({ description: `تم الإعداد التلقائي — ${localMatch.name} · ${localMatch.bestModelLabel}` });
+        setTimeout(() => setPhase("idle"), 2500);
         return;
       }
 
-      // 4. Nothing found — redirect to settings
+      // 4. Nothing found — inform user without opening any modal
       setPhase("fail");
-      setTimeout(() => {
-        setPhase("idle");
-        onOpenProviderSettings?.();
-      }, 900);
-      toast({ description: "لم يُعثر على مزوّد — أضف مفتاح API في الإعدادات", variant: "destructive" });
+      setTimeout(() => setPhase("idle"), 2000);
+      toast({
+        description: "لم يُعثر على مزوّد — أدخل مفتاح API من إعدادات المزود في الشريط الجانبي",
+        variant: "destructive",
+      });
 
     } catch {
       setPhase("fail");
       setTimeout(() => setPhase("idle"), 2000);
     }
 
-    function applyProvider(p: ProviderConfig, baseURL?: string, apiKey?: string) {
+    function applyProvider(p: ProviderConfig, overrideKey?: string, overrideURL?: string) {
       const patch: Record<string, unknown> = { streaming: true, autoTitle: true, showTokenMeter: true };
-      if (apiKey) patch.personalApiKey = apiKey;
-      if (baseURL) patch.personalApiBaseURL = baseURL;
+      if (overrideKey)  patch.personalApiKey     = overrideKey;
+      if (overrideURL)  patch.personalApiBaseURL  = overrideURL;
       dispatch({ type: "SET_SETTINGS", patch: patch as Parameters<typeof dispatch>[0] extends { type: "SET_SETTINGS"; patch: infer T } ? T : never });
       dispatch({ type: "SET_PROVIDER", provider: p.providerName, providerModel: p.bestModel });
       setPhase("done");
       setTimeout(() => setPhase("idle"), 2500);
     }
-  }, [phase, state.settings.personalApiKey, dispatch, toast, onOpenProviderSettings]);
+  }, [phase, state.settings.personalApiKey, dispatch, toast]);
+
+  // Listen for keyboard shortcut event: Ctrl+Shift+A
+  useEffect(() => {
+    function onTrigger() { run(); }
+    window.addEventListener("kali:trigger-auto-setup", onTrigger);
+    return () => window.removeEventListener("kali:trigger-auto-setup", onTrigger);
+  }, [run]);
 
   const isScanning = phase === "scanning";
   const isDone     = phase === "done";
@@ -134,7 +148,7 @@ export function AIQuickSetupButton({ onOpenProviderSettings }: Props) {
         cursor:      isScanning ? "wait" : "pointer",
       }}
       aria-label="إعداد الذكاء الاصطناعي تلقائياً"
-      title="AUTO — يكتشف أفضل مزوّد ونموذج ويفعّل الإعدادات المثلى تلقائياً"
+      title="AUTO — Ctrl+Shift+A — يكتشف أفضل مزوّد ونموذج ويفعّل الإعدادات المثلى"
     >
       <AnimatePresence mode="wait" initial={false}>
         {isScanning ? (
