@@ -65,7 +65,8 @@ export type ArsenalModuleId =
   | "vulntopology" | "precisionstrike" | "livecve" | "bassimulation"
   | "networktopo" | "binaryanalysis" | "webfuzzing" | "multiagentsoc"
   | "orchestrationengine" | "globalvulnheatmap"
-  | "cyberwarfarematrix";
+  | "cyberwarfarematrix"
+  | "sentientcybersphere";
 
 export type ArsenalModule = {
   id: ArsenalModuleId;
@@ -909,6 +910,12 @@ export const ARSENAL_MODULES: ArsenalModule[] = [
     desc: "6-in-1 war room: Live 3D network attack matrix, polymorphic code morphing engine, AI swarm warfare agents, quantum cryptanalysis (Shor/Grover), SCADA/ICS infiltration, and a military-grade live terminal with real-time payload compilation.",
     icon: Crosshair, color: "#e21227", border: "rgba(226,18,39,0.5)", bg: "rgba(226,18,39,0.1)", glow: "rgba(226,18,39,0.4)",
     source: "KaliGPT Native", tag: "WAR ROOM",
+  },
+  {
+    id: "sentientcybersphere", name: "Sentient Cyber-Sphere", subtitle: "Neural Core · Digital Twin · Swarm · Ghost · Genesis · Crypto · War-Game",
+    desc: "The ultimate cognitive deterrence arsenal. Three.js neural particle sphere (4,200 pts), Digital Twin infrastructure clone with live attack simulation, 500-agent swarm intelligence, Ghost Supremacy Protocol (harmonic vibrations + trace erasure), Genesis Pulse shockwave, Dimensional Cryptography (Shor/Grover on 5 ciphers), Predictive War-Gaming 2025–2030. Full military voice synthesis + sub-bass audio engine.",
+    icon: Cpu, color: "#00e5ff", border: "rgba(0,229,255,0.5)", bg: "rgba(0,229,255,0.08)", glow: "rgba(0,229,255,0.35)",
+    source: "KaliGPT Native", tag: "GODMODE",
   },
 ];
 

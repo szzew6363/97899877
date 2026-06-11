@@ -165,6 +165,7 @@ import { MultiAgentSOCModal } from "./components/modals/MultiAgentSOCModal";
 import { OrchestrationEngineModal } from "./components/modals/OrchestrationEngineModal";
 import { GlobalVulnHeatmapModal } from "./components/modals/GlobalVulnHeatmapModal";
 import { CyberWarfareMatrixModal } from "./components/modals/CyberWarfareMatrixModal";
+import { SentientCyberSphereModal } from "./components/modals/SentientCyberSphereModal";
 
 const queryClient = new QueryClient();
 
@@ -371,6 +372,7 @@ function AppContent() {
   const [orchestrationEngineOpen, setOrchestrationEngineOpen] = useState(false);
   const [globalVulnHeatmapOpen, setGlobalVulnHeatmapOpen] = useState(false);
   const [cyberWarfareMatrixOpen, setCyberWarfareMatrixOpen] = useState(false);
+  const [sentientCyberSphereOpen, setSentientCyberSphereOpen] = useState(false);
 
   const [pipelineKeyRef] = useState(() => ({ n: 0 }));
   const [ragPipelineDoc, setRagPipelineDoc] = useState<{ text: string; name: string; key: number } | undefined>();
@@ -455,6 +457,8 @@ function AppContent() {
       setGlobalVulnHeatmapOpen(true);
     } else if (id === "cyberwarfarematrix") {
       setCyberWarfareMatrixOpen(true);
+    } else if (id === "sentientcybersphere") {
+      setSentientCyberSphereOpen(true);
     } else {
       setArsenalPage(id);
     }
@@ -810,6 +814,7 @@ function AppContent() {
       <OrchestrationEngineModal open={orchestrationEngineOpen} onOpenChange={setOrchestrationEngineOpen} />
       <GlobalVulnHeatmapModal open={globalVulnHeatmapOpen} onOpenChange={setGlobalVulnHeatmapOpen} />
       <CyberWarfareMatrixModal open={cyberWarfareMatrixOpen} onOpenChange={setCyberWarfareMatrixOpen} />
+      <SentientCyberSphereModal open={sentientCyberSphereOpen} onOpenChange={setSentientCyberSphereOpen} />
 
       {/* Global HUD scan line — year 3090 effect */}
       <div className="hud-scan-line pointer-events-none" />
