@@ -41,27 +41,27 @@ function OrbitalCanvas({ phase, color }: { phase: Phase; color: string }) {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d")!;
-    const W = 40, H = 40;
+    const W = 52, H = 52;
     canvas.width = W; canvas.height = H;
     const cx = W / 2, cy = H / 2;
     const [pr, pg, pb] = hexToRgb(color);
     const toHex = (n: number) => Math.round(n).toString(16).padStart(2, "0");
     const rgba = (a: number) => `#${toHex(pr)}${toHex(pg)}${toHex(pb)}${toHex(a * 255)}`;
 
-    // Orbital particles
-    const orbs = Array.from({ length: 7 }, (_, i) => ({
-      angle: (i / 7) * Math.PI * 2,
-      speed: 0.022 + (i % 3) * 0.004,
-      radius: 13 + (i % 2) * 2,
-      tiltX: 0.3 + (i / 7) * 0.8,
-      size: 1.2 + (i % 3) * 0.4,
+    // Orbital particles (3 rings, bigger)
+    const orbs = Array.from({ length: 11 }, (_, i) => ({
+      angle: (i / 11) * Math.PI * 2,
+      speed: 0.018 + (i % 3) * 0.005,
+      radius: i < 4 ? 17 : i < 8 ? 20 : 23,
+      tiltX: 0.25 + (i / 11) * 0.9,
+      size: 1.0 + (i % 3) * 0.5,
     }));
 
     // Data stream lines (scanning)
-    const streams = Array.from({ length: 8 }, (_, i) => ({
-      angle: (i / 8) * Math.PI * 2,
-      len: 3 + Math.random() * 4,
-      speed: 0.04 + Math.random() * 0.03,
+    const streams = Array.from({ length: 10 }, (_, i) => ({
+      angle: (i / 10) * Math.PI * 2,
+      len: 4 + Math.random() * 6,
+      speed: 0.035 + Math.random() * 0.03,
       phase: Math.random() * Math.PI * 2,
     }));
 
@@ -75,20 +75,20 @@ function OrbitalCanvas({ phase, color }: { phase: Phase; color: string }) {
       const fail     = phase === "fail";
 
       // Outer glow ring
-      const glowR = 17 + Math.sin(f * 0.05) * 1;
+      const glowR = 22 + Math.sin(f * 0.05) * 1.5;
       const outerG = ctx.createRadialGradient(cx, cy, glowR * 0.7, cx, cy, glowR * 1.4);
-      outerG.addColorStop(0, rgba(0.18));
+      outerG.addColorStop(0, rgba(0.22));
       outerG.addColorStop(1, rgba(0));
       ctx.beginPath();
       ctx.arc(cx, cy, glowR * 1.4, 0, Math.PI * 2);
       ctx.fillStyle = outerG;
       ctx.fill();
 
-      // Orbit ellipses
+      // Orbit ellipses (3 rings, bigger)
       const rings = [
-        { rx: 15, ry: 4.5, rot: f * 0.011, alpha: 0.25 },
-        { rx: 12, ry: 6,   rot: -f * 0.015, alpha: 0.18 },
-        { rx: 9,  ry: 8,   rot: f * 0.009,  alpha: 0.14 },
+        { rx: 19, ry: 5.5, rot: f * 0.011,  alpha: 0.28 },
+        { rx: 16, ry: 7.5, rot: -f * 0.015, alpha: 0.20 },
+        { rx: 12, ry: 10,  rot: f * 0.009,  alpha: 0.15 },
       ];
       rings.forEach(ring => {
         ctx.save();
@@ -110,10 +110,10 @@ function OrbitalCanvas({ phase, color }: { phase: Phase; color: string }) {
         ctx.rotate(beamAngle);
         ctx.beginPath();
         ctx.moveTo(0, 0);
-        ctx.arc(0, 0, 14, -0.35, 0.35);
+        ctx.arc(0, 0, 18, -0.35, 0.35);
         ctx.closePath();
-        const sweepG = ctx.createRadialGradient(0, 0, 0, 0, 0, 14);
-        sweepG.addColorStop(0, rgba(0.5));
+        const sweepG = ctx.createRadialGradient(0, 0, 0, 0, 0, 18);
+        sweepG.addColorStop(0, rgba(0.55));
         sweepG.addColorStop(1, rgba(0.08));
         ctx.fillStyle = sweepG;
         ctx.fill();
@@ -166,8 +166,8 @@ function OrbitalCanvas({ phase, color }: { phase: Phase; color: string }) {
       });
 
       // Core sphere
-      const coreR = scanning ? 5 + Math.sin(f * 0.12) * 1.2 : 4.5;
-      const coreG = ctx.createRadialGradient(cx - 1.5, cy - 1.5, 0, cx, cy, coreR);
+      const coreR = scanning ? 6.5 + Math.sin(f * 0.12) * 1.5 : 5.5;
+      const coreG = ctx.createRadialGradient(cx - 2, cy - 2, 0, cx, cy, coreR);
       coreG.addColorStop(0, "#ffffff");
       coreG.addColorStop(0.3, rgba(1));
       coreG.addColorStop(0.7, rgba(0.8));
@@ -228,7 +228,7 @@ function OrbitalCanvas({ phase, color }: { phase: Phase; color: string }) {
   return (
     <canvas
       ref={canvasRef}
-      className="w-10 h-10 shrink-0"
+      className="w-[52px] h-[52px] shrink-0"
       style={{ imageRendering: "crisp-edges" }}
     />
   );

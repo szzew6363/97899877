@@ -10,7 +10,7 @@ import { applyToTriggers, transform, TECHNIQUE_LABELS, type Technique, type Inte
 import { motion, AnimatePresence } from "framer-motion";
 import { useStore, useActiveChat, type CouncilPayload, type CouncilSeatState, type GodmodePayload, type GodmodeChampState } from "@/lib/store";
 import { useToast } from "@/hooks/use-toast";
-import { renderMessageContent, CodeBlock } from "./CodeBlock";
+import { renderMessageContent, CodeBlock, RichTextBlock } from "./CodeBlock";
 import { QuickPrompts } from "./QuickPrompts";
 import { ShareModal } from "./modals/ShareModal";
 import { VoiceChatModal } from "./modals/VoiceChatModal";
@@ -1183,7 +1183,7 @@ export function ChatView({ onShare, onOpenOsintDash }: { onShare?: () => void; o
                       p.type === "code" ? (
                         <CodeBlock key={i} code={p.value} lang={p.lang ?? "text"} />
                       ) : (
-                        <span key={i} className="whitespace-pre-wrap">{p.value}</span>
+                        <RichTextBlock key={i} text={p.value} />
                       ),
                     );
                   })()

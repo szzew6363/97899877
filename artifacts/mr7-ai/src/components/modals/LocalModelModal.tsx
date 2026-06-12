@@ -1,15 +1,154 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FullPageOverlay } from "@/components/FullPageOverlay";
 import { Switch } from "@/components/ui/switch";
 import {
   Server, Wifi, WifiOff, CheckCircle2, AlertCircle, ExternalLink, Cpu,
   RefreshCw, Download, Search, ChevronDown, ChevronUp, Zap, Brain,
   Shield, Code2, Eye, Globe, Star, Loader2, Copy, Check, Terminal,
-  HardDrive, Gauge, MemoryStick, X,
+  HardDrive, Gauge, MemoryStick, X, Radio, Activity,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useStore } from "@/lib/store";
 import { useToast } from "@/hooks/use-toast";
+
+// ── Server endpoints to auto-scan ────────────────────────────────────────────
+const AUTO_SCAN_TARGETS = [
+  { id: "ollama",   label: "Ollama",    port: 11434, color: "#00e5ff", url: "http://localhost:11434/v1" },
+  { id: "lmstudio", label: "LM Studio", port: 1234,  color: "#a78bfa", url: "http://localhost:1234/v1"  },
+  { id: "jan",      label: "Jan",       port: 1337,  color: "#34d399", url: "http://localhost:1337/v1"  },
+] as const;
+
+type ScanStatus = "idle" | "scanning" | "found" | "notfound";
+type ScanResult = { id: string; status: ScanStatus; models: string[]; latencyMs?: number };
+
+// ── 3D Radar Scan Canvas ──────────────────────────────────────────────────────
+function RadarScan3D({ results, scanning }: { results: ScanResult[]; scanning: boolean }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const rafRef = useRef(0);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d")!;
+    const W = canvas.width = 240, H = canvas.height = 160;
+    const cx = W / 2, cy = H / 2;
+    let frame = 0;
+
+    function draw() {
+      frame++;
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = "#060608";
+      ctx.fillRect(0, 0, W, H);
+
+      // Grid rings
+      [30, 55, 75].forEach((r, ri) => {
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(0,229,255,${0.06 + ri * 0.02})`;
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+      });
+      // Cross hairs
+      ctx.strokeStyle = "rgba(0,229,255,0.08)";
+      ctx.lineWidth = 0.5;
+      ctx.beginPath(); ctx.moveTo(cx, cy - 80); ctx.lineTo(cx, cy + 80); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx - 120, cy); ctx.lineTo(cx + 120, cy); ctx.stroke();
+
+      // Sweep beam
+      if (scanning) {
+        const angle = (frame * 0.04) % (Math.PI * 2);
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(angle);
+        // Manual sweep cone
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, 80, -0.4, 0.4);
+        ctx.closePath();
+        const sg = ctx.createRadialGradient(0, 0, 0, 0, 0, 80);
+        sg.addColorStop(0, "rgba(0,229,255,0.25)");
+        sg.addColorStop(1, "rgba(0,229,255,0)");
+        ctx.fillStyle = sg;
+        ctx.fill();
+        // Sweep line
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(80, 0);
+        ctx.strokeStyle = "rgba(0,229,255,0.8)";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Server blips
+      const positions = [
+        { x: cx - 50, y: cy - 35 },
+        { x: cx + 45, y: cy + 10 },
+        { x: cx - 10, y: cy + 45 },
+      ];
+      AUTO_SCAN_TARGETS.forEach((t, i) => {
+        const res = results.find(r => r.id === t.id);
+        const pos = positions[i];
+        const pulse = (Math.sin(frame * 0.06 + i) + 1) / 2;
+        const status = res?.status ?? "idle";
+
+        // Blip color
+        const color = status === "found" ? t.color
+          : status === "notfound" ? "#ef4444"
+          : status === "scanning" ? "#fbbf24"
+          : "#ffffff33";
+
+        // Outer ring (for found/scanning)
+        if (status === "found" || status === "scanning") {
+          ctx.beginPath();
+          ctx.arc(pos.x, pos.y, 8 + pulse * 6, 0, Math.PI * 2);
+          ctx.strokeStyle = color + "44";
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+
+        // Core dot
+        const gr = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, 5);
+        gr.addColorStop(0, status === "idle" ? "#ffffff22" : color);
+        gr.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, 5, 0, Math.PI * 2);
+        ctx.fillStyle = gr;
+        ctx.fill();
+
+        // Label
+        ctx.fillStyle = status === "found" ? color : "rgba(255,255,255,0.3)";
+        ctx.font = `bold 8px monospace`;
+        ctx.textAlign = "center";
+        ctx.fillText(t.label, pos.x, pos.y - 8);
+        if (res?.latencyMs && status === "found") {
+          ctx.font = `7px monospace`;
+          ctx.fillStyle = color + "aa";
+          ctx.fillText(`${res.latencyMs}ms`, pos.x, pos.y + 14);
+        }
+      });
+
+      // Center label
+      ctx.fillStyle = scanning ? "rgba(0,229,255,0.6)" : "rgba(255,255,255,0.2)";
+      ctx.font = "bold 9px monospace";
+      ctx.textAlign = "center";
+      ctx.fillText(scanning ? "SCANNING..." : "LOCAL SERVERS", cx, cy + 3);
+
+      rafRef.current = requestAnimationFrame(draw);
+    }
+    rafRef.current = requestAnimationFrame(draw);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [scanning, results]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      width={240} height={160}
+      className="w-full max-w-[240px] mx-auto rounded-xl"
+      style={{ imageRendering: "crisp-edges", border: "1px solid rgba(0,229,255,0.12)" }}
+    />
+  );
+}
 
 type ModelTag = "UNCENSORED" | "FAST" | "POWERFUL" | "CODE" | "VISION" | "REASONING" | "MULTILINGUAL" | "TINY" | "EMBED";
 type ModelGroup = "Dolphin / Uncensored" | "Llama Family" | "Mistral Family" | "DeepSeek" | "Qwen" | "Phi / Small" | "Code Models" | "Vision Models" | "Arabic / Multilingual" | "Gemma" | "Security Specialist" | "Mixtral" | "Embedding Models";
@@ -189,6 +328,60 @@ export function LocalModelModal({ open, onOpenChange }: LocalModelModalProps) {
   const [pullProgress, setPullProgress] = useState<{ status: string; completed?: number; total?: number } | null>(null);
   const [pulling, setPulling] = useState(false);
   const [deletingModel, setDeletingModel] = useState<string | null>(null);
+
+  // ── Auto-detect state ────────────────────────────────────────────────────────
+  const [autoScanning, setAutoScanning] = useState(false);
+  const [scanResults, setScanResults] = useState<ScanResult[]>(
+    AUTO_SCAN_TARGETS.map(t => ({ id: t.id, status: "idle" as ScanStatus, models: [] }))
+  );
+
+  // Auto-scan all local servers when modal opens
+  useEffect(() => {
+    if (!open) return;
+    const alreadyScanned = scanResults.some(r => r.status === "found" || r.status === "notfound");
+    if (alreadyScanned) return;
+    runAutoScan();
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function runAutoScan() {
+    setAutoScanning(true);
+    setScanResults(AUTO_SCAN_TARGETS.map(t => ({ id: t.id, status: "scanning" as ScanStatus, models: [] })));
+
+    const results = await Promise.all(AUTO_SCAN_TARGETS.map(async (target) => {
+      const t0 = Date.now();
+      try {
+        const res = await fetch(`${target.url}/models`, {
+          headers: { "Authorization": "Bearer ollama" },
+          signal: AbortSignal.timeout(3000),
+        });
+        const latencyMs = Date.now() - t0;
+        if (res.ok) {
+          const data = await res.json().catch(() => ({})) as { data?: { id: string }[] };
+          const models = Array.isArray(data.data) ? data.data.map((m) => m.id) : [];
+          return { id: target.id, status: "found" as ScanStatus, models, latencyMs };
+        }
+        return { id: target.id, status: "notfound" as ScanStatus, models: [], latencyMs };
+      } catch {
+        return { id: target.id, status: "notfound" as ScanStatus, models: [] };
+      }
+    }));
+
+    setScanResults(results);
+    setAutoScanning(false);
+
+    // Auto-apply first found server
+    const found = results.find(r => r.status === "found");
+    if (found) {
+      const target = AUTO_SCAN_TARGETS.find(t => t.id === found.id);
+      if (target) {
+        setEndpoint(target.url);
+        setServerType(found.id === "ollama" ? "ollama" : found.id === "lmstudio" ? "lmstudio" : "custom");
+        setDetectedModels(found.models);
+        if (found.models.length > 0) setModel(found.models[0]);
+        toast({ description: `تم اكتشاف ${target.label} تلقائياً — ${found.models.length} نموذج` });
+      }
+    }
+  }
 
   const useLocal = state.settings.useLocalModel;
 
@@ -409,6 +602,90 @@ export function LocalModelModal({ open, onOpenChange }: LocalModelModalProps) {
           </button>
         </div>
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
+
+        {/* 3D Auto-Detect Radar */}
+        <div className="rounded-2xl overflow-hidden" style={{ background: "linear-gradient(135deg, #060608, #0a0a10)", border: "1px solid rgba(0,229,255,0.15)", boxShadow: "0 0 30px rgba(0,229,255,0.06)" }}>
+          <div className="flex items-center justify-between px-4 py-2.5" style={{ borderBottom: "1px solid rgba(0,229,255,0.08)" }}>
+            <div className="flex items-center gap-2">
+              <Radio className="w-4 h-4" style={{ color: autoScanning ? "#00e5ff" : "rgba(0,229,255,0.5)" }} />
+              <span className="text-[12px] font-black" style={{ color: "#00e5ff" }}>
+                {autoScanning ? "مسح الشبكة..." : "كشف الخوادم المحلية"}
+              </span>
+              {autoScanning && (
+                <motion.span className="flex items-center gap-1 text-[9px] font-mono px-2 py-0.5 rounded-full"
+                  style={{ background: "rgba(0,229,255,0.1)", color: "#00e5ff", border: "1px solid rgba(0,229,255,0.2)" }}
+                  animate={{ opacity: [1, 0.5, 1] }} transition={{ duration: 1, repeat: Infinity }}>
+                  <Activity className="w-2 h-2" /> LIVE SCAN
+                </motion.span>
+              )}
+            </div>
+            <button onClick={runAutoScan} disabled={autoScanning}
+              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold transition-all hover:scale-105 disabled:opacity-40"
+              style={{ background: "rgba(0,229,255,0.08)", border: "1px solid rgba(0,229,255,0.2)", color: "#00e5ff" }}>
+              {autoScanning ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+              {autoScanning ? "مسح..." : "إعادة المسح"}
+            </button>
+          </div>
+          <div className="flex flex-col md:flex-row items-center gap-4 p-4">
+            <RadarScan3D results={scanResults} scanning={autoScanning} />
+            <div className="flex-1 space-y-2 w-full">
+              {AUTO_SCAN_TARGETS.map((target) => {
+                const res = scanResults.find(r => r.id === target.id);
+                const status = res?.status ?? "idle";
+                return (
+                  <div key={target.id}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all cursor-pointer"
+                    style={{
+                      background: status === "found" ? `${target.color}0a` : "rgba(255,255,255,0.02)",
+                      border: `1px solid ${status === "found" ? target.color + "33" : status === "scanning" ? "#fbbf2433" : "rgba(255,255,255,0.05)"}`,
+                      boxShadow: status === "found" ? `0 0 12px ${target.color}18` : "none",
+                    }}
+                    onClick={() => {
+                      if (status === "found") {
+                        setEndpoint(target.url);
+                        setServerType(target.id === "ollama" ? "ollama" : target.id === "lmstudio" ? "lmstudio" : "custom");
+                        if (res?.models && res.models.length > 0) {
+                          setDetectedModels(res.models);
+                          setModel(res.models[0]);
+                        }
+                        toast({ description: `تم اختيار ${target.label}` });
+                      }
+                    }}
+                  >
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{ background: status === "found" ? `${target.color}18` : "rgba(255,255,255,0.04)", border: `1px solid ${target.color}33` }}>
+                      <Server className="w-4 h-4" style={{ color: status === "found" ? target.color : "rgba(255,255,255,0.3)" }} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[12px] font-bold" style={{ color: status === "found" ? target.color : "rgba(255,255,255,0.5)" }}>{target.label}</span>
+                        {status === "found" && (
+                          <span className="text-[8px] font-black px-1.5 py-0.5 rounded-full" style={{ background: `${target.color}22`, color: target.color, border: `1px solid ${target.color}44` }}>
+                            متصل
+                          </span>
+                        )}
+                        {status === "notfound" && (
+                          <span className="text-[8px] font-mono text-red-400/60">غير متاح</span>
+                        )}
+                      </div>
+                      <div className="text-[9px] font-mono" style={{ color: "rgba(255,255,255,0.2)" }}>
+                        {target.url} {res?.latencyMs ? `· ${res.latencyMs}ms` : ""}
+                      </div>
+                      {res?.models && res.models.length > 0 && (
+                        <div className="text-[9px] mt-0.5" style={{ color: target.color + "88" }}>
+                          {res.models.length} نموذج: {res.models.slice(0, 2).join(", ")}{res.models.length > 2 ? `...+${res.models.length - 2}` : ""}
+                        </div>
+                      )}
+                    </div>
+                    {status === "scanning" && <Loader2 className="w-3.5 h-3.5 animate-spin flex-shrink-0 text-amber-400" />}
+                    {status === "found" && <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" style={{ color: target.color }} />}
+                    {status === "notfound" && <WifiOff className="w-3.5 h-3.5 flex-shrink-0 text-red-400/50" />}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
 
         {/* Enable Toggle */}
         <div className="flex items-center justify-between p-3 rounded-xl border border-border bg-background/60">
