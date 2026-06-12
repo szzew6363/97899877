@@ -1,11 +1,13 @@
 import { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { AI_MODELS } from "@/lib/ai-config";
+import { getPricing, calcCost, fmtCost } from "@/lib/provider-pricing";
 
 interface Props {
   inputTokens: number;
   totalTokens: number;
   modelId: string;
+  providerModel?: string;
 }
 
 function parseContextWindow(cw?: string): number {
@@ -29,7 +31,7 @@ function tokenColor(pct: number): string {
   return "#10b981";
 }
 
-export function TokenCounter3D({ inputTokens, totalTokens, modelId }: Props) {
+export function TokenCounter3D({ inputTokens, totalTokens, modelId, providerModel }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number>(0);
   const fillRef = useRef(0);
@@ -38,6 +40,10 @@ export function TokenCounter3D({ inputTokens, totalTokens, modelId }: Props) {
   const ctxWin = parseContextWindow(model?.contextWindow);
   const fillPct = Math.min(1, totalTokens / ctxWin);
   const color = tokenColor(fillPct);
+
+  const pricing = getPricing(modelId, providerModel);
+  const estimatedCost = pricing ? calcCost(inputTokens, totalTokens - inputTokens, pricing) : null;
+  const costStr = estimatedCost !== null ? fmtCost(estimatedCost) : null;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -176,8 +182,24 @@ export function TokenCounter3D({ inputTokens, totalTokens, modelId }: Props) {
             transition={{ duration: 0.6, ease: "easeOut" }}
           />
         </div>
-        <div className="font-mono text-[7.5px]" style={{ color: "rgba(255,255,255,0.14)" }}>
-          {Math.round(fillPct * 100)}% used
+        <div className="flex items-center gap-1">
+          <div className="font-mono text-[7.5px]" style={{ color: "rgba(255,255,255,0.14)" }}>
+            {Math.round(fillPct * 100)}% used
+          </div>
+          {costStr && (
+            <motion.div
+              key={costStr}
+              initial={{ opacity: 0, x: -4 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="font-mono text-[7.5px] font-bold"
+              style={{
+                color,
+                textShadow: `0 0 8px ${color}88`,
+              }}
+            >
+              · {costStr}
+            </motion.div>
+          )}
         </div>
       </div>
     </motion.div>

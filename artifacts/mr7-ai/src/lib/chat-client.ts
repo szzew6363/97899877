@@ -174,6 +174,55 @@ export async function streamLocalChat(
   return full;
 }
 
+export async function streamLocalChatViaProxy(
+  endpoint: string,
+  model: string,
+  messages: ChatMessage[],
+  systemPrompt: string,
+  onChunk: (text: string) => void,
+  signal?: AbortSignal,
+): Promise<string> {
+  const apiMessages: { role: string; content: string }[] = [
+    { role: "system", content: systemPrompt },
+    ...messages,
+  ];
+  const res = await fetch("/api/local-proxy/chat", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ endpoint, model, messages: apiMessages, stream: true }),
+    signal,
+  });
+  if (!res.ok || !res.body) {
+    const text = await res.text().catch(() => "");
+    let parsed: { error?: string } = {};
+    try { parsed = JSON.parse(text); } catch { /* ignore */ }
+    throw new Error(parsed.error ?? `Local model proxy failed (${res.status}): ${text.slice(0, 300)}`);
+  }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+  let full = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    let idx;
+    while ((idx = buf.indexOf("\n")) !== -1) {
+      const line = buf.slice(0, idx).trim();
+      buf = buf.slice(idx + 1);
+      if (!line.startsWith("data:")) continue;
+      const payload = line.slice(5).trim();
+      if (payload === "[DONE]") return full;
+      try {
+        const obj = JSON.parse(payload);
+        const content = obj.choices?.[0]?.delta?.content;
+        if (content) { full += content; onChunk(content); }
+      } catch { /* ignore */ }
+    }
+  }
+  return full;
+}
+
 export async function generateTitle(firstMessage: string): Promise<string> {
   try {
     const res = await fetch("/api/title", {

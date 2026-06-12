@@ -14,6 +14,7 @@ import filesRouter from "./files";
 import shellRouter from "./shell";
 import gitRouter from "./git";
 import providersRouter from "./providers";
+import localProxyRouter from "./local-proxy";
 
 const router: IRouter = Router();
 
@@ -32,5 +33,6 @@ router.use(filesRouter);
 router.use(shellRouter);
 router.use(gitRouter);
 router.use(providersRouter);
+router.use(localProxyRouter);
 
 export default router;

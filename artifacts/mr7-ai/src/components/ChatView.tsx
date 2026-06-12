@@ -21,7 +21,8 @@ import { DarkWebSearchModal } from "./modals/DarkWebSearchModal";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Smile } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
-import { streamChat, streamLocalChat, streamCouncil, streamGodmode, autoTune, generateTitle, translateText, enhancePrompt, estimateTokens, streamAgent, compressContext, analyzeOsintFile, type ChatMessage, type AgentEvent } from "@/lib/chat-client";
+import { streamChat, streamLocalChat, streamLocalChatViaProxy, streamCouncil, streamGodmode, autoTune, generateTitle, translateText, enhancePrompt, estimateTokens, streamAgent, compressContext, analyzeOsintFile, type ChatMessage, type AgentEvent } from "@/lib/chat-client";
+import { MessageCostBadge } from "./MessageCostBadge";
 import type { AgentStep } from "@/lib/store";
 import { CouncilCard } from "./CouncilCard";
 import { GodmodeCard } from "./GodmodeCard";
@@ -104,6 +105,7 @@ export function ChatView({ onShare, onOpenOsintDash }: { onShare?: () => void; o
   const [liveTokens, setLiveTokens] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
   const liveAccRef = useRef("");
+  const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
@@ -257,20 +259,25 @@ export function ChatView({ onShare, onOpenOsintDash }: { onShare?: () => void; o
     };
     liveAccRef.current = "";
     setLiveTps(0); setLiveTokens(0);
+    if (flushTimerRef.current) { clearTimeout(flushTimerRef.current); flushTimerRef.current = null; }
     const onChunk = (chunk: string) => {
       acc += chunk;
       liveAccRef.current = acc;
-      const out = activeStmCount(stmCfg) > 0 ? applyStm(acc, stmCfg) : acc;
-      dispatch({ type: "PATCH_MSG", chatId, msgId: aId, patch: { content: out } });
-      const elSec = (Date.now() - streamStart) / 1000;
-      const estimatedToks = Math.round(acc.length / 4);
-      setLiveTokens(estimatedToks);
-      if (elSec > 0.3) setLiveTps(Math.round(estimatedToks / elSec));
+      if (flushTimerRef.current) return;
+      flushTimerRef.current = setTimeout(() => {
+        flushTimerRef.current = null;
+        const out = activeStmCount(stmCfg) > 0 ? applyStm(acc, stmCfg) : acc;
+        dispatch({ type: "PATCH_MSG", chatId, msgId: aId, patch: { content: out } });
+        const elSec = (Date.now() - streamStart) / 1000;
+        const estimatedToks = Math.round(acc.length / 4);
+        setLiveTokens(estimatedToks);
+        if (elSec > 0.3) setLiveTps(Math.round(estimatedToks / elSec));
+      }, 48);
     };
     try {
       if (useLocal) {
         try {
-          await streamLocalChat(localEndpoint, localModel, history, localSysPrompt, onChunk, abortRef.current.signal);
+          await streamLocalChatViaProxy(localEndpoint, localModel, history, localSysPrompt, onChunk, abortRef.current.signal);
         } catch (localErr) {
           if ((localErr as { name?: string })?.name === "AbortError") throw localErr;
           const isNetworkErr = localErr instanceof TypeError || (localErr instanceof Error && (localErr.message.includes("fetch") || localErr.message.includes("Failed") || localErr.message.includes("NetworkError") || localErr.message.includes("refused")));
@@ -346,6 +353,12 @@ export function ChatView({ onShare, onOpenOsintDash }: { onShare?: () => void; o
         }
       }
     } finally {
+      if (flushTimerRef.current) {
+        clearTimeout(flushTimerRef.current);
+        flushTimerRef.current = null;
+        const out = activeStmCount(stmCfg) > 0 ? applyStm(acc, stmCfg) : acc;
+        dispatch({ type: "PATCH_MSG", chatId, msgId: aId, patch: { content: out } });
+      }
       if (acc) {
         dispatch({ type: "USE_TOKENS", amount: estimateTokens(acc) });
         const elapsedSec = (Date.now() - streamStart) / 1000;
@@ -1238,6 +1251,19 @@ export function ChatView({ onShare, onOpenOsintDash }: { onShare?: () => void; o
                       </button>
                     );
                   })}
+                </div>
+              )}
+
+              {/* Per-message cost badge — completed messages only */}
+              {msg.role === "assistant" && msg.content.length > 0 && !msg.council && !msg.godmode && !(streaming && msg.id === chat?.messages[chat.messages.length - 1]?.id) && (
+                <div className="ml-1 mt-1.5">
+                  <MessageCostBadge
+                    inputText={chat?.messages.slice(0, chat.messages.indexOf(msg)).map(m => m.content).join(" ") ?? ""}
+                    outputText={msg.content}
+                    modelId={state.activeModel}
+                    providerModel={state.activeProviderModel}
+                    isLocal={state.settings.useLocalModel}
+                  />
                 </div>
               )}
 

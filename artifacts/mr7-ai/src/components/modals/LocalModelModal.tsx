@@ -350,15 +350,15 @@ export function LocalModelModal({ open, onOpenChange }: LocalModelModalProps) {
     const results = await Promise.all(AUTO_SCAN_TARGETS.map(async (target) => {
       const t0 = Date.now();
       try {
-        const res = await fetch(`${target.url}/models`, {
-          headers: { "Authorization": "Bearer ollama" },
-          signal: AbortSignal.timeout(3000),
+        const res = await fetch(`/api/local-proxy/ping?endpoint=${encodeURIComponent(target.url)}`, {
+          signal: AbortSignal.timeout(5000),
         });
         const latencyMs = Date.now() - t0;
         if (res.ok) {
-          const data = await res.json().catch(() => ({})) as { data?: { id: string }[] };
-          const models = Array.isArray(data.data) ? data.data.map((m) => m.id) : [];
-          return { id: target.id, status: "found" as ScanStatus, models, latencyMs };
+          const data = await res.json().catch(() => ({})) as { ok?: boolean; models?: string[] };
+          if (data.ok) {
+            return { id: target.id, status: "found" as ScanStatus, models: data.models ?? [], latencyMs };
+          }
         }
         return { id: target.id, status: "notfound" as ScanStatus, models: [], latencyMs };
       } catch {
