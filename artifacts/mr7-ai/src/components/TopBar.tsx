@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Menu, Sparkles, Coins, LayoutGrid, HelpCircle, Search, Zap, Brain, Server, Bot, Hexagon, Shield, Columns3, Crosshair, BarChart2, ChevronLeft, ChevronRight, Wifi, Target, GitBranch, Bug, Activity, DollarSign, GitMerge, ShieldAlert, ShieldCheck, BrainCircuit, Gauge, Globe, AlertTriangle } from "lucide-react";
+import { Menu, Sparkles, Coins, LayoutGrid, HelpCircle, Search, Zap, Brain, Server, Bot, Hexagon, Shield, Columns3, Crosshair, BarChart2, ChevronLeft, ChevronRight, Wifi, Target, GitBranch, Bug, Activity, DollarSign, GitMerge, ShieldAlert, ShieldCheck, BrainCircuit, Gauge, Globe, AlertTriangle, Network } from "lucide-react";
 import { AIQuickSetupButton } from "./AIQuickSetupButton";
 import { ProviderHealthBadge3D } from "./ProviderHealthBadge3D";
 import { motion, AnimatePresence } from "framer-motion";
@@ -62,9 +62,10 @@ interface TopBarProps {
   onOpenPrefetch?: () => void;
   onOpenMasterHud?: () => void;
   onOpenAnomalyLog?: () => void;
+  onOpenNetworkTopo?: () => void;
 }
 
-export function TopBar({ onMenuClick, onOpenPricing, onOpenToolsHub, onOpenHelp, onOpenPersonaEditor, onOpenLocalModel, onOpenAgent, onOpenNexus, onOpenArsenal, onOpenProviderSettings, onOpenModelCompare, onOpenNeuralMatrix, onOpenAnalytics, onOpenWarRoom, onOpenDeepSearch, onOpenChainInvestigation, onOpenRedTeam, onOpenPerfDash, onOpenCostDash, onOpenDedupViz, onOpenThreatFeed, onOpenSecurityDash, onOpenContextMemory, onOpenPrefetch, onOpenMasterHud, onOpenAnomalyLog }: TopBarProps) {
+export function TopBar({ onMenuClick, onOpenPricing, onOpenToolsHub, onOpenHelp, onOpenPersonaEditor, onOpenLocalModel, onOpenAgent, onOpenNexus, onOpenArsenal, onOpenProviderSettings, onOpenModelCompare, onOpenNeuralMatrix, onOpenAnalytics, onOpenWarRoom, onOpenDeepSearch, onOpenChainInvestigation, onOpenRedTeam, onOpenPerfDash, onOpenCostDash, onOpenDedupViz, onOpenThreatFeed, onOpenSecurityDash, onOpenContextMemory, onOpenPrefetch, onOpenMasterHud, onOpenAnomalyLog, onOpenNetworkTopo }: TopBarProps) {
   const { state, dispatch } = useStore();
   const { t } = useT();
   const { toast } = useToast();
@@ -679,6 +680,18 @@ export function TopBar({ onMenuClick, onOpenPricing, onOpenToolsHub, onOpenHelp,
               title="Anomaly Log 3D"
             >
               <AlertTriangle className="w-4 h-4" />
+            </button>
+          )}
+
+          {/* Network Topology 3D */}
+          {onOpenNetworkTopo && (
+            <button
+              onClick={onOpenNetworkTopo}
+              className="flex-shrink-0 p-2 rounded-lg text-muted-foreground hover:text-[#3b82f6] hover:bg-[#3b82f6]/10 transition-colors"
+              aria-label="Network Topology 3D"
+              title="Network Topology 3D"
+            >
+              <Network className="w-4 h-4" />
             </button>
           )}
 

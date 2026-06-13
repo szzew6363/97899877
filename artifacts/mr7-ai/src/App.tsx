@@ -176,6 +176,7 @@ import { ContextMemoryPanel3D } from "./components/ContextMemoryPanel3D";
 import { PrefetchIntelligence3D } from "./components/PrefetchIntelligence3D";
 import { SystemMasterHUD3D } from "./components/SystemMasterHUD3D";
 import { AnomalyLog3D } from "./components/AnomalyLog3D";
+import { NetworkTopology3D } from "./components/NetworkTopology3D";
 import { contextMemory } from "./lib/context-memory";
 import { securityLayer } from "./lib/security-layer";
 import { prefetchEngine } from "./lib/prefetch-engine";
@@ -479,6 +480,7 @@ function AppContent() {
   const [prefetchOpen, setPrefetchOpen] = useState(false);
   const [masterHudOpen, setMasterHudOpen] = useState(true);
   const [anomalyLogOpen, setAnomalyLogOpen] = useState(false);
+  const [net3DOpen, setNet3DOpen] = useState(false);
   const { entries: costEntries, addEntry: addCostEntry } = useCostTracker();
 
   // Non-invasive context memory tracking + prefetch analysis
@@ -734,6 +736,7 @@ function AppContent() {
           onOpenPrefetch={() => setPrefetchOpen((v) => !v)}
           onOpenMasterHud={() => setMasterHudOpen((v) => !v)}
           onOpenAnomalyLog={() => setAnomalyLogOpen((v) => !v)}
+          onOpenNetworkTopo={() => setNet3DOpen((v) => !v)}
         />
         <ChatView onOpenOsintDash={() => setOsintDashOpen(true)} />
         {compareOpen && <CompareView onClose={() => setCompareOpen(false)} />}
@@ -987,6 +990,9 @@ function AppContent() {
 
       {/* Anomaly Log 3D */}
       {anomalyLogOpen && <AnomalyLog3D onClose={() => setAnomalyLogOpen(false)} />}
+
+      {/* Network Topology 3D */}
+      {net3DOpen && <NetworkTopology3D onClose={() => setNet3DOpen(false)} />}
 
       {/* System Master HUD 3D — always-visible command center */}
       {masterHudOpen && (

@@ -106,6 +106,8 @@ export function ChatView({ onShare, onOpenOsintDash }: { onShare?: () => void; o
   const abortRef = useRef<AbortController | null>(null);
   const liveAccRef = useRef("");
   const flushTimerRef = useRef<number | null>(null);
+  const streamBufRef = useRef(""); // mutable chunk accumulator — no React cost
+  const streamLastRef = useRef(""); // last dispatched content — diff guard
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
@@ -259,20 +261,29 @@ export function ChatView({ onShare, onOpenOsintDash }: { onShare?: () => void; o
     };
     liveAccRef.current = "";
     setLiveTps(0); setLiveTokens(0);
+    // Reset mutable buffers — zero React cost
+    streamBufRef.current = "";
+    streamLastRef.current = "";
     if (flushTimerRef.current) { cancelAnimationFrame(flushTimerRef.current); flushTimerRef.current = null; }
+    // Self-sustaining RAF loop: dispatches ONLY when buffer differs from last render (~60fps max, diff-guarded)
+    const streamLoop = () => {
+      const buf = streamBufRef.current;
+      if (buf !== streamLastRef.current) {
+        streamLastRef.current = buf;
+        const out = activeStmCount(stmCfg) > 0 ? applyStm(buf, stmCfg) : buf;
+        dispatch({ type: "PATCH_MSG", chatId, msgId: aId, patch: { content: out } });
+        const elSec = (Date.now() - streamStart) / 1000;
+        const estimatedToks = Math.round(buf.length / 4);
+        setLiveTokens(estimatedToks);
+        if (elSec > 0.3) setLiveTps(Math.round(estimatedToks / elSec));
+      }
+      flushTimerRef.current = requestAnimationFrame(streamLoop);
+    };
+    flushTimerRef.current = requestAnimationFrame(streamLoop);
     const onChunk = (chunk: string) => {
       acc += chunk;
       liveAccRef.current = acc;
-      if (flushTimerRef.current) return;
-      flushTimerRef.current = requestAnimationFrame(() => {
-        flushTimerRef.current = null;
-        const out = activeStmCount(stmCfg) > 0 ? applyStm(acc, stmCfg) : acc;
-        dispatch({ type: "PATCH_MSG", chatId, msgId: aId, patch: { content: out } });
-        const elSec = (Date.now() - streamStart) / 1000;
-        const estimatedToks = Math.round(acc.length / 4);
-        setLiveTokens(estimatedToks);
-        if (elSec > 0.3) setLiveTps(Math.round(estimatedToks / elSec));
-      });
+      streamBufRef.current = acc; // pure mutable write — zero React overhead
     };
     try {
       if (useLocal) {
@@ -353,9 +364,10 @@ export function ChatView({ onShare, onOpenOsintDash }: { onShare?: () => void; o
         }
       }
     } finally {
-      if (flushTimerRef.current) {
-        cancelAnimationFrame(flushTimerRef.current);
-        flushTimerRef.current = null;
+      // Stop RAF loop
+      if (flushTimerRef.current) { cancelAnimationFrame(flushTimerRef.current); flushTimerRef.current = null; }
+      // Final flush — dispatch if any content wasn't rendered yet
+      if (acc && acc !== streamLastRef.current) {
         const out = activeStmCount(stmCfg) > 0 ? applyStm(acc, stmCfg) : acc;
         dispatch({ type: "PATCH_MSG", chatId, msgId: aId, patch: { content: out } });
       }
