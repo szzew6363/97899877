@@ -105,7 +105,7 @@ export function ChatView({ onShare, onOpenOsintDash }: { onShare?: () => void; o
   const [liveTokens, setLiveTokens] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
   const liveAccRef = useRef("");
-  const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flushTimerRef = useRef<number | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
@@ -144,7 +144,7 @@ export function ChatView({ onShare, onOpenOsintDash }: { onShare?: () => void; o
   function scrollToBottom() {
     const el = scrollRef.current;
     if (!el) return;
-    requestAnimationFrame(() => el.scrollTo({ top: el.scrollHeight, behavior: "smooth" }));
+    requestAnimationFrame(() => el.scrollTo({ top: el.scrollHeight, behavior: streaming ? "auto" : "smooth" }));
   }
 
   async function enhanceInput() {
@@ -259,12 +259,12 @@ export function ChatView({ onShare, onOpenOsintDash }: { onShare?: () => void; o
     };
     liveAccRef.current = "";
     setLiveTps(0); setLiveTokens(0);
-    if (flushTimerRef.current) { clearTimeout(flushTimerRef.current); flushTimerRef.current = null; }
+    if (flushTimerRef.current) { cancelAnimationFrame(flushTimerRef.current); flushTimerRef.current = null; }
     const onChunk = (chunk: string) => {
       acc += chunk;
       liveAccRef.current = acc;
       if (flushTimerRef.current) return;
-      flushTimerRef.current = setTimeout(() => {
+      flushTimerRef.current = requestAnimationFrame(() => {
         flushTimerRef.current = null;
         const out = activeStmCount(stmCfg) > 0 ? applyStm(acc, stmCfg) : acc;
         dispatch({ type: "PATCH_MSG", chatId, msgId: aId, patch: { content: out } });
@@ -272,7 +272,7 @@ export function ChatView({ onShare, onOpenOsintDash }: { onShare?: () => void; o
         const estimatedToks = Math.round(acc.length / 4);
         setLiveTokens(estimatedToks);
         if (elSec > 0.3) setLiveTps(Math.round(estimatedToks / elSec));
-      }, 48);
+      });
     };
     try {
       if (useLocal) {
@@ -354,7 +354,7 @@ export function ChatView({ onShare, onOpenOsintDash }: { onShare?: () => void; o
       }
     } finally {
       if (flushTimerRef.current) {
-        clearTimeout(flushTimerRef.current);
+        cancelAnimationFrame(flushTimerRef.current);
         flushTimerRef.current = null;
         const out = activeStmCount(stmCfg) > 0 ? applyStm(acc, stmCfg) : acc;
         dispatch({ type: "PATCH_MSG", chatId, msgId: aId, patch: { content: out } });

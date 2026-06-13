@@ -175,6 +175,7 @@ import { SecurityDashboard3D } from "./components/SecurityDashboard3D";
 import { ContextMemoryPanel3D } from "./components/ContextMemoryPanel3D";
 import { PrefetchIntelligence3D } from "./components/PrefetchIntelligence3D";
 import { SystemMasterHUD3D } from "./components/SystemMasterHUD3D";
+import { AnomalyLog3D } from "./components/AnomalyLog3D";
 import { contextMemory } from "./lib/context-memory";
 import { securityLayer } from "./lib/security-layer";
 import { prefetchEngine } from "./lib/prefetch-engine";
@@ -477,6 +478,7 @@ function AppContent() {
   const [contextMemoryOpen, setContextMemoryOpen] = useState(false);
   const [prefetchOpen, setPrefetchOpen] = useState(false);
   const [masterHudOpen, setMasterHudOpen] = useState(true);
+  const [anomalyLogOpen, setAnomalyLogOpen] = useState(false);
   const { entries: costEntries, addEntry: addCostEntry } = useCostTracker();
 
   // Non-invasive context memory tracking + prefetch analysis
@@ -731,6 +733,7 @@ function AppContent() {
           onOpenContextMemory={() => setContextMemoryOpen((v) => !v)}
           onOpenPrefetch={() => setPrefetchOpen((v) => !v)}
           onOpenMasterHud={() => setMasterHudOpen((v) => !v)}
+          onOpenAnomalyLog={() => setAnomalyLogOpen((v) => !v)}
         />
         <ChatView onOpenOsintDash={() => setOsintDashOpen(true)} />
         {compareOpen && <CompareView onClose={() => setCompareOpen(false)} />}
@@ -981,6 +984,9 @@ function AppContent() {
 
       {/* Prefetch Intelligence 3D */}
       {prefetchOpen && <PrefetchIntelligence3D onClose={() => setPrefetchOpen(false)} />}
+
+      {/* Anomaly Log 3D */}
+      {anomalyLogOpen && <AnomalyLog3D onClose={() => setAnomalyLogOpen(false)} />}
 
       {/* System Master HUD 3D — always-visible command center */}
       {masterHudOpen && (
