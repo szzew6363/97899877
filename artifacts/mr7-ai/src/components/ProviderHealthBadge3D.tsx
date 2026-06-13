@@ -260,8 +260,10 @@ function HealthSphere({ health }: { health: Health }) {
   useEffect(() => {
     const cv = canvasRef.current;
     if (!cv) return;
-    const ctx = cv.getContext("2d")!;
-    const DPR  = window.devicePixelRatio || 1;
+    const ctx = cv.getContext("2d", { alpha: true })!;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    const DPR  = Math.min((window.devicePixelRatio || 1) * 2, 4);
     const SIZE = 38;
     cv.width  = SIZE * DPR;
     cv.height = SIZE * DPR;
@@ -277,11 +279,9 @@ function HealthSphere({ health }: { health: Health }) {
       speed: 0.8 + (i % 3) * 0.25,
     }));
 
-    function draw(now: number) {
+    function draw(_now: number) {
       rafRef.current = requestAnimationFrame(draw);
-      if (now - lastFRef.current < 28) return; // ~35fps max
-      lastFRef.current = now;
-      tRef.current += 0.048;
+      tRef.current += 0.020;
       const t  = tRef.current;
       const h  = healthRef.current;
       const [cr, cg, cb] = HEALTH_RGB[h];

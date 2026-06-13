@@ -41,8 +41,10 @@ function OrbitalCanvas({ phase, color }: { phase: Phase; color: string }) {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d")!;
-    const DPR = window.devicePixelRatio || 1;
+    const ctx = canvas.getContext("2d", { alpha: true })!;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    const DPR = Math.min((window.devicePixelRatio || 1) * 2, 4);
     const W = 52, H = 52;
     canvas.width  = W * DPR;
     canvas.height = H * DPR;
@@ -81,8 +83,6 @@ function OrbitalCanvas({ phase, color }: { phase: Phase; color: string }) {
 
     function draw(now: number) {
       rafRef.current = requestAnimationFrame(draw);
-      if (now - lastRef.current < 20) return; // ~50fps max
-      lastRef.current = now;
       frameRef.current++;
       const f = frameRef.current;
       ctx.clearRect(0, 0, W, H);
