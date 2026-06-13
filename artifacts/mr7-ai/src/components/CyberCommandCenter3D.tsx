@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import * as THREE from "three";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Zap, Shield, Eye, Code2, Network, Lock, AlertTriangle, Activity } from "lucide-react";
+import { X, Zap, Shield, Eye, Code2, Network, Lock, AlertTriangle, Activity, Globe } from "lucide-react";
+import { LiveAttackGlobe3D } from "./LiveAttackGlobe3D";
 
 /* ═══════════════════════════════════════════════════════════════════════
    CYBER COMMAND CENTER 3D
@@ -116,6 +117,7 @@ export function CyberCommandCenter3D({ open, onClose, onOpenModal }: CyberComman
   const mouseRef    = useRef({ x: 0, y: 0 });
   const isDragging  = useRef(false);
   const lastMouse   = useRef({ x: 0, y: 0 });
+  const [activeTab, setActiveTab] = useState<'hub' | 'attackmap'>('hub');
   const rotGroup    = useRef<THREE.Group | null>(null);
 
   const [hoveredDomain, setHoveredDomain] = useState<number | null>(null);
@@ -413,16 +415,24 @@ export function CyberCommandCenter3D({ open, onClose, onOpenModal }: CyberComman
         className="fixed inset-0 z-[200] flex flex-col"
         style={{ background: "#000510", fontFamily: "'Courier New', monospace" }}
       >
-        {/* Three.js canvas mount */}
-        <div ref={mountRef} className="absolute inset-0 cursor-grab active:cursor-grabbing" />
+        {/* Three.js canvas mount — hidden when on attack map tab */}
+        <div ref={mountRef} className="absolute inset-0 cursor-grab active:cursor-grabbing"
+          style={{ display: activeTab === 'hub' ? 'block' : 'none' }} />
+
+        {/* Attack Globe — shown when on attack map tab */}
+        {activeTab === 'attackmap' && (
+          <div className="absolute inset-0" style={{ top: 56 }}>
+            <LiveAttackGlobe3D />
+          </div>
+        )}
 
         {/* Scanline overlay */}
         <div className="absolute inset-0 pointer-events-none z-10"
-          style={{ backgroundImage: "repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.06) 2px,rgba(0,0,0,0.06) 4px)" }} />
+          style={{ backgroundImage: "repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.06) 2px,rgba(0,0,0,0.06) 4px)", display: activeTab === 'hub' ? 'block' : 'none' }} />
 
         {/* Header */}
         <div className="relative z-20 flex items-center justify-between px-6 py-3"
-          style={{ borderBottom: "1px solid rgba(255,32,32,0.25)", background: "rgba(0,5,16,0.85)", backdropFilter: "blur(12px)" }}>
+          style={{ borderBottom: "1px solid rgba(255,32,32,0.25)", background: "rgba(0,5,16,0.90)", backdropFilter: "blur(12px)" }}>
           <div className="flex items-center gap-3">
             <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: tc, boxShadow: `0 0 8px ${tc}` }} />
             <span className="text-xs font-bold tracking-[0.3em] text-white/90">CYBER COMMAND CENTER</span>
@@ -430,8 +440,38 @@ export function CyberCommandCenter3D({ open, onClose, onOpenModal }: CyberComman
               {threatLevel}
             </span>
           </div>
+
+          {/* Tab switcher */}
+          <div className="flex items-center gap-1 rounded-lg p-0.5" style={{ background: "rgba(0,5,16,0.8)", border: "1px solid rgba(255,255,255,0.08)" }}>
+            <button
+              onClick={() => setActiveTab('hub')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[10px] font-bold tracking-widest transition-all"
+              style={{
+                background: activeTab === 'hub' ? `${tc}22` : "transparent",
+                color: activeTab === 'hub' ? tc : "rgba(255,255,255,0.35)",
+                border: activeTab === 'hub' ? `1px solid ${tc}44` : "1px solid transparent",
+              }}>
+              <Activity className="w-3 h-3" />
+              COMMAND CENTER
+            </button>
+            <button
+              onClick={() => setActiveTab('attackmap')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[10px] font-bold tracking-widest transition-all"
+              style={{
+                background: activeTab === 'attackmap' ? "rgba(255,17,51,0.15)" : "transparent",
+                color: activeTab === 'attackmap' ? "#FF1133" : "rgba(255,255,255,0.35)",
+                border: activeTab === 'attackmap' ? "1px solid rgba(255,17,51,0.35)" : "1px solid transparent",
+              }}>
+              <Globe className="w-3 h-3" />
+              LIVE ATTACK MAP
+              <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+            </button>
+          </div>
+
           <div className="flex items-center gap-4">
-            <span className="text-[10px] text-white/40 tracking-widest hidden md:block">DRAG TO ROTATE · CLICK RING TO EXPAND</span>
+            <span className="text-[10px] text-white/30 tracking-widest hidden lg:block">
+              {activeTab === 'hub' ? "DRAG TO ROTATE · CLICK RING TO EXPAND" : "DRAG TO ROTATE GLOBE · CISA KEV LIVE"}
+            </span>
             <button onClick={onClose}
               className="p-1.5 rounded-lg transition-all"
               style={{ color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)" }}
@@ -442,8 +482,8 @@ export function CyberCommandCenter3D({ open, onClose, onOpenModal }: CyberComman
           </div>
         </div>
 
-        {/* Domain ring buttons — floating left */}
-        <div className="absolute left-4 top-1/2 -translate-y-1/2 z-20 flex flex-col gap-2">
+        {/* Domain ring buttons — floating left (hub tab only) */}
+        <div className="absolute left-4 top-1/2 -translate-y-1/2 z-20 flex flex-col gap-2" style={{ display: activeTab === 'hub' ? 'flex' : 'none' }}>
           {DOMAINS.map((domain, di) => {
             const Icon = DOMAIN_ICONS[di];
             const isHov = hoveredDomain === di;
@@ -472,9 +512,9 @@ export function CyberCommandCenter3D({ open, onClose, onOpenModal }: CyberComman
           })}
         </div>
 
-        {/* Expanded module panel */}
+        {/* Expanded module panel (hub tab only) */}
         <AnimatePresence>
-          {selectedData && (
+          {selectedData && activeTab === 'hub' && (
             <motion.div
               key={selectedDomain}
               initial={{ opacity: 0, x: 20 }}
@@ -512,8 +552,8 @@ export function CyberCommandCenter3D({ open, onClose, onOpenModal }: CyberComman
           )}
         </AnimatePresence>
 
-        {/* Bottom HUD panels */}
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-3 pointer-events-none">
+        {/* Bottom HUD panels (hub tab only) */}
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-3 pointer-events-none" style={{ display: activeTab === 'hub' ? 'flex' : 'none' }}>
           {/* Live threat counter */}
           <div className="rounded-xl px-4 py-2 text-center" style={{ background: "rgba(0,5,16,0.88)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,32,32,0.25)", minWidth: 110 }}>
             <div className="text-[9px] tracking-widest text-white/40 mb-0.5">THREATS TRACKED</div>
@@ -533,8 +573,8 @@ export function CyberCommandCenter3D({ open, onClose, onOpenModal }: CyberComman
           </div>
         </div>
 
-        {/* Recent alerts feed — top right */}
-        <div className="absolute top-16 right-4 z-20 w-72 pointer-events-none" style={{ maxHeight: 160 }}>
+        {/* Recent alerts feed — top right (hub tab only) */}
+        <div className="absolute top-16 right-4 z-20 w-72 pointer-events-none" style={{ maxHeight: 160, display: activeTab === 'hub' ? 'block' : 'none' }}>
           <div className="text-[9px] tracking-widest text-white/30 mb-1 px-1">RECENT ALERTS</div>
           <AnimatePresence initial={false}>
             {recentAlerts.map((alert, i) => (
