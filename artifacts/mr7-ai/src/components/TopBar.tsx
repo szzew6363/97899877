@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Menu, Sparkles, Coins, LayoutGrid, HelpCircle, Search, Zap, Brain, Server, Bot, Hexagon, Shield, Columns3, Crosshair, BarChart2, ChevronLeft, ChevronRight, Wifi, Target, GitBranch, Bug, Activity, DollarSign, GitMerge } from "lucide-react";
+import { Menu, Sparkles, Coins, LayoutGrid, HelpCircle, Search, Zap, Brain, Server, Bot, Hexagon, Shield, Columns3, Crosshair, BarChart2, ChevronLeft, ChevronRight, Wifi, Target, GitBranch, Bug, Activity, DollarSign, GitMerge, ShieldAlert, ShieldCheck, BrainCircuit } from "lucide-react";
 import { AIQuickSetupButton } from "./AIQuickSetupButton";
 import { ProviderHealthBadge3D } from "./ProviderHealthBadge3D";
 import { motion, AnimatePresence } from "framer-motion";
@@ -56,9 +56,12 @@ interface TopBarProps {
   onOpenPerfDash?: () => void;
   onOpenCostDash?: () => void;
   onOpenDedupViz?: () => void;
+  onOpenThreatFeed?: () => void;
+  onOpenSecurityDash?: () => void;
+  onOpenContextMemory?: () => void;
 }
 
-export function TopBar({ onMenuClick, onOpenPricing, onOpenToolsHub, onOpenHelp, onOpenPersonaEditor, onOpenLocalModel, onOpenAgent, onOpenNexus, onOpenArsenal, onOpenProviderSettings, onOpenModelCompare, onOpenNeuralMatrix, onOpenAnalytics, onOpenWarRoom, onOpenDeepSearch, onOpenChainInvestigation, onOpenRedTeam, onOpenPerfDash, onOpenCostDash, onOpenDedupViz }: TopBarProps) {
+export function TopBar({ onMenuClick, onOpenPricing, onOpenToolsHub, onOpenHelp, onOpenPersonaEditor, onOpenLocalModel, onOpenAgent, onOpenNexus, onOpenArsenal, onOpenProviderSettings, onOpenModelCompare, onOpenNeuralMatrix, onOpenAnalytics, onOpenWarRoom, onOpenDeepSearch, onOpenChainInvestigation, onOpenRedTeam, onOpenPerfDash, onOpenCostDash, onOpenDedupViz, onOpenThreatFeed, onOpenSecurityDash, onOpenContextMemory }: TopBarProps) {
   const { state, dispatch } = useStore();
   const { t } = useT();
   const { toast } = useToast();
@@ -625,6 +628,42 @@ export function TopBar({ onMenuClick, onOpenPricing, onOpenToolsHub, onOpenHelp,
               title="Dedup Network Visualizer 3D"
             >
               <GitMerge className="w-4 h-4" />
+            </button>
+          )}
+
+          {/* Threat Intelligence Feed 3D */}
+          {onOpenThreatFeed && (
+            <button
+              onClick={onOpenThreatFeed}
+              className="flex-shrink-0 p-2 rounded-lg text-muted-foreground hover:text-[#e21227] hover:bg-[#e21227]/10 transition-colors"
+              aria-label="Threat Intelligence Feed 3D"
+              title="Threat Intelligence Feed 3D"
+            >
+              <ShieldAlert className="w-4 h-4" />
+            </button>
+          )}
+
+          {/* Security Shield 3D */}
+          {onOpenSecurityDash && (
+            <button
+              onClick={onOpenSecurityDash}
+              className="flex-shrink-0 p-2 rounded-lg text-muted-foreground hover:text-[#00e5ff] hover:bg-[#00e5ff]/10 transition-colors"
+              aria-label="Security Shield 3D"
+              title="Security Shield Dashboard 3D"
+            >
+              <ShieldCheck className="w-4 h-4" />
+            </button>
+          )}
+
+          {/* Context Memory 3D */}
+          {onOpenContextMemory && (
+            <button
+              onClick={onOpenContextMemory}
+              className="flex-shrink-0 p-2 rounded-lg text-muted-foreground hover:text-[#a78bfa] hover:bg-[#a78bfa]/10 transition-colors"
+              aria-label="Context Memory 3D"
+              title="Context Memory Panel 3D"
+            >
+              <BrainCircuit className="w-4 h-4" />
             </button>
           )}
 

@@ -170,6 +170,11 @@ import { AIAutoSetup3D } from "./components/AIAutoSetup3D";
 import { PerformanceDashboard3D } from "./components/PerformanceDashboard3D";
 import { CostDashboard3D, useCostTracker } from "./components/CostDashboard3D";
 import { DedupVisualizer3D } from "./components/DedupVisualizer3D";
+import { ThreatFeed3D } from "./components/ThreatFeed3D";
+import { SecurityDashboard3D } from "./components/SecurityDashboard3D";
+import { ContextMemoryPanel3D } from "./components/ContextMemoryPanel3D";
+import { contextMemory } from "./lib/context-memory";
+import { securityLayer } from "./lib/security-layer";
 
 const queryClient = new QueryClient();
 
@@ -460,11 +465,27 @@ function AppContent() {
   const [cyberWarfareMatrixOpen, setCyberWarfareMatrixOpen] = useState(false);
   const [sentientCyberSphereOpen, setSentientCyberSphereOpen] = useState(false);
 
-  // Performance + Cost + Dedup Dashboards
+  // Performance + Cost + Dedup + Threat + Security + Memory Dashboards
   const [perfDashOpen, setPerfDashOpen] = useState(false);
   const [costDashOpen, setCostDashOpen] = useState(false);
   const [dedupVizOpen, setDedupVizOpen] = useState(false);
+  const [threatFeedOpen, setThreatFeedOpen] = useState(false);
+  const [securityDashOpen, setSecurityDashOpen] = useState(false);
+  const [contextMemoryOpen, setContextMemoryOpen] = useState(false);
   const { entries: costEntries, addEntry: addCostEntry } = useCostTracker();
+
+  // Non-invasive context memory tracking — listen to chat messages
+  useEffect(() => {
+    const chat = state.chats.find((c) => c.id === state.activeChatId);
+    if (!chat) return;
+    const msgs = chat.messages;
+    if (msgs.length === 0) return;
+    const last = msgs[msgs.length - 1];
+    if (last) contextMemory.addMessage(last.role as "user" | "assistant", last.content);
+  }, [state.chats, state.activeChatId]);
+
+  // Non-invasive security audit on session start
+  useEffect(() => { securityLayer.audit("session_start", "info", "App session active"); }, []);
 
   const [pipelineKeyRef] = useState(() => ({ n: 0 }));
   const [ragPipelineDoc, setRagPipelineDoc] = useState<{ text: string; name: string; key: number } | undefined>();
@@ -694,6 +715,9 @@ function AppContent() {
           onOpenPerfDash={() => setPerfDashOpen((v) => !v)}
           onOpenCostDash={() => setCostDashOpen((v) => !v)}
           onOpenDedupViz={() => setDedupVizOpen((v) => !v)}
+          onOpenThreatFeed={() => setThreatFeedOpen((v) => !v)}
+          onOpenSecurityDash={() => setSecurityDashOpen((v) => !v)}
+          onOpenContextMemory={() => setContextMemoryOpen((v) => !v)}
         />
         <ChatView onOpenOsintDash={() => setOsintDashOpen(true)} />
         {compareOpen && <CompareView onClose={() => setCompareOpen(false)} />}
@@ -932,6 +956,15 @@ function AppContent() {
 
       {/* Dedup Network Visualizer 3D */}
       {dedupVizOpen && <DedupVisualizer3D onClose={() => setDedupVizOpen(false)} />}
+
+      {/* Threat Intelligence Feed 3D — fixed bottom strip */}
+      {threatFeedOpen && <ThreatFeed3D onClose={() => setThreatFeedOpen(false)} />}
+
+      {/* Security Shield Dashboard 3D */}
+      {securityDashOpen && <SecurityDashboard3D onClose={() => setSecurityDashOpen(false)} />}
+
+      {/* Context Memory Panel 3D */}
+      {contextMemoryOpen && <ContextMemoryPanel3D onClose={() => setContextMemoryOpen(false)} />}
 
       {/* Global HUD scan line — year 3090 effect */}
       <div className="hud-scan-line pointer-events-none" />
