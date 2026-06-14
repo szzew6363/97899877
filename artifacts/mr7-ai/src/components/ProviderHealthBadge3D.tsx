@@ -32,16 +32,19 @@ const MONITOR_PROVIDERS = [
 ];
 
 // ── ULTRA 3D QUANTUM PLANET — RAINBOW SPECTRUM ────────────────────────────────
-function QuantumPlanet3D({ health, latency, open }: { health: Health; latency: number | null; open: boolean }) {
+function QuantumPlanet3D({ health, latency, open, hover }: { health: Health; latency: number | null; open: boolean; hover: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef    = useRef(0);
   const tRef      = useRef(0);
   const healthRef = useRef<Health>(health);
   const latRef    = useRef<number | null>(latency);
   const openRef   = useRef(open);
+  const hoverRef  = useRef(hover);
+  const burstRef  = useRef(0);
   useEffect(() => { healthRef.current = health;  }, [health]);
   useEffect(() => { latRef.current    = latency; }, [latency]);
   useEffect(() => { openRef.current   = open;    }, [open]);
+  useEffect(() => { hoverRef.current  = hover;   if (hover) burstRef.current = tRef.current; }, [hover]);
 
   useEffect(() => {
     const cvEl = canvasRef.current;
@@ -51,7 +54,7 @@ function QuantumPlanet3D({ health, latency, open }: { health: Health; latency: n
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
 
-    const SIZE = 40;
+    const SIZE = 34;
     const DPR  = Math.min(window.devicePixelRatio * 2, 4);
     cv.width   = SIZE * DPR;
     cv.height  = SIZE * DPR;
@@ -132,7 +135,8 @@ function QuantumPlanet3D({ health, latency, open }: { health: Health; latency: n
 
     function draw() {
       rafRef.current = requestAnimationFrame(draw);
-      tRef.current  += 0.016;
+      const isH = hoverRef.current;
+      tRef.current  += isH ? 0.027 : 0.016;
       const t   = tRef.current;
       const h   = healthRef.current;
       const isO = openRef.current;
@@ -148,7 +152,7 @@ function QuantumPlanet3D({ health, latency, open }: { health: Health; latency: n
       const [hr, hg, hb] = HC[h];
 
       // ── Rainbow spectrum cycling ─────────────────────────────────────────
-      const hue = (t * 9.6) % 360;
+      const hue = (t * (isH ? 18.0 : 9.6)) % 360;
       function hsl(hd: number, s = 1, l = 0.55): string {
         const hh = ((hd % 360) + 360) % 360;
         const k  = (n: number) => (n + hh / 30) % 12;
@@ -163,7 +167,7 @@ function QuantumPlanet3D({ health, latency, open }: { health: Health; latency: n
       const bb = Math.round((hb + hueRgb[2]) / 2);
 
       const gRX = Math.sin(t * 0.22) * 0.32 + 0.14;
-      const gRY = t * 0.18;
+      const gRY = t * (isH ? 0.33 : 0.18);
       const gRZ = Math.sin(t * 0.30) * 0.18;
 
       // ── Deep-field stars ────────────────────────────────────────────────
@@ -201,9 +205,9 @@ function QuantumPlanet3D({ health, latency, open }: { health: Health; latency: n
       }
 
       // ── Outer corona ────────────────────────────────────────────────────
-      const coronaR = R + 13;
+      const coronaR = R + (isH ? 17 : 13);
       const corona  = ctx.createRadialGradient(cx, cy, R * 0.75, cx, cy, coronaR);
-      corona.addColorStop(0,   `rgba(${br},${bg},${bb},${isO ? 0.20 : 0.13})`);
+      corona.addColorStop(0,   `rgba(${br},${bg},${bb},${isO ? 0.20 : isH ? 0.19 : 0.13})`);
       corona.addColorStop(0.25,`rgba(${hsl(hue + 60)},${isO ? 0.16 : 0.10})`);
       corona.addColorStop(0.65,`rgba(${hsl(hue + 120)},0.04)`);
       corona.addColorStop(1,   "rgba(0,0,0,0)");
@@ -219,6 +223,17 @@ function QuantumPlanet3D({ health, latency, open }: { health: Health; latency: n
           ? `rgba(${br},${bg},${bb},${0.26 * (1 - pulse * 0.55)})`
           : `rgba(${hsl(hue + pr * 120)},${(0.18 - pr * 0.04) * (1 - pulse * 0.4)})`;
         ctx.lineWidth = 0.8 - pr * 0.2; ctx.stroke();
+      }
+
+      // ── Hover energy corona burst ────────────────────────────────────────
+      if (isH) {
+        for (let bi = 0; bi < 4; bi++) {
+          const bp2 = ((t * 0.75 + bi * 19) % 95) / 95;
+          const bRad = R + 1 + bp2 * 16;
+          ctx.beginPath(); ctx.arc(cx, cy, bRad, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(${hsl(hue + bi * 90)},${(1 - bp2) * 0.42})`;
+          ctx.lineWidth = 2.0 * (1 - bp2); ctx.stroke();
+        }
       }
 
       // ── Saturn planetary ring disc (true 3D, rainbow-tinted) ────────────
@@ -275,7 +290,7 @@ function QuantumPlanet3D({ health, latency, open }: { health: Health; latency: n
       });
 
       // ── Project particles ───────────────────────────────────────────────
-      const spd = isO ? 1.42 : 1.05;
+      const spd = isH ? 2.1 : isO ? 1.42 : 1.05;
       type PP = { px: number; py: number; sc: number; zd: number; p: P };
       const projected: PP[] = particles.map(pp => {
         pp.angle += ORB_RINGS[pp.ring].speed * spd;
@@ -499,8 +514,11 @@ function QuantumPlanet3D({ health, latency, open }: { health: Health; latency: n
 
   return (
     <canvas ref={canvasRef}
-      width={40} height={40}
-      style={{ width: 40, height: 40, display: "block", flexShrink: 0, imageRendering: "auto" }} />
+      width={34} height={34}
+      style={{ width: 34, height: 34, display: "block", flexShrink: 0, imageRendering: "auto", cursor: "crosshair" }}
+      onMouseEnter={() => { hoverRef.current = true; burstRef.current = tRef.current; }}
+      onMouseLeave={() => { hoverRef.current = false; }}
+    />
   );
 }
 
@@ -766,6 +784,8 @@ export function ProviderHealthBadge3D() {
   const [intervalMs, setIntervalMs] = useState(90000);
   const [uptimePct, setUptimePct]   = useState(100);
   const [successCnt, setSuccessCnt] = useState(0);
+  const [planetHover, setPlanetHover] = useState(false);
+  const [magPos2,     setMagPos2]     = useState({ x: 0, y: 0 });
   const panelRef = useRef<HTMLDivElement>(null);
 
   const avg = history.length > 0 ? Math.round(history.reduce((a, b) => a + b, 0) / history.length) : null;
@@ -853,7 +873,17 @@ export function ProviderHealthBadge3D() {
       <motion.button
         onClick={() => setOpen(o => !o)}
         className="flex items-center gap-1 pl-0.5 pr-1.5 py-0.5 rounded-xl transition-all"
+        onMouseEnter={() => setPlanetHover(true)}
+        onMouseLeave={() => { setPlanetHover(false); setMagPos2({ x: 0, y: 0 }); }}
+        onMouseMove={(e) => {
+          const r = e.currentTarget.getBoundingClientRect();
+          setMagPos2({
+            x: ((e.clientX - (r.left + r.width  / 2)) / (r.width  / 2)) * 5,
+            y: ((e.clientY - (r.top  + r.height / 2)) / (r.height / 2)) * 3,
+          });
+        }}
         style={{
+          x: magPos2.x, y: magPos2.y,
           background: open
             ? "linear-gradient(135deg,rgba(139,92,246,0.16) 0%,rgba(167,139,250,0.09) 100%)"
             : "linear-gradient(135deg,rgba(139,92,246,0.09) 0%,rgba(167,139,250,0.04) 100%)",
@@ -865,7 +895,7 @@ export function ProviderHealthBadge3D() {
         whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
         aria-label="حالة اتصال المزوّد"
       >
-        <QuantumPlanet3D health={health} latency={latency} open={open} />
+        <QuantumPlanet3D health={health} latency={latency} open={open} hover={planetHover} />
         <div className="hidden sm:flex flex-col items-start leading-none gap-0.5 pr-0.5">
           <span style={{ fontSize: "8px", fontWeight: 800, color: "rgba(167,139,250,0.6)", letterSpacing: "0.1em", fontFamily: "monospace" }}>
             {label}
@@ -880,12 +910,12 @@ export function ProviderHealthBadge3D() {
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0,  scale: 1    }}
-            exit   ={{ opacity: 0, y: 8,  scale: 0.96 }}
-            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            initial={{ opacity: 0, y: 12, scale: 0.95, rotateX: -6 }}
+            animate={{ opacity: 1, y: 0,  scale: 1,    rotateX: -1.5 }}
+            exit   ={{ opacity: 0, y: 8,  scale: 0.96, rotateX: -6 }}
+            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
             className="absolute top-full mt-2.5 right-0 z-[9999]"
-            style={{ width: 318 }}
+            style={{ width: 318, perspective: "1200px", transformStyle: "preserve-3d", transformOrigin: "top center" }}
           >
             <div className="rounded-2xl overflow-hidden"
               style={{

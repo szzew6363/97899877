@@ -119,14 +119,18 @@ const ALL_PROVIDERS: ProviderDef[] = [
 type Phase = "idle" | "scanning" | "done" | "fail";
 
 // ── ULTRA 3D QUANTUM ATOM — RAINBOW SPECTRUM ──────────────────────────────────
-function QuantumAtom3D({ phase, open }: { phase: Phase; open: boolean }) {
+function QuantumAtom3D({ phase, open, hover }: { phase: Phase; open: boolean; hover: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef    = useRef(0);
   const tRef      = useRef(0);
   const phaseRef  = useRef<Phase>(phase);
   const openRef   = useRef(open);
+  const hoverRef  = useRef(hover);
+  const mouseRef  = useRef({ x: -1, y: -1 });
+  const burstRef  = useRef(0);
   useEffect(() => { phaseRef.current = phase; }, [phase]);
   useEffect(() => { openRef.current  = open;  }, [open]);
+  useEffect(() => { hoverRef.current = hover; if (hover) burstRef.current = tRef.current; }, [hover]);
 
   useEffect(() => {
     const cvEl = canvasRef.current;
@@ -136,7 +140,7 @@ function QuantumAtom3D({ phase, open }: { phase: Phase; open: boolean }) {
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
 
-    const SIZE = 44;
+    const SIZE = 38;
     const DPR  = Math.min(window.devicePixelRatio * 2, 4);
     cv.width   = SIZE * DPR;
     cv.height  = SIZE * DPR;
@@ -201,14 +205,15 @@ function QuantumAtom3D({ phase, open }: { phase: Phase; open: boolean }) {
 
     function draw() {
       rafRef.current = requestAnimationFrame(draw);
-      tRef.current += 0.5;
+      const isH = hoverRef.current;
+      tRef.current += isH ? 0.88 : 0.5;
       const t   = tRef.current;
       const ph  = phaseRef.current;
       const isO = openRef.current;
       ctx.clearRect(0, 0, SIZE, SIZE);
 
       // ── Rainbow spectrum cycling ────────────────────────────────────────
-      const hue = (t * 0.6) % 360;
+      const hue = (t * (isH ? 1.55 : 0.6)) % 360;
       function hsl(h: number, s = 1, l = 0.58): string {
         const hh = ((h % 360) + 360) % 360;
         const k  = (n: number) => (n + hh / 30) % 12;
@@ -230,8 +235,8 @@ function QuantumAtom3D({ phase, open }: { phase: Phase; open: boolean }) {
       });
 
       // ── Deep ambient field ──────────────────────────────────────────────
-      const aR = isO ? 22 : 20;
-      const aA = ph === "scanning" ? 0.28 : isO ? 0.22 : 0.13;
+      const aR = isO ? 22 : isH ? 21 : 20;
+      const aA = ph === "scanning" ? 0.28 : isO ? 0.22 : isH ? 0.20 : 0.13;
       const amb = ctx.createRadialGradient(cx, cy, 0, cx, cy, aR);
       amb.addColorStop(0,   `rgba(${hsl(hue)},${aA * 2.4})`);
       amb.addColorStop(0.3, `rgba(${hsl(hue + 120)},${aA * 0.7})`);
@@ -276,6 +281,17 @@ function QuantumAtom3D({ phase, open }: { phase: Phase; open: boolean }) {
         ctx.stroke();
       });
       ctx.setLineDash([]);
+
+      // ── Hover energy burst rings ───────────────────────────────────────
+      if (isH) {
+        for (let bi = 0; bi < 5; bi++) {
+          const bp = ((t * 1.1 + bi * 25) % 125) / 125;
+          const bRad = 4 + bp * 22;
+          ctx.beginPath(); ctx.arc(cx, cy, bRad, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(${hsl(hue + bi * 72)},${(1 - bp) * 0.38})`;
+          ctx.lineWidth = 1.8 * (1 - bp); ctx.stroke();
+        }
+      }
 
       // ── Scan pulse rings ───────────────────────────────────────────────
       if (ph === "scanning") {
@@ -324,7 +340,7 @@ function QuantumAtom3D({ phase, open }: { phase: Phase; open: boolean }) {
       });
 
       // ── Project + advance particles ────────────────────────────────────
-      const spd = ph === "scanning" ? 3.2 : isO ? 1.55 : 1.05;
+      const spd = ph === "scanning" ? 3.2 : isO ? 1.55 : isH ? 2.6 : 1.05;
       type PP = { px: number; py: number; sc: number; zd: number; p: P };
       const projected: PP[] = particles.map(pp => {
         pp.angle += RINGS[pp.ring].speed * spd;
@@ -361,31 +377,32 @@ function QuantumAtom3D({ phase, open }: { phase: Phase; open: boolean }) {
       // ── Nucleus (depth-sorted between particles) ───────────────────────
       let nucleusDrawn = false;
       const drawNucleus = () => {
-        const cR = 5.5 + (ph === "scanning"
+        const cR = (isH ? 6.2 : 5.5) + (ph === "scanning"
           ? Math.sin(t * 0.18) * 2.0
-          : isO ? Math.sin(t * 0.055) * 0.8 : 0);
+          : isO ? Math.sin(t * 0.055) * 0.8 : isH ? Math.sin(t * 0.12) * 1.2 : 0);
 
         // Chromatic aberration — 3 offset halo passes, rainbow-shifted
-        const chromOffset = 1.0;
+        const chromOffset = isH ? 1.4 : 1.0;
         [
           [chromOffset,  0,           hsl(hue)],
           [0,            chromOffset, hsl(hue + 120)],
           [-chromOffset, 0,           hsl(hue + 240)],
         ].forEach(([ox, oy, col]) => {
-          const hc = ctx.createRadialGradient(cx + (ox as number), cy + (oy as number), cR, cx + (ox as number), cy + (oy as number), cR * 5.8);
-          hc.addColorStop(0,   `rgba(${col},${ph === "scanning" ? 0.30 : 0.18})`);
+          const haloR = cR * (isH ? 7.0 : 5.8);
+          const hc = ctx.createRadialGradient(cx + (ox as number), cy + (oy as number), cR, cx + (ox as number), cy + (oy as number), haloR);
+          hc.addColorStop(0,   `rgba(${col},${ph === "scanning" ? 0.30 : isH ? 0.28 : 0.18})`);
           hc.addColorStop(0.5, `rgba(${col},0.03)`);
           hc.addColorStop(1,   `rgba(${col},0)`);
-          ctx.beginPath(); ctx.arc(cx + (ox as number), cy + (oy as number), cR * 5.8, 0, Math.PI * 2);
+          ctx.beginPath(); ctx.arc(cx + (ox as number), cy + (oy as number), haloR, 0, Math.PI * 2);
           ctx.fillStyle = hc; ctx.fill();
         });
 
         // Pulsing energy rings — each offset 120° in hue
-        for (let r = 0; r < 3; r++) {
-          const pulse = 0.5 + Math.sin(t * 0.08 + r * 1.2) * 0.5;
+        for (let r = 0; r < (isH ? 4 : 3); r++) {
+          const pulse = 0.5 + Math.sin(t * (isH ? 0.14 : 0.08) + r * 1.2) * 0.5;
           ctx.beginPath(); ctx.arc(cx, cy, cR * (1.8 + r * 0.6) + pulse * 2, 0, Math.PI * 2);
-          ctx.strokeStyle = `rgba(${hsl(hue + r * 120)},${(0.18 - r * 0.04) * pulse})`;
-          ctx.lineWidth = 1.0 - r * 0.25; ctx.stroke();
+          ctx.strokeStyle = `rgba(${hsl(hue + r * 90)},${(0.22 - r * 0.04) * pulse})`;
+          ctx.lineWidth = (isH ? 1.3 : 1.0) - r * 0.25; ctx.stroke();
         }
 
         // Body — full rainbow spectrum sphere
@@ -496,8 +513,18 @@ function QuantumAtom3D({ phase, open }: { phase: Phase; open: boolean }) {
 
   return (
     <canvas ref={canvasRef}
-      width={44} height={44}
-      style={{ width: 44, height: 44, display: "block", flexShrink: 0, imageRendering: "auto" }} />
+      width={38} height={38}
+      style={{ width: 38, height: 38, display: "block", flexShrink: 0, imageRendering: "auto", cursor: "crosshair" }}
+      onMouseEnter={() => { hoverRef.current = true; burstRef.current = tRef.current; }}
+      onMouseLeave={() => { hoverRef.current = false; mouseRef.current = { x: -1, y: -1 }; }}
+      onMouseMove={(e) => {
+        const rect = (e.target as HTMLCanvasElement).getBoundingClientRect();
+        mouseRef.current = {
+          x: (e.clientX - rect.left) * (38 / rect.width),
+          y: (e.clientY - rect.top)  * (38 / rect.height),
+        };
+      }}
+    />
   );
 }
 
@@ -670,6 +697,8 @@ export function AIQuickSetupButton() {
   const [keys, setKeys]           = useState<Record<string, string>>({});
   const [providerSearch, setProviderSearch] = useState("");
   const [activeTab, setActiveTab] = useState<"nexus" | "metrics" | "arsenal">("nexus");
+  const [atomHover, setAtomHover] = useState(false);
+  const [magPos,    setMagPos]    = useState({ x: 0, y: 0 });
   const panelRef = useRef<HTMLDivElement>(null);
 
   // Load saved keys on open
@@ -794,8 +823,18 @@ export function AIQuickSetupButton() {
         onClick={() => setOpen(o => !o)}
         disabled={phase === "scanning"}
         className="relative flex items-center gap-1 pl-0.5 pr-1.5 py-0.5 rounded-xl"
+        onMouseEnter={() => setAtomHover(true)}
+        onMouseLeave={() => { setAtomHover(false); setMagPos({ x: 0, y: 0 }); }}
+        onMouseMove={(e) => {
+          const r = e.currentTarget.getBoundingClientRect();
+          setMagPos({
+            x: ((e.clientX - (r.left + r.width  / 2)) / (r.width  / 2)) * 5,
+            y: ((e.clientY - (r.top  + r.height / 2)) / (r.height / 2)) * 3,
+          });
+        }}
         style={{
           minWidth: 0, overflow: "visible",
+          x: magPos.x, y: magPos.y,
           background: open
             ? "linear-gradient(135deg,rgba(0,255,136,0.15) 0%,rgba(0,229,255,0.08) 100%)"
             : "linear-gradient(135deg,rgba(0,255,136,0.08) 0%,rgba(0,229,255,0.03) 100%)",
@@ -822,7 +861,7 @@ export function AIQuickSetupButton() {
             transition={{ duration: 1.0, repeat: Infinity, ease: "linear" }} />
         )}
 
-        <QuantumAtom3D phase={phase} open={open} />
+        <QuantumAtom3D phase={phase} open={open} hover={atomHover} />
 
         <div className="hidden sm:flex flex-col items-start leading-none gap-0.5 pr-0.5">
           <span className="text-[7px] font-black tracking-widest uppercase"
@@ -845,12 +884,12 @@ export function AIQuickSetupButton() {
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0,  scale: 1    }}
-            exit   ={{ opacity: 0, y: 8,  scale: 0.96 }}
-            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            initial={{ opacity: 0, y: 12, scale: 0.95, rotateX: -6 }}
+            animate={{ opacity: 1, y: 0,  scale: 1,    rotateX: -1.5 }}
+            exit   ={{ opacity: 0, y: 8,  scale: 0.96, rotateX: -6 }}
+            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
             className="absolute top-full mt-2.5 left-0 z-[9999]"
-            style={{ width: 380 }}
+            style={{ width: 380, perspective: "1200px", transformStyle: "preserve-3d", transformOrigin: "top center" }}
           >
             <div className="rounded-2xl overflow-hidden"
               style={{

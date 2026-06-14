@@ -86,8 +86,7 @@ function CpuRingGauge({ value, color }: { value: number; color: string }) {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    const ctx = canvas.getContext("2d")!;
     let frame: number;
     let lastT = 0;
     function draw(timestamp: number) {
