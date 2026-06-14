@@ -31,7 +31,7 @@ const MONITOR_PROVIDERS = [
   { id: "mistral",    name: "Mistral",    color: "#ec4899", url: "https://api.mistral.ai/v1" },
 ];
 
-// ── QUANTUM PLANET 3D ─────────────────────────────────────────────────────────
+// ── ULTRA 3D QUANTUM PLANET ───────────────────────────────────────────────────
 function QuantumPlanet3D({ health, latency, open }: { health: Health; latency: number | null; open: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef    = useRef(0);
@@ -57,46 +57,48 @@ function QuantumPlanet3D({ health, latency, open }: { health: Health; latency: n
     cv.height  = SIZE * DPR;
     ctx.scale(DPR, DPR);
     const [cx, cy] = [SIZE / 2, SIZE / 2];
-    const R   = 11;   // planet radius
-    const FOV = 155;
+    const R   = 11;
+    const FOV = 158;
 
-    // ── 3D math (same system as atom) ────────────────────────────────────
-    function rotX(x: number, y: number, z: number, a: number): [number, number, number] {
+    // ── 3D math ──────────────────────────────────────────────────────────
+    function rotX(x: number, y: number, z: number, a: number): [number,number,number] {
       const c = Math.cos(a), s = Math.sin(a);
-      return [x, y * c - z * s, y * s + z * c];
+      return [x, y*c - z*s, y*s + z*c];
     }
-    function rotY(x: number, y: number, z: number, a: number): [number, number, number] {
+    function rotY(x: number, y: number, z: number, a: number): [number,number,number] {
       const c = Math.cos(a), s = Math.sin(a);
-      return [x * c + z * s, y, -x * s + z * c];
+      return [x*c + z*s, y, -x*s + z*c];
     }
-    function rotZ(x: number, y: number, z: number, a: number): [number, number, number] {
+    function rotZ(x: number, y: number, z: number, a: number): [number,number,number] {
       const c = Math.cos(a), s = Math.sin(a);
-      return [x * c - y * s, x * s + y * c, z];
+      return [x*c - y*s, x*s + y*c, z];
     }
     function proj(x: number, y: number, z: number): { px: number; py: number; sc: number } {
       const sc = FOV / (FOV + z + 55);
       return { px: cx + x * sc, py: cy + y * sc, sc };
     }
 
-    // Orbital ring definitions for moons/satellites
+    // 4 orbital rings, 7 moons each
     type OrbRing = { r: number; tX: number; tY: number; speed: number; col: string; moonR: number };
     const ORB_RINGS: OrbRing[] = [
-      { r: 17, tX:  0.45, tY:  0.22, speed:  0.018, col: "rgba(139,92,246,",  moonR: 1.4 },
-      { r: 21, tX: -0.60, tY:  0.55, speed: -0.012, col: "rgba(192,132,252,", moonR: 1.1 },
-      { r: 25, tX:  0.80, tY: -0.62, speed:  0.009, col: "rgba(236,72,153,",  moonR: 0.9 },
+      { r: 16, tX:  0.42, tY:  0.20, speed:  0.022, col: "rgba(139,92,246,",  moonR: 1.5 },
+      { r: 20, tX: -0.58, tY:  0.50, speed: -0.014, col: "rgba(192,132,252,", moonR: 1.2 },
+      { r: 24, tX:  0.78, tY: -0.60, speed:  0.010, col: "rgba(236,72,153,",  moonR: 1.0 },
+      { r: 27, tX: -0.30, tY:  0.35, speed: -0.007, col: "rgba(99,102,241,",  moonR: 0.8 },
     ];
 
-    // Particle state — 5 per ring
+    // Saturn-like flat planetary ring (in equatorial plane, tilted)
+    const RING_DISC = { rInner: 14, rOuter: 20, tX: 0.55, tY: 0.10 };
+
     type P = { ring: number; angle: number; trail: Array<{ x: number; y: number }> };
     const particles: P[] = ORB_RINGS.flatMap((_, ri) =>
-      Array.from({ length: 5 }, (_, i) => ({
-        ring: ri, angle: (i / 5) * Math.PI * 2 + ri * 1.1, trail: [],
+      Array.from({ length: 7 }, (_, i) => ({
+        ring: ri, angle: (i / 7) * Math.PI * 2 + ri * 1.05, trail: [],
       }))
     );
 
-    // Transform orbital point (local XZ) → screen
     function xf(
-      r: number, angle: number, ring: OrbRing,
+      r: number, angle: number, ring: { tX: number; tY: number },
       gRX: number, gRY: number, gRZ: number
     ): { px: number; py: number; sc: number; zd: number } {
       let [x, y, z] = rotX(r * Math.cos(angle), 0, r * Math.sin(angle), ring.tX);
@@ -108,26 +110,34 @@ function QuantumPlanet3D({ health, latency, open }: { health: Health; latency: n
       return { px, py, sc, zd: z };
     }
 
-    // Animated surface noise (pre-generate turbulence field)
-    type NebParticle = { x: number; y: number; vx: number; vy: number; r: number; a: number };
-    const nebula: NebParticle[] = Array.from({ length: 14 }, () => ({
-      x: cx + (Math.random() - 0.5) * 22,
-      y: cy + (Math.random() - 0.5) * 22,
-      vx: (Math.random() - 0.5) * 0.10,
-      vy: (Math.random() - 0.5) * 0.10,
-      r: 1.2 + Math.random() * 2.5,
-      a: 0.03 + Math.random() * 0.09,
+    // Deep-field background stars
+    type Star = { x: number; y: number; r: number; a: number; va: number };
+    const stars: Star[] = Array.from({ length: 20 }, () => ({
+      x: Math.random() * SIZE, y: Math.random() * SIZE,
+      r: 0.25 + Math.random() * 0.45,
+      a: 0.15 + Math.random() * 0.55,
+      va: 0.012 + Math.random() * 0.028,
+    }));
+
+    // Nebula cloud particles
+    type NebP = { x: number; y: number; vx: number; vy: number; r: number; a: number };
+    const nebula: NebP[] = Array.from({ length: 12 }, () => ({
+      x: cx + (Math.random() - 0.5) * 24,
+      y: cy + (Math.random() - 0.5) * 24,
+      vx: (Math.random() - 0.5) * 0.08,
+      vy: (Math.random() - 0.5) * 0.08,
+      r: 1.5 + Math.random() * 3.0,
+      a: 0.025 + Math.random() * 0.065,
     }));
 
     function draw() {
       rafRef.current = requestAnimationFrame(draw);
-      tRef.current  += 0.018;
+      tRef.current  += 0.016;
       const t   = tRef.current;
       const h   = healthRef.current;
       const isO = openRef.current;
       ctx.clearRect(0, 0, SIZE, SIZE);
 
-      // Health color RGB
       const HC: Record<Health, [number,number,number]> = {
         healthy:  [34,  197, 94 ],
         slow:     [245, 158, 11 ],
@@ -137,245 +147,336 @@ function QuantumPlanet3D({ health, latency, open }: { health: Health; latency: n
       };
       const [hr, hg, hb] = HC[h];
 
-      // Global slow wobble
-      const gRX = Math.sin(t * 0.25) * 0.30 + 0.15;
-      const gRY = t * 0.20;
-      const gRZ = Math.sin(t * 0.33) * 0.16;
+      const gRX = Math.sin(t * 0.22) * 0.32 + 0.14;
+      const gRY = t * 0.18;
+      const gRZ = Math.sin(t * 0.30) * 0.18;
 
-      // ── Layer 1: Deep space nebula cloud ────────────────────────────────
+      // ── Deep-field stars ────────────────────────────────────────────────
+      stars.forEach(s => {
+        const a = s.a * (0.5 + Math.sin(t * s.va) * 0.5);
+        ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,255,255,${a})`; ctx.fill();
+      });
+
+      // ── Nebula cloud ────────────────────────────────────────────────────
       nebula.forEach(n => {
         n.x += n.vx; n.y += n.vy;
-        if (n.x < 2 || n.x > SIZE - 2) n.vx *= -1;
-        if (n.y < 2 || n.y > SIZE - 2) n.vy *= -1;
-        const ng = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r * 2.8);
-        ng.addColorStop(0, `rgba(139,92,246,${n.a * (isO ? 1.5 : 1.0)})`);
+        if (n.x < 1 || n.x > SIZE - 1) n.vx *= -1;
+        if (n.y < 1 || n.y > SIZE - 1) n.vy *= -1;
+        const ng = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r * 3.0);
+        ng.addColorStop(0, `rgba(139,92,246,${n.a * (isO ? 1.6 : 1.0)})`);
+        ng.addColorStop(0.5, `rgba(99,102,241,${n.a * 0.4})`);
         ng.addColorStop(1, "rgba(139,92,246,0)");
-        ctx.beginPath(); ctx.arc(n.x, n.y, n.r * 2.8, 0, Math.PI * 2);
+        ctx.beginPath(); ctx.arc(n.x, n.y, n.r * 3.0, 0, Math.PI * 2);
         ctx.fillStyle = ng; ctx.fill();
       });
 
-      // ── Layer 2: Outer corona / atmosphere haze ─────────────────────────
-      const coronaR = R + 14;
-      const corona  = ctx.createRadialGradient(cx, cy, R * 0.8, cx, cy, coronaR);
-      corona.addColorStop(0,    `rgba(${hr},${hg},${hb},${isO ? 0.18 : 0.12})`);
-      corona.addColorStop(0.3,  `rgba(139,92,246,${isO ? 0.14 : 0.09})`);
-      corona.addColorStop(0.7,  `rgba(139,92,246,0.04)`);
-      corona.addColorStop(1,    "rgba(0,0,0,0)");
+      // ── Magnetosphere field lines ────────────────────────────────────────
+      const magP = 0.5 + Math.sin(t * 0.9) * 0.5;
+      for (let m = 0; m < 4; m++) {
+        const mr = R + 14 + m * 2.8 + magP * 1.5;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, mr, mr * 0.58, Math.PI * 0.12, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(139,92,246,${(0.055 - m * 0.010) * (1 + magP * 0.4)})`;
+        ctx.lineWidth = 0.55; ctx.stroke();
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, mr * 0.58, mr, Math.PI * 0.12, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(${hr},${hg},${hb},${(0.025 - m * 0.004) * (1 + magP * 0.3)})`;
+        ctx.lineWidth = 0.45; ctx.stroke();
+      }
+
+      // ── Outer corona ────────────────────────────────────────────────────
+      const coronaR = R + 16;
+      const corona  = ctx.createRadialGradient(cx, cy, R * 0.75, cx, cy, coronaR);
+      corona.addColorStop(0,   `rgba(${hr},${hg},${hb},${isO ? 0.20 : 0.13})`);
+      corona.addColorStop(0.25,`rgba(139,92,246,${isO ? 0.16 : 0.10})`);
+      corona.addColorStop(0.65,`rgba(139,92,246,0.04)`);
+      corona.addColorStop(1,   "rgba(0,0,0,0)");
       ctx.beginPath(); ctx.arc(cx, cy, coronaR, 0, Math.PI * 2);
       ctx.fillStyle = corona; ctx.fill();
 
-      // Pulsing health ring
-      const pulse1 = (Math.sin(t * 1.8) + 1) / 2;
-      ctx.beginPath(); ctx.arc(cx, cy, R + 3.5 + pulse1 * 6, 0, Math.PI * 2);
-      ctx.strokeStyle = `rgba(139,92,246,${0.28 * (1 - pulse1 * 0.5)})`;
-      ctx.lineWidth   = 0.9; ctx.stroke();
+      // Pulsing health aura rings
+      for (let pr = 0; pr < 3; pr++) {
+        const pulse = (Math.sin(t * (1.6 + pr * 0.4) + pr * 1.1) + 1) / 2;
+        const rr    = R + 2.5 + pr * 3.5 + pulse * 5.0;
+        ctx.beginPath(); ctx.arc(cx, cy, rr, 0, Math.PI * 2);
+        ctx.strokeStyle = pr === 0
+          ? `rgba(${hr},${hg},${hb},${0.26 * (1 - pulse * 0.55)})`
+          : `rgba(139,92,246,${(0.18 - pr * 0.04) * (1 - pulse * 0.4)})`;
+        ctx.lineWidth = 0.8 - pr * 0.2; ctx.stroke();
+      }
 
-      const pulse2 = (Math.sin(t * 1.3 + 1.2) + 1) / 2;
-      ctx.beginPath(); ctx.arc(cx, cy, R + 2 + pulse2 * 3.5, 0, Math.PI * 2);
-      ctx.strokeStyle = `rgba(${hr},${hg},${hb},${0.22 * (1 - pulse2 * 0.45)})`;
-      ctx.lineWidth   = 0.7; ctx.stroke();
+      // ── Saturn planetary ring disc (true 3D, back half first) ──────────
+      const drawRingDisc = (frontHalf: boolean) => {
+        const SEGMENTS = 72;
+        const rI = RING_DISC.rInner, rO = RING_DISC.rOuter;
+        for (let i = 0; i < SEGMENTS; i++) {
+          const a0 = (i / SEGMENTS) * Math.PI * 2;
+          const a1 = ((i + 1) / SEGMENTS) * Math.PI * 2;
+          const midA = (a0 + a1) / 2;
+          const pI = xf(rI, midA, RING_DISC, gRX, gRY, gRZ);
+          const pO = xf(rO, midA, RING_DISC, gRX, gRY, gRZ);
+          const isFront = pI.zd > 0 || pO.zd > 0;
+          if (isFront !== frontHalf) continue;
+          const { px: ix0, py: iy0 } = xf(rI, a0, RING_DISC, gRX, gRY, gRZ);
+          const { px: ix1, py: iy1 } = xf(rI, a1, RING_DISC, gRX, gRY, gRZ);
+          const { px: ox0, py: oy0 } = xf(rO, a0, RING_DISC, gRX, gRY, gRZ);
+          const { px: ox1, py: oy1 } = xf(rO, a1, RING_DISC, gRX, gRY, gRZ);
+          const brightness = 0.5 + Math.sin(midA * 3 + t * 0.2) * 0.3;
+          const alpha = frontHalf ? 0.45 * brightness : 0.28 * brightness;
+          ctx.beginPath();
+          ctx.moveTo(ix0, iy0); ctx.lineTo(ox0, oy0);
+          ctx.lineTo(ox1, oy1); ctx.lineTo(ix1, iy1);
+          ctx.closePath();
+          const ringGrad = ctx.createLinearGradient(ix0, iy0, ox0, oy0);
+          ringGrad.addColorStop(0,    `rgba(167,139,250,${alpha * 0.55})`);
+          ringGrad.addColorStop(0.35, `rgba(192,132,252,${alpha})`);
+          ringGrad.addColorStop(0.65, `rgba(216,180,254,${alpha * 0.8})`);
+          ringGrad.addColorStop(1,    `rgba(139,92,246,${alpha * 0.3})`);
+          ctx.fillStyle = ringGrad; ctx.fill();
+        }
+      };
 
-      // ── Orbit ring paths — TRUE 3D projected ───────────────────────────
+      // ── Back half of ring disc ──────────────────────────────────────────
+      drawRingDisc(false);
+
+      // ── Orbit ring paths ────────────────────────────────────────────────
       ORB_RINGS.forEach(ring => {
         ctx.beginPath();
         let first = true;
-        for (let i = 0; i <= 64; i++) {
-          const a = (i / 64) * Math.PI * 2;
+        for (let i = 0; i <= 80; i++) {
+          const a = (i / 80) * Math.PI * 2;
           const { px, py } = xf(ring.r, a, ring, gRX, gRY, gRZ);
           if (first) { ctx.moveTo(px, py); first = false; }
           else         ctx.lineTo(px, py);
         }
         ctx.closePath();
-        ctx.setLineDash([2, 5]);
-        ctx.strokeStyle = `${ring.col}${isO ? 0.30 : 0.18})`;
-        ctx.lineWidth   = 0.7;
+        ctx.setLineDash([1.8, 4.2]);
+        ctx.strokeStyle = `${ring.col}${isO ? 0.32 : 0.20})`;
+        ctx.lineWidth   = 0.65;
         ctx.stroke();
         ctx.setLineDash([]);
       });
 
-      // ── Back orbital particles ──────────────────────────────────────────
-      const spd = isO ? 1.35 : 1.0;
+      // ── Project particles ───────────────────────────────────────────────
+      const spd = isO ? 1.42 : 1.05;
       type PP = { px: number; py: number; sc: number; zd: number; p: P };
       const projected: PP[] = particles.map(pp => {
         pp.angle += ORB_RINGS[pp.ring].speed * spd;
         const ring = ORB_RINGS[pp.ring];
         const { px, py, sc, zd } = xf(ring.r, pp.angle, ring, gRX, gRY, gRZ);
         pp.trail.push({ x: px, y: py });
-        if (pp.trail.length > 10) pp.trail.shift();
+        if (pp.trail.length > 12) pp.trail.shift();
         return { px, py, sc, zd, p: pp };
       });
-
       projected.sort((a, b) => a.zd - b.zd);
 
-      // Draw back particles (behind planet)
+      // ── Back particles ──────────────────────────────────────────────────
       projected.forEach(({ px, py, sc, zd, p: pp }) => {
-        if (zd > 0) return; // skip front ones for now
+        if (zd > 0) return;
         const ring  = ORB_RINGS[pp.ring];
-        const depth = Math.max(0.08, Math.min(1, (0.6 - sc) / 0.4));
-        const alpha = 0.15 + depth * 0.5;
-        const sz    = ring.moonR * sc * 2.2;
-
+        const depth = Math.max(0.08, Math.min(1, (0.62 - sc) / 0.42));
+        const alpha = 0.14 + depth * 0.52;
+        const sz    = ring.moonR * sc * 2.4;
         pp.trail.forEach((pt, ti) => {
-          const ta = alpha * (ti / pp.trail.length) * 0.18;
-          const tr = sz * (ti / pp.trail.length) * 0.5;
+          const ta = alpha * (ti / pp.trail.length) * 0.20;
+          const tr = sz * (ti / pp.trail.length) * 0.52;
           if (tr < 0.1) return;
           ctx.beginPath(); ctx.arc(pt.x, pt.y, tr, 0, Math.PI * 2);
           ctx.fillStyle = `${ring.col}${ta})`; ctx.fill();
         });
-
-        const g = ctx.createRadialGradient(px, py, 0, px, py, sz * 2.5);
-        g.addColorStop(0, `${ring.col}${alpha * 0.8})`);
+        const g = ctx.createRadialGradient(px, py, 0, px, py, sz * 2.8);
+        g.addColorStop(0, `${ring.col}${alpha * 0.85})`);
         g.addColorStop(1, `${ring.col}0)`);
-        ctx.beginPath(); ctx.arc(px, py, sz * 2.5, 0, Math.PI * 2);
+        ctx.beginPath(); ctx.arc(px, py, sz * 2.8, 0, Math.PI * 2);
         ctx.fillStyle = g; ctx.fill();
-        ctx.beginPath(); ctx.arc(px, py, Math.max(0.3, sz * 0.3), 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255,255,255,${alpha * 0.85})`; ctx.fill();
+        ctx.beginPath(); ctx.arc(px, py, Math.max(0.3, sz * 0.32), 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,255,255,${alpha * 0.88})`; ctx.fill();
       });
 
-      // ── PLANET SPHERE — 9 render passes for photorealistic look ────────
+      // ── PLANET SPHERE — 12 render passes ────────────────────────────────
 
-      // Pass 1: Shadow base
+      // P1: Deep shadow base
       ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2);
-      ctx.fillStyle = "rgba(4,0,12,0.98)"; ctx.fill();
+      ctx.fillStyle = "rgba(3,0,10,0.99)"; ctx.fill();
 
-      // Pass 2: Main diffuse (PBR-like gradient from upper-left light)
-      const diff = ctx.createRadialGradient(cx - R * 0.28, cy - R * 0.32, 0, cx, cy, R * 1.35);
-      diff.addColorStop(0,    "rgba(192,132,252,0.96)");
-      diff.addColorStop(0.28, "rgba(139,92,246,0.82)");
-      diff.addColorStop(0.60, "rgba(76,29,149,0.72)");
-      diff.addColorStop(0.85, "rgba(35,10,75,0.62)");
-      diff.addColorStop(1,    "rgba(12,2,30,0.55)");
+      // P2: Main diffuse PBR
+      const diff = ctx.createRadialGradient(cx - R * 0.30, cy - R * 0.34, 0, cx, cy, R * 1.38);
+      diff.addColorStop(0,    "rgba(210,160,255,0.98)");
+      diff.addColorStop(0.22, "rgba(167,139,250,0.88)");
+      diff.addColorStop(0.50, "rgba(109,40,217,0.78)");
+      diff.addColorStop(0.78, "rgba(55,12,120,0.68)");
+      diff.addColorStop(1,    "rgba(15,3,38,0.60)");
       ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2);
       ctx.fillStyle = diff; ctx.fill();
 
-      // Pass 3: Health color tint (subsurface scatter approximation)
-      const htint = ctx.createRadialGradient(cx, cy + R * 0.45, 0, cx, cy + R * 0.25, R * 0.95);
-      htint.addColorStop(0, `rgba(${hr},${hg},${hb},0.22)`);
+      // P3: Health tint (sub-surface scatter)
+      const htint = ctx.createRadialGradient(cx, cy + R * 0.50, 0, cx, cy + R * 0.28, R);
+      htint.addColorStop(0, `rgba(${hr},${hg},${hb},0.28)`);
+      htint.addColorStop(0.6, `rgba(${hr},${hg},${hb},0.08)`);
       htint.addColorStop(1, `rgba(${hr},${hg},${hb},0)`);
       ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2);
       ctx.fillStyle = htint; ctx.fill();
 
-      // Pass 4: Animated surface features (latitude bands + storm)
+      // P4: Surface features clipped to sphere
       ctx.save();
       ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.clip();
 
-      // Latitude bands
-      for (let band = 0; band < 4; band++) {
-        const bandFrac = (band + 0.5) / 4;
-        const by = cy - R + bandFrac * R * 2 + Math.sin(t * 0.3 + band) * 1.2;
-        ctx.beginPath();
-        ctx.ellipse(cx, by, R * 0.92, R * 0.22, 0, 0, Math.PI * 2);
-        ctx.strokeStyle = `rgba(${hr},${hg},${hb},${0.04 + (band % 2) * 0.025})`;
-        ctx.lineWidth = 1.2; ctx.stroke();
+      // Continental landmass blobs (3 of them, drifting with rotation)
+      const surfAngle = gRY * 0.55;
+      for (let lm = 0; lm < 3; lm++) {
+        const lx = cx + Math.cos(surfAngle + lm * 2.09) * R * 0.42;
+        const ly = cy + Math.sin(surfAngle * 0.3 + lm * 1.8) * R * 0.32;
+        const lr = R * (0.22 + lm * 0.04);
+        const lg = ctx.createRadialGradient(lx, ly, 0, lx, ly, lr);
+        lg.addColorStop(0, `rgba(${hr},${hg},${hb},0.18)`);
+        lg.addColorStop(0.6, `rgba(${hr},${hg},${hb},0.06)`);
+        lg.addColorStop(1, `rgba(${hr},${hg},${hb},0)`);
+        ctx.beginPath(); ctx.arc(lx, ly, lr, 0, Math.PI * 2);
+        ctx.fillStyle = lg; ctx.fill();
       }
 
-      // Equatorial belt (more prominent)
+      // Latitude bands (5 bands)
+      for (let band = 0; band < 5; band++) {
+        const by = cy - R + ((band + 0.5) / 5) * R * 2 + Math.sin(t * 0.25 + band) * 1.0;
+        ctx.beginPath();
+        ctx.ellipse(cx, by, R * 0.94, R * 0.20, 0, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(${hr},${hg},${hb},${0.035 + (band % 2) * 0.020})`;
+        ctx.lineWidth = 1.0; ctx.stroke();
+      }
+
+      // Equatorial belt
       ctx.beginPath();
-      ctx.ellipse(cx, cy + Math.sin(t * 0.2) * 0.8, R, R * 0.20, 0, 0, Math.PI * 2);
-      ctx.strokeStyle = `rgba(167,139,250,0.14)`;
-      ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.ellipse(cx, cy + Math.sin(t * 0.18) * 0.7, R, R * 0.18, 0, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(167,139,250,0.16)";
+      ctx.lineWidth = 1.6; ctx.stroke();
 
-      // Rotating storm vortex
-      const stormAngle = t * 0.18;
-      const stormX = cx + Math.cos(stormAngle) * R * 0.38;
-      const stormY = cy + Math.sin(stormAngle) * R * 0.16;
-      const storm  = ctx.createRadialGradient(stormX, stormY, 0, stormX, stormY, R * 0.32);
-      storm.addColorStop(0, `rgba(${hr},${hg},${hb},0.16)`);
-      storm.addColorStop(0.5, `rgba(${hr},${hg},${hb},0.06)`);
-      storm.addColorStop(1, `rgba(${hr},${hg},${hb},0)`);
-      ctx.beginPath(); ctx.arc(stormX, stormY, R * 0.32, 0, Math.PI * 2);
-      ctx.fillStyle = storm; ctx.fill();
+      // Two storm vortices
+      for (let sv = 0; sv < 2; sv++) {
+        const sAngle = t * (0.15 + sv * 0.08) + sv * 1.5;
+        const sx = cx + Math.cos(sAngle) * R * (0.35 + sv * 0.12);
+        const sy = cy + Math.sin(sAngle * 0.6) * R * (0.18 + sv * 0.06);
+        const storm = ctx.createRadialGradient(sx, sy, 0, sx, sy, R * (0.28 - sv * 0.06));
+        storm.addColorStop(0, `rgba(${hr},${hg},${hb},0.18)`);
+        storm.addColorStop(0.5, `rgba(${hr},${hg},${hb},0.06)`);
+        storm.addColorStop(1, `rgba(${hr},${hg},${hb},0)`);
+        ctx.beginPath(); ctx.arc(sx, sy, R * (0.28 - sv * 0.06), 0, Math.PI * 2);
+        ctx.fillStyle = storm; ctx.fill();
+      }
 
-      // Polar aurora (health-colored glow at poles)
-      if (h === "healthy" || h === "slow") {
-        const auroraA = 0.08 + Math.sin(t * 2.2) * 0.04;
-        const northAurora = ctx.createRadialGradient(cx, cy - R * 0.7, 0, cx, cy - R * 0.7, R * 0.65);
-        northAurora.addColorStop(0, `rgba(${hr},${hg},${hb},${auroraA})`);
-        northAurora.addColorStop(1, `rgba(${hr},${hg},${hb},0)`);
-        ctx.beginPath(); ctx.arc(cx, cy - R * 0.7, R * 0.65, 0, Math.PI * 2);
-        ctx.fillStyle = northAurora; ctx.fill();
+      // Polar aurora — wavering arcs at both poles
+      const auroraA = 0.10 + Math.sin(t * 2.0) * 0.06;
+      const auroraW = 0.06 + Math.sin(t * 3.5) * 0.03;
+      for (let pole = 0; pole < 2; pole++) {
+        const poleY = cy + (pole === 0 ? -R * 0.68 : R * 0.68);
+        const aGrad = ctx.createRadialGradient(cx, poleY, 0, cx, poleY, R * 0.72);
+        aGrad.addColorStop(0, `rgba(${hr},${hg},${hb},${auroraA})`);
+        aGrad.addColorStop(0.5, `rgba(139,92,246,${auroraW})`);
+        aGrad.addColorStop(1, "rgba(139,92,246,0)");
+        ctx.beginPath(); ctx.arc(cx, poleY, R * 0.72, 0, Math.PI * 2);
+        ctx.fillStyle = aGrad; ctx.fill();
+        // Bright aurora arc
+        ctx.beginPath();
+        const aR2 = R * 0.58 + Math.sin(t * 2.8 + pole) * 1.5;
+        ctx.ellipse(cx, poleY, aR2, aR2 * 0.35, Math.sin(t * 0.5) * 0.3, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(${hr},${hg},${hb},${0.22 + Math.sin(t * 3.2 + pole) * 0.12})`;
+        ctx.lineWidth = 0.9; ctx.stroke();
       }
 
       ctx.restore();
 
-      // Pass 5: Specular highlight (Phong)
-      const spec = ctx.createRadialGradient(cx - R * 0.44, cy - R * 0.48, 0, cx - R * 0.12, cy - R * 0.12, R);
-      spec.addColorStop(0,    "rgba(255,255,255,0.88)");
-      spec.addColorStop(0.18, "rgba(255,255,255,0.30)");
-      spec.addColorStop(0.5,  "rgba(255,255,255,0.05)");
+      // P5: Specular (Phong highlight)
+      const spec = ctx.createRadialGradient(cx - R * 0.46, cy - R * 0.50, 0, cx - R * 0.14, cy - R * 0.14, R);
+      spec.addColorStop(0,    "rgba(255,255,255,0.95)");
+      spec.addColorStop(0.16, "rgba(255,255,255,0.36)");
+      spec.addColorStop(0.45, "rgba(255,255,255,0.06)");
       spec.addColorStop(1,    "rgba(255,255,255,0)");
       ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2);
       ctx.fillStyle = spec; ctx.fill();
 
-      // Pass 6: Rim light (backlight, warm pink/magenta)
-      const rim = ctx.createRadialGradient(cx + R * 0.62, cy + R * 0.42, 0, cx + R * 0.42, cy + R * 0.24, R * 0.88);
-      rim.addColorStop(0, "rgba(236,72,153,0.52)");
+      // P6: Rim light (warm magenta backlight)
+      const rim = ctx.createRadialGradient(cx + R * 0.65, cy + R * 0.44, 0, cx + R * 0.42, cy + R * 0.26, R * 0.90);
+      rim.addColorStop(0, "rgba(236,72,153,0.62)");
+      rim.addColorStop(0.5, "rgba(167,139,250,0.18)");
       rim.addColorStop(1, "rgba(236,72,153,0)");
       ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2);
       ctx.fillStyle = rim; ctx.fill();
 
-      // Pass 7: Atmospheric limb brightening (thin bright ring at planet edge)
-      const limb = ctx.createRadialGradient(cx, cy, R - 2.8, cx, cy, R + 4.5);
-      limb.addColorStop(0,   "rgba(139,92,246,0)");
-      limb.addColorStop(0.45, `rgba(139,92,246,${isO ? 0.42 : 0.28})`);
-      limb.addColorStop(0.75, `rgba(${hr},${hg},${hb},0.14)`);
-      limb.addColorStop(1,   "rgba(0,0,0,0)");
-      ctx.beginPath(); ctx.arc(cx, cy, R + 4.5, 0, Math.PI * 2);
-      ctx.fillStyle = limb; ctx.fill();
+      // P7: Chromatic atmospheric limb (3-layer RGB split)
+      const limbPairs: [number, number, number, number, number, number][] = [
+        [1.2,  0, 255, 100, 180, 0.20],
+        [0,    0, 139,  92, 246, isO ? 0.48 : 0.32],
+        [-0.8, 0, hr,   hg,  hb, 0.16],
+      ];
+      limbPairs.forEach(([ox, , lr, lg2, lb, la]) => {
+        const limb = ctx.createRadialGradient(cx + ox, cy, R - 3.0, cx + ox, cy, R + 5.5);
+        limb.addColorStop(0,    `rgba(${lr},${lg2},${lb},0)`);
+        limb.addColorStop(0.40, `rgba(${lr},${lg2},${lb},${la})`);
+        limb.addColorStop(0.78, `rgba(${lr},${lg2},${lb},${la * 0.35})`);
+        limb.addColorStop(1,    `rgba(${lr},${lg2},${lb},0)`);
+        ctx.beginPath(); ctx.arc(cx + ox, cy, R + 5.5, 0, Math.PI * 2);
+        ctx.fillStyle = limb; ctx.fill();
+      });
 
-      // Pass 8: Checking state — dual spinner arcs
+      // P8: Checking spinner arcs
       if (h === "checking") {
-        ctx.beginPath();
-        ctx.arc(cx, cy, R - 1.8, t * 1.2, t * 1.2 + Math.PI * 1.35);
-        ctx.strokeStyle = "rgba(192,132,252,0.95)"; ctx.lineWidth = 2.3; ctx.stroke();
-        ctx.beginPath();
-        ctx.arc(cx, cy, R - 3.5, -t * 0.75, -t * 0.75 + Math.PI * 0.82);
-        ctx.strokeStyle = "rgba(167,139,250,0.52)"; ctx.lineWidth = 1.3; ctx.stroke();
+        for (let sp = 0; sp < 3; sp++) {
+          const spinR = R - 1.2 - sp * 1.5;
+          const startA = t * (1.4 - sp * 0.35) + sp * 1.0;
+          ctx.beginPath();
+          ctx.arc(cx, cy, spinR, startA, startA + Math.PI * (1.4 - sp * 0.28));
+          ctx.strokeStyle = `rgba(${192 - sp * 20},${132 - sp * 10},252,${0.98 - sp * 0.28})`;
+          ctx.lineWidth = 2.2 - sp * 0.5; ctx.stroke();
+        }
       }
 
-      // ── Front orbital particles ─────────────────────────────────────────
+      // ── Front half of ring disc (over planet front face) ────────────────
+      drawRingDisc(true);
+
+      // ── Front particles ─────────────────────────────────────────────────
       projected.forEach(({ px, py, sc, zd, p: pp }) => {
         if (zd <= 0) return;
         const ring  = ORB_RINGS[pp.ring];
         const depth = Math.max(0.12, Math.min(1, (sc - 0.42) / 0.65));
-        const alpha = 0.22 + depth * 0.78;
-        const sz    = ring.moonR * sc * 2.8;
-
+        const alpha = 0.24 + depth * 0.76;
+        const sz    = ring.moonR * sc * 3.0;
         pp.trail.forEach((pt, ti) => {
-          const ta = alpha * (ti / pp.trail.length) * 0.22;
-          const tr = sz * (ti / pp.trail.length) * 0.55;
+          const ta = alpha * (ti / pp.trail.length) * 0.24;
+          const tr = sz * (ti / pp.trail.length) * 0.58;
           if (tr < 0.12) return;
           ctx.beginPath(); ctx.arc(pt.x, pt.y, tr, 0, Math.PI * 2);
           ctx.fillStyle = `${ring.col}${ta})`; ctx.fill();
         });
-
-        const g2 = ctx.createRadialGradient(px, py, 0, px, py, sz * 3.2);
-        g2.addColorStop(0,   `${ring.col}${alpha * 0.92})`);
-        g2.addColorStop(0.4, `${ring.col}${alpha * 0.20})`);
+        const g2 = ctx.createRadialGradient(px, py, 0, px, py, sz * 3.4);
+        g2.addColorStop(0,   `${ring.col}${alpha * 0.94})`);
+        g2.addColorStop(0.38,`${ring.col}${alpha * 0.22})`);
         g2.addColorStop(1,   `${ring.col}0)`);
-        ctx.beginPath(); ctx.arc(px, py, sz * 3.2, 0, Math.PI * 2);
+        ctx.beginPath(); ctx.arc(px, py, sz * 3.4, 0, Math.PI * 2);
         ctx.fillStyle = g2; ctx.fill();
-
-        ctx.beginPath(); ctx.arc(px, py, Math.max(0.4, sz * 0.32), 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(255,255,255,0.95)"; ctx.fill();
+        ctx.beginPath(); ctx.arc(px, py, Math.max(0.42, sz * 0.34), 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(255,255,255,0.97)"; ctx.fill();
       });
 
-      // ── Health blip indicator (top-right of planet) ─────────────────────
+      // ── Health blip (top-right, with pulse ring) ────────────────────────
       const blinkA =
-        h === "healthy"  ? 0.82 + Math.sin(t * 2.2)  * 0.18 :
-        h === "error"    ? 0.35 + Math.sin(t * 8.5)  * 0.65 :
-        h === "slow"     ? 0.55 + Math.sin(t * 4.0)  * 0.45 :
-        h === "checking" ? 0.30 + Math.sin(t * 11.0) * 0.50 : 0.45;
-      const bx = cx + R * 0.74, by = cy - R * 0.74;
-      const bg  = ctx.createRadialGradient(bx, by, 0, bx, by, 6.5);
-      bg.addColorStop(0, `rgba(${hr},${hg},${hb},${blinkA * 0.6})`);
-      bg.addColorStop(1, `rgba(${hr},${hg},${hb},0)`);
-      ctx.beginPath(); ctx.arc(bx, by, 6.5, 0, Math.PI * 2);
-      ctx.fillStyle = bg; ctx.fill();
-      ctx.beginPath(); ctx.arc(bx, by, 2.6, 0, Math.PI * 2);
+        h === "healthy"  ? 0.85 + Math.sin(t * 2.0)  * 0.15 :
+        h === "error"    ? 0.30 + Math.sin(t * 8.0)  * 0.70 :
+        h === "slow"     ? 0.52 + Math.sin(t * 3.8)  * 0.48 :
+        h === "checking" ? 0.28 + Math.sin(t * 10.5) * 0.52 : 0.42;
+      const bx = cx + R * 0.76, by = cy - R * 0.76;
+      // Pulse ring
+      const pulseR = 4.5 + Math.sin(t * 2.8) * 3.0;
+      const pgr = ctx.createRadialGradient(bx, by, 0, bx, by, pulseR + 4);
+      pgr.addColorStop(0, `rgba(${hr},${hg},${hb},${blinkA * 0.55})`);
+      pgr.addColorStop(0.5, `rgba(${hr},${hg},${hb},0.04)`);
+      pgr.addColorStop(1, `rgba(${hr},${hg},${hb},0)`);
+      ctx.beginPath(); ctx.arc(bx, by, pulseR + 4, 0, Math.PI * 2);
+      ctx.fillStyle = pgr; ctx.fill();
+      // Core dot
+      ctx.beginPath(); ctx.arc(bx, by, 2.8, 0, Math.PI * 2);
       ctx.fillStyle = `rgba(${hr},${hg},${hb},${blinkA})`; ctx.fill();
       ctx.beginPath(); ctx.arc(bx, by, 1.1, 0, Math.PI * 2);
-      ctx.fillStyle = "rgba(255,255,255,0.95)"; ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,0.97)"; ctx.fill();
     }
 
     rafRef.current = requestAnimationFrame(draw);
@@ -384,7 +485,8 @@ function QuantumPlanet3D({ health, latency, open }: { health: Health; latency: n
 
   return (
     <canvas ref={canvasRef}
-      style={{ width: 50, height: 50, imageRendering: "pixelated", display: "block", flexShrink: 0 }} />
+      width={50} height={50}
+      style={{ width: 50, height: 50, display: "block", flexShrink: 0, imageRendering: "auto" }} />
   );
 }
 

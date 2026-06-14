@@ -530,7 +530,7 @@ export function TopBar({
       </div>
 
       {/* ── CENTER: health + auto AI (between model and toolbar) ─────── */}
-      <div className="flex items-center gap-1.5 flex-shrink-0 relative z-10 mx-1.5">
+      <div className="flex items-center gap-1.5 flex-shrink-0 relative z-10 mx-1.5" style={{ minWidth: 0, overflow: "visible" }}>
         <ProviderHealthBadge3D />
         <AIQuickSetupButton />
       </div>

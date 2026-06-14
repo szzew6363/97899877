@@ -2954,6 +2954,12 @@ pre {
   animation: modal-in 0.18s ease-out;
 }
 
+/* TopBar canvas visibility fix */
+canvas {
+  display: block !important;
+  flex-shrink: 0 !important;
+}
+
 /* Cyber Hub button pulse */
 @keyframes cyber-hub-pulse {
   0%, 100% { box-shadow: 0 0 12px rgba(226,18,39,0.2); }

@@ -118,7 +118,7 @@ const ALL_PROVIDERS: ProviderDef[] = [
 
 type Phase = "idle" | "scanning" | "done" | "fail";
 
-// ── TRUE 3D QUANTUM ATOM ──────────────────────────────────────────────────────
+// ── ULTRA 3D QUANTUM ATOM ─────────────────────────────────────────────────────
 function QuantumAtom3D({ phase, open }: { phase: Phase; open: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef    = useRef(0);
@@ -142,51 +142,56 @@ function QuantumAtom3D({ phase, open }: { phase: Phase; open: boolean }) {
     cv.height  = SIZE * DPR;
     ctx.scale(DPR, DPR);
     const [cx, cy] = [SIZE / 2, SIZE / 2];
-    const FOV = 160;
+    const FOV = 165;
 
-    // Ring definitions: local XZ-plane circle, then tilted
-    type Ring = { r: number; tX: number; tY: number; speed: number; col: string };
+    // 4 rings: inner magenta, mid green, mid-outer cyan, outer lime
+    type Ring = { r: number; tX: number; tY: number; speed: number; col: string; eCount: number };
     const RINGS: Ring[] = [
-      { r: 12, tX:  0.40, tY:  0.20, speed:  0.016, col: "rgba(0,255,136," },
-      { r: 17, tX: -0.55, tY:  0.50, speed: -0.011, col: "rgba(0,229,255," },
-      { r: 22, tX:  0.75, tY: -0.58, speed:  0.008, col: "rgba(134,255,0,"  },
+      { r:  8, tX:  0.22, tY:  0.10, speed:  0.028, col: "rgba(255,0,200,",   eCount: 6  },
+      { r: 13, tX:  0.40, tY:  0.20, speed:  0.018, col: "rgba(0,255,136,",   eCount: 8  },
+      { r: 18, tX: -0.55, tY:  0.50, speed: -0.012, col: "rgba(0,229,255,",   eCount: 10 },
+      { r: 23, tX:  0.75, tY: -0.58, speed:  0.008, col: "rgba(134,255,0,",   eCount: 12 },
     ];
 
-    // Particle state
+    // Quantum foam — micro background dots
+    type Foam = { x: number; y: number; r: number; a: number; va: number };
+    const foam: Foam[] = Array.from({ length: 18 }, () => ({
+      x: Math.random() * SIZE, y: Math.random() * SIZE,
+      r: 0.3 + Math.random() * 0.5,
+      a: 0.02 + Math.random() * 0.06,
+      va: 0.018 + Math.random() * 0.032,
+    }));
+
     type P = { ring: number; angle: number; trail: Array<{ x: number; y: number }> };
-    const particles: P[] = RINGS.flatMap((_, ri) =>
-      Array.from({ length: 8 }, (_, i) => ({
-        ring: ri, angle: (i / 8) * Math.PI * 2 + ri * 0.75, trail: [],
+    const particles: P[] = RINGS.flatMap((ring, ri) =>
+      Array.from({ length: ring.eCount }, (_, i) => ({
+        ring: ri, angle: (i / ring.eCount) * Math.PI * 2 + ri * 0.85, trail: [],
       }))
     );
 
-    // ── 3D math helpers ─────────────────────────────────────────────────
-    function rotX(x: number, y: number, z: number, a: number): [number, number, number] {
+    // ── 3D math ──────────────────────────────────────────────────────────
+    function rotX(x: number, y: number, z: number, a: number): [number,number,number] {
       const c = Math.cos(a), s = Math.sin(a);
-      return [x, y * c - z * s, y * s + z * c];
+      return [x, y*c - z*s, y*s + z*c];
     }
-    function rotY(x: number, y: number, z: number, a: number): [number, number, number] {
+    function rotY(x: number, y: number, z: number, a: number): [number,number,number] {
       const c = Math.cos(a), s = Math.sin(a);
-      return [x * c + z * s, y, -x * s + z * c];
+      return [x*c + z*s, y, -x*s + z*c];
     }
-    function rotZ(x: number, y: number, z: number, a: number): [number, number, number] {
+    function rotZ(x: number, y: number, z: number, a: number): [number,number,number] {
       const c = Math.cos(a), s = Math.sin(a);
-      return [x * c - y * s, x * s + y * c, z];
+      return [x*c - y*s, x*s + y*c, z];
     }
     function proj(x: number, y: number, z: number): { px: number; py: number; sc: number } {
       const sc = FOV / (FOV + z + 55);
       return { px: cx + x * sc, py: cy + y * sc, sc };
     }
-
-    // Transform a ring point (in local XZ plane) through ring tilt + global rotation
     function xf(
       x0: number, z0: number, ring: Ring,
       gRX: number, gRY: number, gRZ: number
     ): { px: number; py: number; sc: number; zd: number } {
-      // Ring local (y=0 for all ring points)
       let [x, y, z] = rotX(x0, 0, z0, ring.tX);
       [x, y, z] = rotY(x, y, z, ring.tY);
-      // Global wobble
       [x, y, z] = rotX(x, y, z, gRX);
       [x, y, z] = rotY(x, y, z, gRY);
       [x, y, z] = rotZ(x, y, z, gRZ);
@@ -196,69 +201,120 @@ function QuantumAtom3D({ phase, open }: { phase: Phase; open: boolean }) {
 
     function draw() {
       rafRef.current = requestAnimationFrame(draw);
-      tRef.current++;
+      tRef.current += 0.5;
       const t   = tRef.current;
       const ph  = phaseRef.current;
       const isO = openRef.current;
       ctx.clearRect(0, 0, SIZE, SIZE);
 
-      // Slow global wobble — gives the illusion of 3D tumbling
-      const gRX = Math.sin(t * 0.009) * 0.30 + 0.20;
-      const gRY = t * 0.0065;
-      const gRZ = Math.sin(t * 0.013) * 0.18;
+      const gRX = Math.sin(t * 0.0045) * 0.35 + 0.18;
+      const gRY = t * 0.0055;
+      const gRZ = Math.sin(t * 0.0065) * 0.20;
 
-      // ── Ambient field ──────────────────────────────────────────────────
-      const aR  = isO ? 26 : 22;
-      const aA  = ph === "scanning" ? 0.24 : isO ? 0.20 : 0.11;
+      // ── Quantum foam background ─────────────────────────────────────────
+      foam.forEach(f => {
+        const a = Math.abs(Math.sin(t * f.va)) * f.a;
+        ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(0,255,136,${a})`; ctx.fill();
+      });
+
+      // ── Deep ambient field ──────────────────────────────────────────────
+      const aR = isO ? 27 : 24;
+      const aA = ph === "scanning" ? 0.28 : isO ? 0.22 : 0.13;
       const amb = ctx.createRadialGradient(cx, cy, 0, cx, cy, aR);
-      amb.addColorStop(0,   `rgba(0,255,136,${aA * 2.2})`);
-      amb.addColorStop(0.4, `rgba(0,229,255,${aA * 0.55})`);
+      amb.addColorStop(0,   `rgba(0,255,136,${aA * 2.4})`);
+      amb.addColorStop(0.3, `rgba(0,229,255,${aA * 0.7})`);
+      amb.addColorStop(0.6, `rgba(134,0,255,${aA * 0.2})`);
       amb.addColorStop(1,   "rgba(0,0,0,0)");
       ctx.beginPath(); ctx.arc(cx, cy, aR, 0, Math.PI * 2);
       ctx.fillStyle = amb; ctx.fill();
 
-      // ── Scan pulse rings ───────────────────────────────────────────────
-      if (ph === "scanning") {
-        for (let i = 0; i < 3; i++) {
-          const p  = ((t * 1.8 + i * 55) % 165) / 165;
-          const rr = 7 + p * 23;
-          ctx.beginPath(); ctx.arc(cx, cy, rr, 0, Math.PI * 2);
-          ctx.strokeStyle = `rgba(0,229,255,${(1 - p) * 0.52})`;
-          ctx.lineWidth   = 1.8 * (1 - p);
-          ctx.stroke();
-        }
-        // Rotating sonar ray
-        const rayA = (t * 0.055) % (Math.PI * 2);
-        ctx.save(); ctx.translate(cx, cy); ctx.rotate(rayA);
-        ctx.beginPath(); ctx.moveTo(0, 0);
-        ctx.arc(0, 0, 24, -0.55, 0.55); ctx.closePath();
-        const ray = ctx.createRadialGradient(0, 0, 0, 0, 0, 24);
-        ray.addColorStop(0, "rgba(0,229,255,0.7)");
-        ray.addColorStop(1, "rgba(0,229,255,0)");
-        ctx.fillStyle = ray; ctx.fill(); ctx.restore();
+      // ── Magnetosphere outer field lines ────────────────────────────────
+      const magPulse = 0.5 + Math.sin(t * 0.022) * 0.5;
+      for (let m = 0; m < 3; m++) {
+        const mr = 25 + m * 2.5 + magPulse * 1.2;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, mr, mr * 0.62, Math.PI * 0.15, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(0,229,255,${0.04 + m * 0.015 - magPulse * 0.012})`;
+        ctx.lineWidth = 0.6; ctx.stroke();
       }
 
-      // ── Orbit paths — TRUE 3D: sample 64 pts, project each ────────────
+      // ── Holographic hex grid overlay ───────────────────────────────────
+      const hexAlpha = 0.04 + Math.sin(t * 0.016) * 0.02;
+      const HEX_R = 5.5;
+      const hexCenters = [
+        [cx, cy - HEX_R * 2],
+        [cx + HEX_R * 1.73, cy - HEX_R],
+        [cx + HEX_R * 1.73, cy + HEX_R],
+        [cx, cy + HEX_R * 2],
+        [cx - HEX_R * 1.73, cy + HEX_R],
+        [cx - HEX_R * 1.73, cy - HEX_R],
+        [cx, cy],
+      ];
+      ctx.setLineDash([1.5, 3]);
+      ctx.lineWidth = 0.4;
+      hexCenters.forEach(([hx, hy]) => {
+        ctx.beginPath();
+        for (let s = 0; s < 6; s++) {
+          const a = (s / 6) * Math.PI * 2 - Math.PI / 6;
+          s === 0 ? ctx.moveTo(hx + HEX_R * Math.cos(a), hy + HEX_R * Math.sin(a))
+                  : ctx.lineTo(hx + HEX_R * Math.cos(a), hy + HEX_R * Math.sin(a));
+        }
+        ctx.closePath();
+        ctx.strokeStyle = `rgba(0,255,136,${hexAlpha})`;
+        ctx.stroke();
+      });
+      ctx.setLineDash([]);
+
+      // ── Scan pulse rings ───────────────────────────────────────────────
+      if (ph === "scanning") {
+        for (let i = 0; i < 4; i++) {
+          const p  = ((t * 1.5 + i * 42) % 168) / 168;
+          const rr = 6 + p * 25;
+          ctx.beginPath(); ctx.arc(cx, cy, rr, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(0,229,255,${(1 - p) * 0.60})`;
+          ctx.lineWidth   = 2.0 * (1 - p);
+          ctx.stroke();
+        }
+        const rayA = (t * 0.065) % (Math.PI * 2);
+        ctx.save(); ctx.translate(cx, cy); ctx.rotate(rayA);
+        ctx.beginPath(); ctx.moveTo(0, 0);
+        ctx.arc(0, 0, 26, -0.60, 0.60); ctx.closePath();
+        const ray = ctx.createRadialGradient(0, 0, 0, 0, 0, 26);
+        ray.addColorStop(0, "rgba(0,229,255,0.80)");
+        ray.addColorStop(0.6, "rgba(0,229,255,0.18)");
+        ray.addColorStop(1, "rgba(0,229,255,0)");
+        ctx.fillStyle = ray; ctx.fill(); ctx.restore();
+        // Counter-rotating inner ray (magenta)
+        ctx.save(); ctx.translate(cx, cy); ctx.rotate(-rayA * 0.62 + 1.2);
+        ctx.beginPath(); ctx.moveTo(0, 0);
+        ctx.arc(0, 0, 16, -0.40, 0.40); ctx.closePath();
+        const ray2 = ctx.createRadialGradient(0, 0, 0, 0, 0, 16);
+        ray2.addColorStop(0, "rgba(255,0,200,0.55)");
+        ray2.addColorStop(1, "rgba(255,0,200,0)");
+        ctx.fillStyle = ray2; ctx.fill(); ctx.restore();
+      }
+
+      // ── Orbit paths (true 3D projected, 80 samples each) ──────────────
       RINGS.forEach(ring => {
         ctx.beginPath();
         let first = true;
-        for (let i = 0; i <= 64; i++) {
-          const a      = (i / 64) * Math.PI * 2;
+        for (let i = 0; i <= 80; i++) {
+          const a = (i / 80) * Math.PI * 2;
           const { px, py } = xf(ring.r * Math.cos(a), ring.r * Math.sin(a), ring, gRX, gRY, gRZ);
           if (first) { ctx.moveTo(px, py); first = false; }
           else         ctx.lineTo(px, py);
         }
         ctx.closePath();
-        ctx.setLineDash([2, 5]);
-        ctx.strokeStyle = `${ring.col}${isO ? 0.38 : 0.22})`;
-        ctx.lineWidth   = 0.75;
+        ctx.setLineDash([1.8, 4.5]);
+        ctx.strokeStyle = `${ring.col}${isO ? 0.42 : 0.26})`;
+        ctx.lineWidth   = 0.65;
         ctx.stroke();
         ctx.setLineDash([]);
       });
 
-      // ── Update + project all particles ─────────────────────────────────
-      const spd = ph === "scanning" ? 2.8 : isO ? 1.45 : 1.0;
-
+      // ── Project + advance particles ────────────────────────────────────
+      const spd = ph === "scanning" ? 3.2 : isO ? 1.55 : 1.05;
       type PP = { px: number; py: number; sc: number; zd: number; p: P };
       const projected: PP[] = particles.map(pp => {
         pp.angle += RINGS[pp.ring].speed * spd;
@@ -266,75 +322,119 @@ function QuantumAtom3D({ phase, open }: { phase: Phase; open: boolean }) {
         const a    = pp.angle;
         const { px, py, sc, zd } = xf(ring.r * Math.cos(a), ring.r * Math.sin(a), ring, gRX, gRY, gRZ);
         pp.trail.push({ x: px, y: py });
-        if (pp.trail.length > 12) pp.trail.shift();
+        if (pp.trail.length > 14) pp.trail.shift();
         return { px, py, sc, zd, p: pp };
       });
-
-      // Sort back → front
       projected.sort((a, b) => a.zd - b.zd);
 
-      // Nucleus draw function (called once when z-sorted position is reached)
+      // ── Energy tendrils between nearby electrons ───────────────────────
+      if (isO || ph === "scanning") {
+        for (let i = 0; i < projected.length; i += 3) {
+          for (let j = i + 1; j < projected.length; j += 4) {
+            const dx = projected[j].px - projected[i].px;
+            const dy = projected[j].py - projected[i].py;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            if (dist < 14 && dist > 2) {
+              const a = (1 - dist / 14) * 0.12;
+              const mx = (projected[i].px + projected[j].px) / 2 + Math.sin(t * 0.03 + i) * 3;
+              const my = (projected[i].py + projected[j].py) / 2 + Math.cos(t * 0.025 + j) * 3;
+              ctx.beginPath();
+              ctx.moveTo(projected[i].px, projected[i].py);
+              ctx.quadraticCurveTo(mx, my, projected[j].px, projected[j].py);
+              ctx.strokeStyle = `rgba(0,255,136,${a})`;
+              ctx.lineWidth = 0.5; ctx.stroke();
+            }
+          }
+        }
+      }
+
+      // ── Nucleus (depth-sorted between particles) ───────────────────────
       let nucleusDrawn = false;
       const drawNucleus = () => {
-        const cR = 5.8 + (ph === "scanning"
-          ? Math.sin(t * 0.22) * 2.2
-          : isO ? Math.sin(t * 0.07) * 0.8 : 0);
+        const cR = 6.2 + (ph === "scanning"
+          ? Math.sin(t * 0.18) * 2.5
+          : isO ? Math.sin(t * 0.055) * 0.9 : 0);
 
-        // Outer halo layers
-        const halo1 = ctx.createRadialGradient(cx, cy, cR, cx, cy, cR * 5.5);
-        halo1.addColorStop(0, `rgba(0,255,136,${ph === "scanning" ? 0.52 : 0.32})`);
-        halo1.addColorStop(0.45, "rgba(0,200,180,0.06)");
-        halo1.addColorStop(1, "rgba(0,0,0,0)");
-        ctx.beginPath(); ctx.arc(cx, cy, cR * 5.5, 0, Math.PI * 2);
-        ctx.fillStyle = halo1; ctx.fill();
+        // Chromatic aberration — 3 offset halo passes (R/G/B)
+        const chromOffset = 1.2;
+        [
+          [chromOffset, 0,           "rgba(255,0,80,"],
+          [0,           chromOffset, "rgba(0,255,136,"],
+          [-chromOffset, 0,          "rgba(0,200,255,"],
+        ].forEach(([ox, oy, col]) => {
+          const hc = ctx.createRadialGradient(cx + (ox as number), cy + (oy as number), cR, cx + (ox as number), cy + (oy as number), cR * 5.8);
+          hc.addColorStop(0,   `${col}${ph === "scanning" ? 0.30 : 0.18})`);
+          hc.addColorStop(0.5, `${col}0.03)`);
+          hc.addColorStop(1,   `${col}0)`);
+          ctx.beginPath(); ctx.arc(cx + (ox as number), cy + (oy as number), cR * 5.8, 0, Math.PI * 2);
+          ctx.fillStyle = hc; ctx.fill();
+        });
 
-        // Secondary energy ring
-        if (isO || ph === "scanning") {
-          const pulse = 0.5 + Math.sin(t * 0.14) * 0.5;
-          ctx.beginPath(); ctx.arc(cx, cy, cR * 2.2 + pulse * 1.5, 0, Math.PI * 2);
-          ctx.strokeStyle = `rgba(0,255,136,${0.12 + pulse * 0.08})`;
-          ctx.lineWidth = 1; ctx.stroke();
+        // Pulsing energy rings around nucleus
+        for (let r = 0; r < 3; r++) {
+          const pulse = 0.5 + Math.sin(t * 0.08 + r * 1.2) * 0.5;
+          ctx.beginPath(); ctx.arc(cx, cy, cR * (1.8 + r * 0.6) + pulse * 2, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(0,255,136,${(0.18 - r * 0.04) * pulse})`;
+          ctx.lineWidth = 1.0 - r * 0.25; ctx.stroke();
         }
 
-        // Body — PBR-style multi-gradient
-        const body = ctx.createRadialGradient(cx - cR * 0.32, cy - cR * 0.38, 0, cx, cy, cR);
-        body.addColorStop(0,    "rgba(255,255,255,0.98)");
-        body.addColorStop(0.18, "rgba(0,255,136,1)");
-        body.addColorStop(0.55, "rgba(0,185,95,0.92)");
-        body.addColorStop(0.85, "rgba(0,100,55,0.75)");
-        body.addColorStop(1,    "rgba(0,40,20,0.65)");
+        // Body — crystalline PBR sphere
+        const body = ctx.createRadialGradient(cx - cR * 0.34, cy - cR * 0.40, 0, cx, cy, cR);
+        body.addColorStop(0,    "rgba(255,255,255,1.0)");
+        body.addColorStop(0.12, "rgba(180,255,220,1.0)");
+        body.addColorStop(0.30, "rgba(0,255,136,1.0)");
+        body.addColorStop(0.58, "rgba(0,190,100,0.95)");
+        body.addColorStop(0.82, "rgba(0,100,55,0.80)");
+        body.addColorStop(1,    "rgba(0,30,15,0.70)");
         ctx.beginPath(); ctx.arc(cx, cy, cR, 0, Math.PI * 2);
         ctx.fillStyle = body; ctx.fill();
 
+        // Surface plasma swirl
+        ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, cR, 0, Math.PI * 2); ctx.clip();
+        const swAngle = t * 0.04;
+        for (let sw = 0; sw < 3; sw++) {
+          ctx.beginPath();
+          ctx.ellipse(cx, cy, cR * 0.85, cR * 0.32, swAngle + sw * 1.05, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(0,255,136,${0.14 - sw * 0.03})`;
+          ctx.lineWidth = 0.5; ctx.stroke();
+        }
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, cR * 0.30, cR * 0.90, -swAngle * 0.7, 0, Math.PI * 2);
+        ctx.strokeStyle = "rgba(0,229,255,0.14)"; ctx.lineWidth = 0.45; ctx.stroke();
+        ctx.restore();
+
+        // Crystalline facets — 6 subtle highlight lines
+        ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, cR, 0, Math.PI * 2); ctx.clip();
+        for (let f = 0; f < 6; f++) {
+          const fa = (f / 6) * Math.PI + t * 0.012;
+          ctx.beginPath();
+          ctx.moveTo(cx + Math.cos(fa) * cR * 0.1, cy + Math.sin(fa) * cR * 0.1);
+          ctx.lineTo(cx + Math.cos(fa) * cR * 0.88, cy + Math.sin(fa) * cR * 0.88);
+          ctx.strokeStyle = `rgba(255,255,255,${0.06 + Math.abs(Math.sin(fa + t * 0.02)) * 0.05})`;
+          ctx.lineWidth = 0.35; ctx.stroke();
+        }
+        ctx.restore();
+
         // Specular highlight
-        const spec = ctx.createRadialGradient(cx - cR * 0.4, cy - cR * 0.45, 0, cx - cR * 0.1, cy - cR * 0.1, cR);
-        spec.addColorStop(0,   "rgba(255,255,255,0.88)");
-        spec.addColorStop(0.22,"rgba(255,255,255,0.22)");
-        spec.addColorStop(1,   "rgba(255,255,255,0)");
+        const spec = ctx.createRadialGradient(cx - cR * 0.42, cy - cR * 0.48, 0, cx - cR * 0.12, cy - cR * 0.12, cR);
+        spec.addColorStop(0,    "rgba(255,255,255,0.95)");
+        spec.addColorStop(0.18, "rgba(255,255,255,0.28)");
+        spec.addColorStop(0.55, "rgba(255,255,255,0.05)");
+        spec.addColorStop(1,    "rgba(255,255,255,0)");
         ctx.beginPath(); ctx.arc(cx, cy, cR, 0, Math.PI * 2);
         ctx.fillStyle = spec; ctx.fill();
 
-        // Surface lines (latitude + meridian)
-        ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, cR, 0, Math.PI * 2); ctx.clip();
-        ctx.beginPath();
-        ctx.ellipse(cx, cy, cR, cR * 0.28, 0, 0, Math.PI * 2);
-        ctx.strokeStyle = "rgba(0,255,136,0.28)"; ctx.lineWidth = 0.55; ctx.stroke();
-        ctx.beginPath();
-        ctx.ellipse(cx, cy, cR * 0.28, cR, 0, 0, Math.PI * 2);
-        ctx.strokeStyle = "rgba(0,229,255,0.18)"; ctx.lineWidth = 0.5; ctx.stroke();
-        ctx.restore();
-
-        // Rim light
-        const rim = ctx.createRadialGradient(cx + cR * 0.55, cy + cR * 0.42, 0, cx + cR * 0.35, cy + cR * 0.25, cR * 0.85);
-        rim.addColorStop(0, "rgba(0,229,255,0.45)");
+        // Rim light (cyan backlight)
+        const rim = ctx.createRadialGradient(cx + cR * 0.58, cy + cR * 0.44, 0, cx + cR * 0.36, cy + cR * 0.26, cR * 0.88);
+        rim.addColorStop(0, "rgba(0,229,255,0.55)");
         rim.addColorStop(1, "rgba(0,229,255,0)");
         ctx.beginPath(); ctx.arc(cx, cy, cR, 0, Math.PI * 2);
         ctx.fillStyle = rim; ctx.fill();
 
         // Phase overlays
         if (ph === "done") {
-          ctx.strokeStyle = "#22c55e"; ctx.lineWidth = 2.5; ctx.lineCap = "round";
-          ctx.shadowColor = "#22c55e"; ctx.shadowBlur = 16;
+          ctx.strokeStyle = "#22c55e"; ctx.lineWidth = 2.6; ctx.lineCap = "round";
+          ctx.shadowColor = "#22c55e"; ctx.shadowBlur = 18;
           ctx.beginPath();
           ctx.moveTo(cx - 4.5, cy + 0.5);
           ctx.lineTo(cx - 0.8, cy + 4.5);
@@ -342,8 +442,8 @@ function QuantumAtom3D({ phase, open }: { phase: Phase; open: boolean }) {
           ctx.stroke(); ctx.shadowBlur = 0;
         }
         if (ph === "fail") {
-          ctx.strokeStyle = "#ef4444"; ctx.lineWidth = 2.2; ctx.lineCap = "round";
-          ctx.shadowColor = "#ef4444"; ctx.shadowBlur = 14;
+          ctx.strokeStyle = "#ef4444"; ctx.lineWidth = 2.4; ctx.lineCap = "round";
+          ctx.shadowColor = "#ef4444"; ctx.shadowBlur = 16;
           ctx.beginPath();
           ctx.moveTo(cx - 4, cy - 4); ctx.lineTo(cx + 4, cy + 4);
           ctx.moveTo(cx + 4, cy - 4); ctx.lineTo(cx - 4, cy + 4);
@@ -351,35 +451,31 @@ function QuantumAtom3D({ phase, open }: { phase: Phase; open: boolean }) {
         }
       };
 
-      // ── Draw particles (depth-sorted, nucleus inserted at z=0) ─────────
+      // ── Draw particles depth-sorted, nucleus at z=0 ────────────────────
       projected.forEach(({ px, py, sc, zd, p: pp }) => {
         if (!nucleusDrawn && zd > 0) { drawNucleus(); nucleusDrawn = true; }
-
         const ring  = RINGS[pp.ring];
-        const depth = Math.max(0.08, Math.min(1, (sc - 0.38) / 0.68));
-        const alpha = 0.18 + depth * 0.82;
-        const size  = sc * (1.8 + depth * 2.8);
+        const depth = Math.max(0.08, Math.min(1, (sc - 0.36) / 0.70));
+        const alpha = 0.16 + depth * 0.84;
+        const size  = sc * (2.0 + depth * 3.0);
 
-        // Trail (fading)
         pp.trail.forEach((pt, ti) => {
-          const ta = alpha * (ti / pp.trail.length) * 0.20;
-          const tr = size * (ti / pp.trail.length) * 0.58;
-          if (tr < 0.12) return;
+          const ta = alpha * (ti / pp.trail.length) * 0.22;
+          const tr = size * (ti / pp.trail.length) * 0.60;
+          if (tr < 0.10) return;
           ctx.beginPath(); ctx.arc(pt.x, pt.y, tr, 0, Math.PI * 2);
           ctx.fillStyle = `${ring.col}${ta})`; ctx.fill();
         });
 
-        // Glow corona
-        const g = ctx.createRadialGradient(px, py, 0, px, py, size * 3.0);
-        g.addColorStop(0,   `${ring.col}${alpha * 0.88})`);
-        g.addColorStop(0.4, `${ring.col}${alpha * 0.18})`);
+        const g = ctx.createRadialGradient(px, py, 0, px, py, size * 3.2);
+        g.addColorStop(0,   `${ring.col}${alpha * 0.90})`);
+        g.addColorStop(0.38,`${ring.col}${alpha * 0.20})`);
         g.addColorStop(1,   `${ring.col}0)`);
-        ctx.beginPath(); ctx.arc(px, py, size * 3.0, 0, Math.PI * 2);
+        ctx.beginPath(); ctx.arc(px, py, size * 3.2, 0, Math.PI * 2);
         ctx.fillStyle = g; ctx.fill();
 
-        // White hot core
-        ctx.beginPath(); ctx.arc(px, py, Math.max(0.4, size * 0.28), 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255,255,255,${alpha * 0.93})`; ctx.fill();
+        ctx.beginPath(); ctx.arc(px, py, Math.max(0.45, size * 0.30), 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,255,255,${alpha * 0.95})`; ctx.fill();
       });
 
       if (!nucleusDrawn) drawNucleus();
@@ -391,7 +487,8 @@ function QuantumAtom3D({ phase, open }: { phase: Phase; open: boolean }) {
 
   return (
     <canvas ref={canvasRef}
-      style={{ width: 56, height: 56, imageRendering: "pixelated", display: "block", flexShrink: 0 }} />
+      width={56} height={56}
+      style={{ width: 56, height: 56, display: "block", flexShrink: 0, imageRendering: "auto" }} />
   );
 }
 
@@ -687,6 +784,7 @@ export function AIQuickSetupButton() {
         disabled={phase === "scanning"}
         className="relative flex items-center gap-1 pl-0.5 pr-1.5 py-0.5 rounded-xl"
         style={{
+          minWidth: 0, overflow: "visible",
           background: open
             ? "linear-gradient(135deg,rgba(0,255,136,0.15) 0%,rgba(0,229,255,0.08) 100%)"
             : "linear-gradient(135deg,rgba(0,255,136,0.08) 0%,rgba(0,229,255,0.03) 100%)",
