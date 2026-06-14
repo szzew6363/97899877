@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { useT } from "@/lib/i18n";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { Sidebar } from "./components/Sidebar";
 import { TopBar } from "./components/TopBar";
 import { ChatView } from "./components/ChatView";
@@ -19,6 +19,7 @@ import { CompareView } from "./components/CompareView";
 import { ArsenalFullPage } from "./components/ArsenalFullPage";
 import { QRSyncModal, useQRSyncImport } from "./components/modals/QRSyncModal";
 import { AmbientParticleField } from "./components/AmbientParticleField";
+import { NeuralParticleBackground } from "./components/NeuralParticleBackground";
 import { HoloDataStream } from "./components/HoloDataStream";
 import { CyberHUDOverlay } from "./components/CyberWidgetsDock";
 import { SystemStatusWidget } from "./components/SystemStatusWidget";
@@ -294,6 +295,7 @@ function AppContent() {
   const [cliPipelineContext, setCliPipelineContext] = useState<{text:string;key:number}|undefined>();
   const [idePipelineCode, setIdePipelineCode] = useState<{text:string;key:number}|undefined>();
   const [pipelineKeyRef] = useState(() => ({ n: 0 }));
+  const [hudsVisible, setHudsVisible] = useState(true);
   const { entries: costEntries, addEntry: addCostEntry } = useCostTracker();
   void addCostEntry; void shellGeneratorInject;
 
@@ -526,7 +528,8 @@ function AppContent() {
           onOpenPrefetch={() => toggle('prefetch')}
           onOpenMasterHud={() => toggle('masterHud')}
           onOpenAnomalyLog={() => toggle('anomalyLog')}
-          onOpenNetworkTopo={() => toggle('net3D')}
+          hudsVisible={hudsVisible}
+          onOpenNetworkTopo={() => setHudsVisible(v => !v)}
           onOpenCyberHub={() => open('cyberHub')}
           onOpenWidgetsDock={() => open('widgetsDock')}
           onOpenCisaLive={() => toggle('cisaLive')}
@@ -720,14 +723,39 @@ function AppContent() {
         </div>
       )}
 
-      {/* ── Cyber Intelligence Layer — always-on floating HUD + full command center ── */}
-      <IntelligenceHUDOverlay onOpenCommandCenter={() => open('cyberIntel')} />
+      {/* ── Cyber Intelligence Layer — NET·HUD button toggles both floating panels ── */}
+      <AnimatePresence>
+        {hudsVisible && (
+          <motion.div
+            key="ai-intel-hud"
+            initial={{ opacity: 0, scale: 0.82, y: 40 }}
+            animate={{ opacity: 1, scale: 1,    y: 0  }}
+            exit={{    opacity: 0, scale: 0.82, y: 40 }}
+            transition={{ type: "spring", stiffness: 320, damping: 30 }}
+          >
+            <IntelligenceHUDOverlay onOpenCommandCenter={() => open('cyberIntel')} />
+          </motion.div>
+        )}
+      </AnimatePresence>
       <CyberIntelCenter open={modals.cyberIntel} onClose={() => close('cyberIntel')} />
 
       {/* Always-on ambient layers — conditionally paused when tab hidden */}
       <CyberHeatmapHUD />
-      <SystemStatusWidget />
-      <div className="hidden md:block"><AmbientParticleField density={0.3} /></div>
+      <AnimatePresence>
+        {hudsVisible && (
+          <motion.div
+            key="sys-widget"
+            initial={{ opacity: 0, x: 80 }}
+            animate={{ opacity: 1, x: 0  }}
+            exit={{    opacity: 0, x: 80 }}
+            transition={{ type: "spring", stiffness: 320, damping: 30, delay: 0.06 }}
+          >
+            <SystemStatusWidget />
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <NeuralParticleBackground />
+      <div className="hidden md:block"><AmbientParticleField density={0.15} /></div>
       <div className="hidden md:block"><HoloDataStream side="both" /></div>
       {/* CyberWidgetsDock removed — accessible via TopBar "HUD" button */}
       <AnimatePresence>

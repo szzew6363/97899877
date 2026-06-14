@@ -56,6 +56,7 @@ interface TopBarProps {
   onOpenCognitiveWarfare?: () => void;
   onOpenAutonomousOffense?: () => void;
   onOpenAttackGraph?: () => void;
+  hudsVisible?: boolean;
 }
 
 // ── 3D animated HUD background ────────────────────────────────────────────────
@@ -173,7 +174,7 @@ function TopBarHUDCanvas({ powerOn }: { powerOn: boolean }) {
 
 // ── Holographic HUD toolbar button ────────────────────────────────────────────
 function HUDBtn({
-  icon: Icon, label, color, onClick, badge, shortLabel, title: tip,
+  icon: Icon, label, color, onClick, badge, shortLabel, title: tip, active,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
@@ -182,6 +183,7 @@ function HUDBtn({
   badge?: string;
   shortLabel?: string;
   title?: string;
+  active?: boolean;
 }) {
   return (
     <motion.button
@@ -190,9 +192,10 @@ function HUDBtn({
       aria-label={label}
       className="flex-shrink-0 flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg relative overflow-hidden whitespace-nowrap"
       style={{
-        background: `${color}0e`,
-        border: `1px solid ${color}30`,
+        background: active ? `${color}22` : `${color}0e`,
+        border: active ? `1px solid ${color}77` : `1px solid ${color}30`,
         color: color,
+        boxShadow: active ? `0 0 14px ${color}44, inset 0 1px 0 ${color}22` : undefined,
       }}
       whileHover={{
         scale: 1.05, y: -1,
@@ -622,6 +625,7 @@ export function TopBar({
   onOpenContextMemory, onOpenPrefetch, onOpenMasterHud, onOpenAnomalyLog,
   onOpenNetworkTopo, onOpenCyberHub, onOpenWidgetsDock, onOpenCisaLive, onOpenCveTimeline,
   onOpenCyberHierarchy, onOpenCognitiveWarfare, onOpenAutonomousOffense, onOpenAttackGraph,
+  hudsVisible,
 }: TopBarProps) {
   const { state, dispatch } = useStore();
   const { t } = useT();
@@ -768,7 +772,7 @@ export function TopBar({
           {onOpenSecurityDash   && <HUDBtn icon={ShieldCheck}  label="Security"     color="#00e5ff" onClick={onOpenSecurityDash} />}
           {onOpenContextMemory  && <HUDBtn icon={BrainCircuit} label="Memory"       color="#a78bfa" onClick={onOpenContextMemory} />}
           {onOpenAnomalyLog     && <HUDBtn icon={AlertTriangle}label="Anomaly"      color="#e21227" onClick={onOpenAnomalyLog} />}
-          {onOpenNetworkTopo    && <HUDBtn icon={Network}      label="Network"      color="#3b82f6" onClick={onOpenNetworkTopo} />}
+          {onOpenNetworkTopo    && <HUDBtn icon={Network}      label="NET·HUD"      color="#3b82f6" onClick={onOpenNetworkTopo} active={hudsVisible} />}
           {onOpenPrefetch       && <HUDBtn icon={Gauge}        label="Prefetch"     color="#fbbf24" onClick={onOpenPrefetch} />}
           {onOpenMasterHud      && <HUDBtn icon={Globe}        label="HUD"          color="#22c55e" onClick={onOpenMasterHud} />}
           {onOpenCyberHub       && <HUDBtn icon={Zap}          label="Cyber Hub"    color="#e21227" onClick={onOpenCyberHub} badge="3D" />}

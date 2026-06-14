@@ -59,6 +59,7 @@ function BrainCanvas3D({ scores, threat, size }: {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef    = useRef(0);
   const tRef      = useRef(0);
+  const mouseRef  = useRef<{ x: number; y: number }>({ x: -9999, y: -9999 });
 
   useEffect(() => {
     const cvEl = canvasRef.current;
@@ -174,22 +175,45 @@ function BrainCanvas3D({ scores, threat, size }: {
         ctx.fillText(String(v), lx, ly);
       });
 
-      /* Orbit rings */
+      /* Orbit rings — cursor proximity brightening */
+      const mx = mouseRef.current.x, my = mouseRef.current.y;
       for (let ring = 0; ring < 2; ring++) {
-        const speed   = ring === 0 ? 1.4 : -0.9;
-        const r       = size * (ring === 0 ? 0.28 : 0.36);
-        const count   = ring === 0 ? 8 : 6;
+        const speed = ring === 0 ? 1.4 : -0.9;
+        const r     = size * (ring === 0 ? 0.28 : 0.36);
+        const count = ring === 0 ? 8 : 6;
         for (let i = 0; i < count; i++) {
           const a  = t * speed + (Math.PI * 2 / count) * i;
           const px = cx + Math.cos(a) * r;
           const py = cy + Math.sin(a) * r;
-          const br = ring === 0 ? 2.5 : 2;
-          const bgrad = ctx.createRadialGradient(px, py, 0, px, py, br * 2);
-          bgrad.addColorStop(0, col);
+          /* Mouse proximity */
+          const dist  = Math.hypot(px - mx, py - my);
+          const prox  = Math.max(0, 1 - dist / (size * 0.22));
+          const br    = (ring === 0 ? 2.5 : 2) * (1 + prox * 4);
+          const gSize = br * (2 + prox * 4);
+          const bgrad = ctx.createRadialGradient(px, py, 0, px, py, gSize);
+          bgrad.addColorStop(0, prox > 0.15 ? "#ffffff" : col);
+          bgrad.addColorStop(0.35, col + "ee");
           bgrad.addColorStop(1, "transparent");
-          ctx.beginPath(); ctx.arc(px, py, br * 2, 0, Math.PI * 2);
+          ctx.beginPath(); ctx.arc(px, py, gSize, 0, Math.PI * 2);
           ctx.fillStyle = bgrad; ctx.fill();
+          /* Proximity halo */
+          if (prox > 0.35) {
+            const halo = ctx.createRadialGradient(px, py, 0, px, py, gSize * 3.5);
+            halo.addColorStop(0, col + "44");
+            halo.addColorStop(1, "transparent");
+            ctx.beginPath(); ctx.arc(px, py, gSize * 3.5, 0, Math.PI * 2);
+            ctx.fillStyle = halo; ctx.fill();
+          }
         }
+      }
+      /* Cursor glow on canvas */
+      if (mx > 0 && mx < size && my > 0 && my < size) {
+        const cr = ctx.createRadialGradient(mx, my, 0, mx, my, size * 0.1);
+        cr.addColorStop(0, col + "33"); cr.addColorStop(1, "transparent");
+        ctx.beginPath(); ctx.arc(mx, my, size * 0.1, 0, Math.PI * 2);
+        ctx.fillStyle = cr; ctx.fill();
+        ctx.beginPath(); ctx.arc(mx, my, size * 0.012, 0, Math.PI * 2);
+        ctx.fillStyle = "#ffffff66"; ctx.fill();
       }
 
       /* Neural connection lines */
@@ -238,7 +262,21 @@ function BrainCanvas3D({ scores, threat, size }: {
     return () => cancelAnimationFrame(rafRef.current);
   }, [scores, threat, size]);
 
-  return <canvas ref={canvasRef} style={{ width: size, height: size }} className="rounded-full" />;
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{ width: size, height: size, cursor: "crosshair" }}
+      className="rounded-full"
+      onMouseMove={(e) => {
+        const rect = canvasRef.current?.getBoundingClientRect();
+        if (rect) mouseRef.current = {
+          x: ((e.clientX - rect.left) / rect.width)  * size,
+          y: ((e.clientY - rect.top)  / rect.height) * size,
+        };
+      }}
+      onMouseLeave={() => { mouseRef.current = { x: -9999, y: -9999 }; }}
+    />
+  );
 }
 
 /* ── Global Network Canvas ──────────────────────────────────────────────────── */
@@ -563,6 +601,8 @@ export function CyberIntelCenter({ open, onClose }: CyberIntelCenterProps) {
   const [decisions, setDecisions]   = useState<BrainDecision[]>(() => cyberBrain.getDecisions());
   const [anomalies, setAnomalies]   = useState<AnomalyEvent[]>(() => anomalyDetector.getEvents());
   const [threat,    setThreat]      = useState<ThreatLevel>(() => cyberBrain.getThreatLevel());
+  const [cveItems,  setCveItems]    = useState<Array<{id:string;name:string;vendor:string;sev:string;date:string}>>([]);
+  const [cveFetching, setCveFetching] = useState(false);
   const [simState,  setSimState]    = useState(() => cyberBrain.getSimState());
   const [memSnaps,  setMemSnaps]    = useState<ScoreSnapshot[]>(() => intelligenceMemory.getRecentScores(60));
   const [profileSummary, setProfileSummary] = useState(() => behaviorProfiler.getSummary());
@@ -598,6 +638,28 @@ export function CyberIntelCenter({ open, onClose }: CyberIntelCenterProps) {
       setMemSnaps(intelligenceMemory.getRecentScores(60));
     }
   }, [open]);
+
+  /* Live CISA KEV CVE feed — fetched once when THREATS tab is active */
+  useEffect(() => {
+    if (activeTab !== 'threats' || cveItems.length > 0) return;
+    setCveFetching(true);
+    fetch('https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json')
+      .then(r => r.json())
+      .then((data: { vulnerabilities?: Array<{cveID:string;vulnerabilityName:string;vendorProject:string;knownRansomwareCampaignUse:string;dateAdded:string}> }) => {
+        const items = (data.vulnerabilities ?? [])
+          .slice(0, 50)
+          .map(v => ({
+            id:     v.cveID,
+            name:   v.vulnerabilityName,
+            vendor: v.vendorProject,
+            sev:    v.knownRansomwareCampaignUse === 'Known' ? 'critical' : 'high',
+            date:   v.dateAdded,
+          }));
+        setCveItems(items);
+      })
+      .catch(() => { /* network unavailable — silent */ })
+      .finally(() => setCveFetching(false));
+  }, [activeTab, cveItems.length]);
 
   const handleKey = useCallback((e: KeyboardEvent) => {
     if (e.key === "Escape") onClose();
@@ -825,11 +887,55 @@ export function CyberIntelCenter({ open, onClose }: CyberIntelCenterProps) {
                           </div>
                         </div>
 
+                        {/* Live CISA KEV CVE feed */}
+                        <div className="mx-4 mt-4 rounded-xl border overflow-hidden" style={{ borderColor: '#1a1a28' }}>
+                          <div className="flex items-center justify-between px-4 py-2 border-b" style={{ background: '#080810', borderColor: '#1a1a28' }}>
+                            <div className="flex items-center gap-2">
+                              <motion.div animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1.2, repeat: Infinity }}>
+                                <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                              </motion.div>
+                              <span className="text-[9px] font-mono text-white/50 uppercase tracking-widest">Live CISA KEV · Known Exploited Vulnerabilities</span>
+                            </div>
+                            {cveFetching
+                              ? <motion.span animate={{ opacity: [1,0.4,1] }} transition={{ duration: 0.8, repeat: Infinity }} className="text-[8px] font-mono text-amber-400/70">Fetching…</motion.span>
+                              : cveItems.length > 0 && <span className="text-[8px] font-mono text-white/25">{cveItems.length} entries</span>
+                            }
+                          </div>
+                          <div className="overflow-y-auto" style={{ maxHeight: 210 }}>
+                            {cveItems.map((c, i) => (
+                              <motion.div
+                                key={c.id}
+                                initial={{ opacity: 0, x: -16 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: Math.min(i * 0.025, 0.8), duration: 0.25 }}
+                                className="flex items-center gap-3 px-4 py-2 border-b hover:bg-white/[0.025] transition-colors"
+                                style={{ borderColor: '#0d0d18' }}
+                              >
+                                <span
+                                  className="text-[7px] font-mono font-bold px-1.5 py-0.5 rounded shrink-0"
+                                  style={{ background: SEV_COLOR[c.sev] + '22', color: SEV_COLOR[c.sev], border: `1px solid ${SEV_COLOR[c.sev]}44` }}
+                                >
+                                  {c.sev.toUpperCase()}
+                                </span>
+                                <span className="text-[9px] font-mono font-bold text-white/75 shrink-0 w-32">{c.id}</span>
+                                <span className="flex-1 text-[8px] font-mono text-white/40 truncate">{c.name}</span>
+                                <span className="text-[7px] font-mono text-white/25 shrink-0">{c.vendor}</span>
+                                <span className="text-[7px] font-mono text-white/20 shrink-0 w-20 text-right">{c.date}</span>
+                              </motion.div>
+                            ))}
+                            {!cveFetching && cveItems.length === 0 && (
+                              <div className="px-4 py-6 text-center text-[9px] font-mono text-white/20">
+                                CVE feed loads automatically — check network connection
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
                         {/* Anomaly list */}
-                        <div className="flex-1 overflow-y-auto px-4 py-4">
-                          <div className="text-[9px] font-mono text-white/30 uppercase tracking-widest mb-3">Detected Anomalies</div>
+                        <div className="overflow-y-auto px-4 py-4 mt-2">
+                          <div className="text-[9px] font-mono text-white/30 uppercase tracking-widest mb-3">Local Anomaly Log</div>
                           {anomalies.length === 0 && (
-                            <div className="text-center py-12 text-[11px] font-mono text-white/20">
+                            <div className="text-center py-8 text-[11px] font-mono text-white/20">
                               No anomalies detected — system clean
                             </div>
                           )}

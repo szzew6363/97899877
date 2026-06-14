@@ -705,6 +705,39 @@ export function Sidebar({ isOpen, onClose, onOpenPricing, onOpenApi, onOpenTool,
 
       {/* Footer */}
       <div className="p-3 border-t border-sidebar-border bg-sidebar space-y-3">
+        {/* ── 3D Collapse All / Expand All ── */}
+        <motion.button
+          onClick={() => {
+            const allOpen = communityOpen && offerOpen && tokensOpen;
+            const next = !allOpen;
+            setCommunityOpen(next);
+            setOfferOpen(next);
+            setTokensOpen(next);
+          }}
+          className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl border border-white/[0.06] hover:border-white/[0.14] transition-all group relative overflow-hidden"
+          style={{ background: "rgba(255,255,255,0.025)" }}
+          whileHover={{ scale: 1.01, y: -0.5 }}
+          whileTap={{ scale: 0.98 }}
+          transition={{ type: "spring", stiffness: 400, damping: 28 }}
+        >
+          {/* 3D scanline sweep */}
+          <motion.div
+            className="absolute inset-0 pointer-events-none"
+            animate={{ x: ["-100%", "200%"] }}
+            transition={{ duration: 2.5, repeat: Infinity, ease: "linear", repeatDelay: 4 }}
+            style={{ background: "linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.06) 50%,transparent 100%)", width: "60%" }}
+          />
+          <span className="relative text-[9px] font-mono font-bold uppercase tracking-widest text-white/30 group-hover:text-white/55 transition-colors">
+            {communityOpen && offerOpen && tokensOpen ? "Collapse All" : "Expand All"}
+          </span>
+          <motion.div
+            animate={{ rotate: communityOpen && offerOpen && tokensOpen ? 180 : 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 24 }}
+          >
+            <ChevronDown className="w-3 h-3 text-white/20 group-hover:text-white/45 transition-colors" />
+          </motion.div>
+        </motion.button>
+
         {/* Community — collapsible drawer */}
         <div>
           <button
