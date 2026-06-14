@@ -54,3 +54,8 @@ externalPort = 3003
 [[ports]]
 localPort = 22938
 externalPort = 3001
+
+[userenv]
+
+[userenv.shared]
+NODE_ENV = "development"
