@@ -23,6 +23,8 @@ import { HoloDataStream } from "./components/HoloDataStream";
 import { CyberHUDOverlay } from "./components/CyberWidgetsDock";
 import { SystemStatusWidget } from "./components/SystemStatusWidget";
 import { CyberHeatmapHUD } from "./components/CyberHeatmapHUD";
+import { IntelligenceHUDOverlay } from "./components/IntelligenceHUDOverlay";
+import { CyberIntelCenter } from "./components/CyberIntelCenter";
 import { AIAutoSetup3D } from "./components/AIAutoSetup3D";
 import { PerformanceDashboard3D } from "./components/PerformanceDashboard3D";
 import { CostDashboard3D, useCostTracker } from "./components/CostDashboard3D";
@@ -209,6 +211,7 @@ const MODAL_IDS = [
   'sentientCyberSphere','perfDash','costDash','dedupViz','threatFeed','securityDash',
   'contextMemory','prefetch','masterHud','anomalyLog','net3D','autoSetup','cyberHub','sidebar','widgetsDock',
   'cisaLive','cveTimeline','cyberHierarchy','cognitiveWarfare','autonomousOffense','attackGraph',
+  'cyberIntel',
 ] as const;
 
 type ModalId = typeof MODAL_IDS[number];
@@ -716,6 +719,10 @@ function AppContent() {
           </div>
         </div>
       )}
+
+      {/* ── Cyber Intelligence Layer — always-on floating HUD + full command center ── */}
+      <IntelligenceHUDOverlay onOpenCommandCenter={() => open('cyberIntel')} />
+      <CyberIntelCenter open={modals.cyberIntel} onClose={() => close('cyberIntel')} />
 
       {/* Always-on ambient layers — conditionally paused when tab hidden */}
       <CyberHeatmapHUD />
