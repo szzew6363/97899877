@@ -718,8 +718,8 @@ function AppContent() {
       )}
 
       {/* Always-on ambient layers — conditionally paused when tab hidden */}
-      <div className="hidden md:block"><CyberHeatmapHUD /></div>
-      <div className="hidden md:block"><SystemStatusWidget /></div>
+      <CyberHeatmapHUD />
+      <SystemStatusWidget />
       <div className="hidden md:block"><AmbientParticleField density={0.3} /></div>
       <div className="hidden md:block"><HoloDataStream side="both" /></div>
       {/* CyberWidgetsDock removed — accessible via TopBar "HUD" button */}

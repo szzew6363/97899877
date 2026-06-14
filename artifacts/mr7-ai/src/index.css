@@ -1,10 +1,48 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* ── Global box model safety ── */
 *, *::before, *::after { box-sizing: border-box; }
 body { overflow-x: hidden; }
+
+/* ── Maximum GPU acceleration for 240fps ── */
+canvas,
+[data-framer-component-type],
+.CHAT-GPT-topbar,
+.CHAT-GPT-sidebar {
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  image-rendering: auto;
+}
+
+/* ── Force compositor layer on all animated elements ── */
+[style*="animation"],
+[style*="transition"],
+[style*="transform"] {
+  will-change: transform, opacity;
+  transform: translateZ(0);
+}
+
+/* ── Mobile sidebar never overflows ── */
 @media (max-width: 767px) {
   .CHAT-GPT-sidebar { width: min(280px, 100vw) !important; }
+}
+
+/* ── Scrollable tab bars ── */
+.overflow-x-auto { -ms-overflow-style: none; scrollbar-width: none; }
+.overflow-x-auto::-webkit-scrollbar { display: none; }
+
+/* ── SYS widget scanline animation ── */
+@keyframes scanline {
+  0%   { top: 0%;   opacity: 0.8; }
+  100% { top: 100%; opacity: 0;   }
+}
+
+/* ── Border pulse for SYS widget — synced to 240fps rendering ── */
+@keyframes borderPulse {
+  0%, 100% { border-color: rgba(226,18,39,0.6);  box-shadow: 0 0 8px rgba(226,18,39,0.3);  }
+  50%       { border-color: rgba(0,229,255,0.4);  box-shadow: 0 0 8px rgba(0,229,255,0.2);  }
 }
 @plugin "@tailwindcss/typography";
 

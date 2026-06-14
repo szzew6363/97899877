@@ -628,7 +628,7 @@ export function ToolsHubModal({
         </DialogHeader>
 
         {/* Stats bar */}
-        <div className="grid grid-cols-4 gap-2 mt-1">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1">
           {[
             { label: "TOOLS", value: ALL_TOOLS.length, color: "#e21227" },
             { label: "PINNED", value: pinned.length, color: "#fbbf24" },

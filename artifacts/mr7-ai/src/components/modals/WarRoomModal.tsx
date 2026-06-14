@@ -797,7 +797,7 @@ export function WarRoomModal({ open, onOpenChange }: Props) {
           </div>
 
           {/* ── BODY ── */}
-          <div style={{ flex: 1, display: "grid", gridTemplateColumns: "260px 1fr 280px", overflow: "hidden", minHeight: 0 }}>
+          <div className="md:[grid-template-columns:260px_1fr_280px]" style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr", overflow: "hidden", minHeight: 0 }}>
 
             {/* LEFT — Metrics */}
             <div style={{ borderRight: "1px solid rgba(255,255,255,0.06)", padding: "16px", display: "flex", flexDirection: "column", gap: "8px", overflowY: "auto" }}>
