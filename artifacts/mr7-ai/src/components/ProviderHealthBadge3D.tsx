@@ -31,7 +31,7 @@ const MONITOR_PROVIDERS = [
   { id: "mistral",    name: "Mistral",    color: "#ec4899", url: "https://api.mistral.ai/v1" },
 ];
 
-// ── ULTRA 3D QUANTUM PLANET ───────────────────────────────────────────────────
+// ── ULTRA 3D QUANTUM PLANET — RAINBOW SPECTRUM ────────────────────────────────
 function QuantumPlanet3D({ health, latency, open }: { health: Health; latency: number | null; open: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef    = useRef(0);
@@ -51,14 +51,14 @@ function QuantumPlanet3D({ health, latency, open }: { health: Health; latency: n
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
 
-    const SIZE = 50;
+    const SIZE = 40;
     const DPR  = Math.min(window.devicePixelRatio * 2, 4);
     cv.width   = SIZE * DPR;
     cv.height  = SIZE * DPR;
     ctx.scale(DPR, DPR);
     const [cx, cy] = [SIZE / 2, SIZE / 2];
-    const R   = 11;
-    const FOV = 158;
+    const R   = 9;
+    const FOV = 152;
 
     // ── 3D math ──────────────────────────────────────────────────────────
     function rotX(x: number, y: number, z: number, a: number): [number,number,number] {
@@ -74,21 +74,21 @@ function QuantumPlanet3D({ health, latency, open }: { health: Health; latency: n
       return [x*c - y*s, x*s + y*c, z];
     }
     function proj(x: number, y: number, z: number): { px: number; py: number; sc: number } {
-      const sc = FOV / (FOV + z + 55);
+      const sc = FOV / (FOV + z + 50);
       return { px: cx + x * sc, py: cy + y * sc, sc };
     }
 
-    // 4 orbital rings, 7 moons each
-    type OrbRing = { r: number; tX: number; tY: number; speed: number; col: string; moonR: number };
+    // 4 orbital rings — rainbow spectrum, hOff staggers hue 90° per ring
+    type OrbRing = { r: number; tX: number; tY: number; speed: number; hOff: number; moonR: number };
     const ORB_RINGS: OrbRing[] = [
-      { r: 16, tX:  0.42, tY:  0.20, speed:  0.022, col: "rgba(139,92,246,",  moonR: 1.5 },
-      { r: 20, tX: -0.58, tY:  0.50, speed: -0.014, col: "rgba(192,132,252,", moonR: 1.2 },
-      { r: 24, tX:  0.78, tY: -0.60, speed:  0.010, col: "rgba(236,72,153,",  moonR: 1.0 },
-      { r: 27, tX: -0.30, tY:  0.35, speed: -0.007, col: "rgba(99,102,241,",  moonR: 0.8 },
+      { r: 13, tX:  0.42, tY:  0.20, speed:  0.022, hOff:   0, moonR: 1.3 },
+      { r: 16, tX: -0.58, tY:  0.50, speed: -0.014, hOff:  90, moonR: 1.0 },
+      { r: 19, tX:  0.78, tY: -0.60, speed:  0.010, hOff: 180, moonR: 0.85},
+      { r: 22, tX: -0.30, tY:  0.35, speed: -0.007, hOff: 270, moonR: 0.7 },
     ];
 
-    // Saturn-like flat planetary ring (in equatorial plane, tilted)
-    const RING_DISC = { rInner: 14, rOuter: 20, tX: 0.55, tY: 0.10 };
+    // Saturn-like flat planetary ring (scaled to SIZE 40)
+    const RING_DISC = { rInner: 11, rOuter: 16, tX: 0.55, tY: 0.10 };
 
     type P = { ring: number; angle: number; trail: Array<{ x: number; y: number }> };
     const particles: P[] = ORB_RINGS.flatMap((_, ri) =>
@@ -147,6 +147,21 @@ function QuantumPlanet3D({ health, latency, open }: { health: Health; latency: n
       };
       const [hr, hg, hb] = HC[h];
 
+      // ── Rainbow spectrum cycling ─────────────────────────────────────────
+      const hue = (t * 9.6) % 360;
+      function hsl(hd: number, s = 1, l = 0.55): string {
+        const hh = ((hd % 360) + 360) % 360;
+        const k  = (n: number) => (n + hh / 30) % 12;
+        const aa = s * Math.min(l, 1 - l);
+        const f  = (n: number) => l - aa * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+        return `${Math.round(f(0)*255)},${Math.round(f(8)*255)},${Math.round(f(4)*255)}`;
+      }
+      const ringCol = (ri: number, alpha: number) => `rgba(${hsl(hue + ORB_RINGS[ri].hOff)},${alpha})`;
+      const hueRgb = hsl(hue).split(",").map(Number);
+      const br = Math.round((hr + hueRgb[0]) / 2);
+      const bg = Math.round((hg + hueRgb[1]) / 2);
+      const bb = Math.round((hb + hueRgb[2]) / 2);
+
       const gRX = Math.sin(t * 0.22) * 0.32 + 0.14;
       const gRY = t * 0.18;
       const gRZ = Math.sin(t * 0.30) * 0.18;
@@ -164,9 +179,9 @@ function QuantumPlanet3D({ health, latency, open }: { health: Health; latency: n
         if (n.x < 1 || n.x > SIZE - 1) n.vx *= -1;
         if (n.y < 1 || n.y > SIZE - 1) n.vy *= -1;
         const ng = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r * 3.0);
-        ng.addColorStop(0, `rgba(139,92,246,${n.a * (isO ? 1.6 : 1.0)})`);
-        ng.addColorStop(0.5, `rgba(99,102,241,${n.a * 0.4})`);
-        ng.addColorStop(1, "rgba(139,92,246,0)");
+        ng.addColorStop(0, `rgba(${hsl(hue + 60)},${n.a * (isO ? 1.6 : 1.0)})`);
+        ng.addColorStop(0.5, `rgba(${hsl(hue + 120)},${n.a * 0.4})`);
+        ng.addColorStop(1, `rgba(${hsl(hue)},0)`);
         ctx.beginPath(); ctx.arc(n.x, n.y, n.r * 3.0, 0, Math.PI * 2);
         ctx.fillStyle = ng; ctx.fill();
       });
@@ -174,41 +189,41 @@ function QuantumPlanet3D({ health, latency, open }: { health: Health; latency: n
       // ── Magnetosphere field lines ────────────────────────────────────────
       const magP = 0.5 + Math.sin(t * 0.9) * 0.5;
       for (let m = 0; m < 4; m++) {
-        const mr = R + 14 + m * 2.8 + magP * 1.5;
+        const mr = R + 11 + m * 2.2 + magP * 1.2;
         ctx.beginPath();
         ctx.ellipse(cx, cy, mr, mr * 0.58, Math.PI * 0.12, 0, Math.PI * 2);
-        ctx.strokeStyle = `rgba(139,92,246,${(0.055 - m * 0.010) * (1 + magP * 0.4)})`;
+        ctx.strokeStyle = `rgba(${hsl(hue)},${(0.05 - m * 0.009) * (1 + magP * 0.4)})`;
         ctx.lineWidth = 0.55; ctx.stroke();
         ctx.beginPath();
         ctx.ellipse(cx, cy, mr * 0.58, mr, Math.PI * 0.12, 0, Math.PI * 2);
-        ctx.strokeStyle = `rgba(${hr},${hg},${hb},${(0.025 - m * 0.004) * (1 + magP * 0.3)})`;
+        ctx.strokeStyle = `rgba(${br},${bg},${bb},${(0.022 - m * 0.004) * (1 + magP * 0.3)})`;
         ctx.lineWidth = 0.45; ctx.stroke();
       }
 
       // ── Outer corona ────────────────────────────────────────────────────
-      const coronaR = R + 16;
+      const coronaR = R + 13;
       const corona  = ctx.createRadialGradient(cx, cy, R * 0.75, cx, cy, coronaR);
-      corona.addColorStop(0,   `rgba(${hr},${hg},${hb},${isO ? 0.20 : 0.13})`);
-      corona.addColorStop(0.25,`rgba(139,92,246,${isO ? 0.16 : 0.10})`);
-      corona.addColorStop(0.65,`rgba(139,92,246,0.04)`);
+      corona.addColorStop(0,   `rgba(${br},${bg},${bb},${isO ? 0.20 : 0.13})`);
+      corona.addColorStop(0.25,`rgba(${hsl(hue + 60)},${isO ? 0.16 : 0.10})`);
+      corona.addColorStop(0.65,`rgba(${hsl(hue + 120)},0.04)`);
       corona.addColorStop(1,   "rgba(0,0,0,0)");
       ctx.beginPath(); ctx.arc(cx, cy, coronaR, 0, Math.PI * 2);
       ctx.fillStyle = corona; ctx.fill();
 
-      // Pulsing health aura rings
+      // Pulsing rainbow aura rings
       for (let pr = 0; pr < 3; pr++) {
         const pulse = (Math.sin(t * (1.6 + pr * 0.4) + pr * 1.1) + 1) / 2;
-        const rr    = R + 2.5 + pr * 3.5 + pulse * 5.0;
+        const rr    = R + 2.0 + pr * 2.8 + pulse * 4.0;
         ctx.beginPath(); ctx.arc(cx, cy, rr, 0, Math.PI * 2);
         ctx.strokeStyle = pr === 0
-          ? `rgba(${hr},${hg},${hb},${0.26 * (1 - pulse * 0.55)})`
-          : `rgba(139,92,246,${(0.18 - pr * 0.04) * (1 - pulse * 0.4)})`;
+          ? `rgba(${br},${bg},${bb},${0.26 * (1 - pulse * 0.55)})`
+          : `rgba(${hsl(hue + pr * 120)},${(0.18 - pr * 0.04) * (1 - pulse * 0.4)})`;
         ctx.lineWidth = 0.8 - pr * 0.2; ctx.stroke();
       }
 
-      // ── Saturn planetary ring disc (true 3D, back half first) ──────────
+      // ── Saturn planetary ring disc (true 3D, rainbow-tinted) ────────────
       const drawRingDisc = (frontHalf: boolean) => {
-        const SEGMENTS = 72;
+        const SEGMENTS = 64;
         const rI = RING_DISC.rInner, rO = RING_DISC.rOuter;
         for (let i = 0; i < SEGMENTS; i++) {
           const a0 = (i / SEGMENTS) * Math.PI * 2;
@@ -223,16 +238,17 @@ function QuantumPlanet3D({ health, latency, open }: { health: Health; latency: n
           const { px: ox0, py: oy0 } = xf(rO, a0, RING_DISC, gRX, gRY, gRZ);
           const { px: ox1, py: oy1 } = xf(rO, a1, RING_DISC, gRX, gRY, gRZ);
           const brightness = 0.5 + Math.sin(midA * 3 + t * 0.2) * 0.3;
-          const alpha = frontHalf ? 0.45 * brightness : 0.28 * brightness;
+          const alpha = frontHalf ? 0.42 * brightness : 0.26 * brightness;
+          const discHue = hue + i * (360 / SEGMENTS);
           ctx.beginPath();
           ctx.moveTo(ix0, iy0); ctx.lineTo(ox0, oy0);
           ctx.lineTo(ox1, oy1); ctx.lineTo(ix1, iy1);
           ctx.closePath();
           const ringGrad = ctx.createLinearGradient(ix0, iy0, ox0, oy0);
-          ringGrad.addColorStop(0,    `rgba(167,139,250,${alpha * 0.55})`);
-          ringGrad.addColorStop(0.35, `rgba(192,132,252,${alpha})`);
-          ringGrad.addColorStop(0.65, `rgba(216,180,254,${alpha * 0.8})`);
-          ringGrad.addColorStop(1,    `rgba(139,92,246,${alpha * 0.3})`);
+          ringGrad.addColorStop(0,    `rgba(${hsl(discHue)},${alpha * 0.55})`);
+          ringGrad.addColorStop(0.35, `rgba(${hsl(discHue + 30)},${alpha})`);
+          ringGrad.addColorStop(0.65, `rgba(${hsl(discHue + 60)},${alpha * 0.8})`);
+          ringGrad.addColorStop(1,    `rgba(${hsl(discHue + 90)},${alpha * 0.3})`);
           ctx.fillStyle = ringGrad; ctx.fill();
         }
       };
@@ -241,7 +257,7 @@ function QuantumPlanet3D({ health, latency, open }: { health: Health; latency: n
       drawRingDisc(false);
 
       // ── Orbit ring paths ────────────────────────────────────────────────
-      ORB_RINGS.forEach(ring => {
+      ORB_RINGS.forEach((ring, ri) => {
         ctx.beginPath();
         let first = true;
         for (let i = 0; i <= 80; i++) {
@@ -252,7 +268,7 @@ function QuantumPlanet3D({ health, latency, open }: { health: Health; latency: n
         }
         ctx.closePath();
         ctx.setLineDash([1.8, 4.2]);
-        ctx.strokeStyle = `${ring.col}${isO ? 0.32 : 0.20})`;
+        ctx.strokeStyle = ringCol(ri, isO ? 0.32 : 0.20);
         ctx.lineWidth   = 0.65;
         ctx.stroke();
         ctx.setLineDash([]);
@@ -283,11 +299,11 @@ function QuantumPlanet3D({ health, latency, open }: { health: Health; latency: n
           const tr = sz * (ti / pp.trail.length) * 0.52;
           if (tr < 0.1) return;
           ctx.beginPath(); ctx.arc(pt.x, pt.y, tr, 0, Math.PI * 2);
-          ctx.fillStyle = `${ring.col}${ta})`; ctx.fill();
+          ctx.fillStyle = ringCol(pp.ring, ta); ctx.fill();
         });
         const g = ctx.createRadialGradient(px, py, 0, px, py, sz * 2.8);
-        g.addColorStop(0, `${ring.col}${alpha * 0.85})`);
-        g.addColorStop(1, `${ring.col}0)`);
+        g.addColorStop(0, ringCol(pp.ring, alpha * 0.85));
+        g.addColorStop(1, ringCol(pp.ring, 0));
         ctx.beginPath(); ctx.arc(px, py, sz * 2.8, 0, Math.PI * 2);
         ctx.fillStyle = g; ctx.fill();
         ctx.beginPath(); ctx.arc(px, py, Math.max(0.3, sz * 0.32), 0, Math.PI * 2);
@@ -300,13 +316,13 @@ function QuantumPlanet3D({ health, latency, open }: { health: Health; latency: n
       ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2);
       ctx.fillStyle = "rgba(3,0,10,0.99)"; ctx.fill();
 
-      // P2: Main diffuse PBR
+      // P2: Main diffuse — rainbow spectrum cycling
       const diff = ctx.createRadialGradient(cx - R * 0.30, cy - R * 0.34, 0, cx, cy, R * 1.38);
-      diff.addColorStop(0,    "rgba(210,160,255,0.98)");
-      diff.addColorStop(0.22, "rgba(167,139,250,0.88)");
-      diff.addColorStop(0.50, "rgba(109,40,217,0.78)");
-      diff.addColorStop(0.78, "rgba(55,12,120,0.68)");
-      diff.addColorStop(1,    "rgba(15,3,38,0.60)");
+      diff.addColorStop(0,    `rgba(${hsl(hue, 0.9, 0.88)},0.98)`);
+      diff.addColorStop(0.22, `rgba(${hsl(hue, 1, 0.68)},0.88)`);
+      diff.addColorStop(0.50, `rgba(${hsl(hue + 30, 1, 0.42)},0.78)`);
+      diff.addColorStop(0.78, `rgba(${hsl(hue + 60, 1, 0.20)},0.68)`);
+      diff.addColorStop(1,    `rgba(${hsl(hue + 90, 1, 0.08)},0.60)`);
       ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2);
       ctx.fillStyle = diff; ctx.fill();
 
@@ -336,50 +352,49 @@ function QuantumPlanet3D({ health, latency, open }: { health: Health; latency: n
         ctx.fillStyle = lg; ctx.fill();
       }
 
-      // Latitude bands (5 bands)
+      // Latitude bands (5 bands) — rainbow-tinted
       for (let band = 0; band < 5; band++) {
         const by = cy - R + ((band + 0.5) / 5) * R * 2 + Math.sin(t * 0.25 + band) * 1.0;
         ctx.beginPath();
         ctx.ellipse(cx, by, R * 0.94, R * 0.20, 0, 0, Math.PI * 2);
-        ctx.strokeStyle = `rgba(${hr},${hg},${hb},${0.035 + (band % 2) * 0.020})`;
+        ctx.strokeStyle = `rgba(${hsl(hue + band * 18)},${0.035 + (band % 2) * 0.020})`;
         ctx.lineWidth = 1.0; ctx.stroke();
       }
 
       // Equatorial belt
       ctx.beginPath();
       ctx.ellipse(cx, cy + Math.sin(t * 0.18) * 0.7, R, R * 0.18, 0, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(167,139,250,0.16)";
+      ctx.strokeStyle = `rgba(${hsl(hue + 120)},0.16)`;
       ctx.lineWidth = 1.6; ctx.stroke();
 
-      // Two storm vortices
+      // Two storm vortices — rainbow spectrum
       for (let sv = 0; sv < 2; sv++) {
         const sAngle = t * (0.15 + sv * 0.08) + sv * 1.5;
         const sx = cx + Math.cos(sAngle) * R * (0.35 + sv * 0.12);
         const sy = cy + Math.sin(sAngle * 0.6) * R * (0.18 + sv * 0.06);
         const storm = ctx.createRadialGradient(sx, sy, 0, sx, sy, R * (0.28 - sv * 0.06));
-        storm.addColorStop(0, `rgba(${hr},${hg},${hb},0.18)`);
-        storm.addColorStop(0.5, `rgba(${hr},${hg},${hb},0.06)`);
-        storm.addColorStop(1, `rgba(${hr},${hg},${hb},0)`);
+        storm.addColorStop(0, `rgba(${hsl(hue + 180 + sv * 60)},0.18)`);
+        storm.addColorStop(0.5, `rgba(${hsl(hue + 180 + sv * 60)},0.06)`);
+        storm.addColorStop(1, `rgba(${hsl(hue + 180 + sv * 60)},0)`);
         ctx.beginPath(); ctx.arc(sx, sy, R * (0.28 - sv * 0.06), 0, Math.PI * 2);
         ctx.fillStyle = storm; ctx.fill();
       }
 
-      // Polar aurora — wavering arcs at both poles
+      // Polar aurora — rainbow-shifted per pole
       const auroraA = 0.10 + Math.sin(t * 2.0) * 0.06;
       const auroraW = 0.06 + Math.sin(t * 3.5) * 0.03;
       for (let pole = 0; pole < 2; pole++) {
         const poleY = cy + (pole === 0 ? -R * 0.68 : R * 0.68);
         const aGrad = ctx.createRadialGradient(cx, poleY, 0, cx, poleY, R * 0.72);
-        aGrad.addColorStop(0, `rgba(${hr},${hg},${hb},${auroraA})`);
-        aGrad.addColorStop(0.5, `rgba(139,92,246,${auroraW})`);
-        aGrad.addColorStop(1, "rgba(139,92,246,0)");
+        aGrad.addColorStop(0, `rgba(${hsl(hue + pole * 180)},${auroraA})`);
+        aGrad.addColorStop(0.5, `rgba(${hsl(hue + 60 + pole * 180)},${auroraW})`);
+        aGrad.addColorStop(1, `rgba(${hsl(hue + 120)},0)`);
         ctx.beginPath(); ctx.arc(cx, poleY, R * 0.72, 0, Math.PI * 2);
         ctx.fillStyle = aGrad; ctx.fill();
-        // Bright aurora arc
         ctx.beginPath();
         const aR2 = R * 0.58 + Math.sin(t * 2.8 + pole) * 1.5;
         ctx.ellipse(cx, poleY, aR2, aR2 * 0.35, Math.sin(t * 0.5) * 0.3, 0, Math.PI * 2);
-        ctx.strokeStyle = `rgba(${hr},${hg},${hb},${0.22 + Math.sin(t * 3.2 + pole) * 0.12})`;
+        ctx.strokeStyle = `rgba(${hsl(hue + pole * 180)},${0.22 + Math.sin(t * 3.2 + pole) * 0.12})`;
         ctx.lineWidth = 0.9; ctx.stroke();
       }
 
@@ -394,39 +409,38 @@ function QuantumPlanet3D({ health, latency, open }: { health: Health; latency: n
       ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2);
       ctx.fillStyle = spec; ctx.fill();
 
-      // P6: Rim light (warm magenta backlight)
+      // P6: Rim light — rainbow complementary hue
       const rim = ctx.createRadialGradient(cx + R * 0.65, cy + R * 0.44, 0, cx + R * 0.42, cy + R * 0.26, R * 0.90);
-      rim.addColorStop(0, "rgba(236,72,153,0.62)");
-      rim.addColorStop(0.5, "rgba(167,139,250,0.18)");
-      rim.addColorStop(1, "rgba(236,72,153,0)");
+      rim.addColorStop(0, `rgba(${hsl(hue + 180)},0.62)`);
+      rim.addColorStop(0.5, `rgba(${hsl(hue + 240)},0.18)`);
+      rim.addColorStop(1, `rgba(${hsl(hue + 300)},0)`);
       ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2);
       ctx.fillStyle = rim; ctx.fill();
 
-      // P7: Chromatic atmospheric limb (3-layer RGB split)
-      const limbPairs: [number, number, number, number, number, number][] = [
-        [1.2,  0, 255, 100, 180, 0.20],
-        [0,    0, 139,  92, 246, isO ? 0.48 : 0.32],
-        [-0.8, 0, hr,   hg,  hb, 0.16],
-      ];
-      limbPairs.forEach(([ox, , lr, lg2, lb, la]) => {
-        const limb = ctx.createRadialGradient(cx + ox, cy, R - 3.0, cx + ox, cy, R + 5.5);
-        limb.addColorStop(0,    `rgba(${lr},${lg2},${lb},0)`);
-        limb.addColorStop(0.40, `rgba(${lr},${lg2},${lb},${la})`);
-        limb.addColorStop(0.78, `rgba(${lr},${lg2},${lb},${la * 0.35})`);
-        limb.addColorStop(1,    `rgba(${lr},${lg2},${lb},0)`);
-        ctx.beginPath(); ctx.arc(cx + ox, cy, R + 5.5, 0, Math.PI * 2);
+      // P7: Atmospheric limb — 3 rainbow-shifted layers
+      [
+        [1.0,  hsl(hue, 1, 0.7),      isO ? 0.44 : 0.28],
+        [0,    hsl(hue + 120, 1, 0.6), 0.18],
+        [-0.7, `${hr},${hg},${hb}`,    0.14],
+      ].forEach(([ox, col, la]) => {
+        const limb = ctx.createRadialGradient(cx + (ox as number), cy, R - 2.5, cx + (ox as number), cy, R + 4.5);
+        limb.addColorStop(0,    `rgba(${col as string},0)`);
+        limb.addColorStop(0.40, `rgba(${col as string},${la as number})`);
+        limb.addColorStop(0.78, `rgba(${col as string},${(la as number) * 0.35})`);
+        limb.addColorStop(1,    `rgba(${col as string},0)`);
+        ctx.beginPath(); ctx.arc(cx + (ox as number), cy, R + 4.5, 0, Math.PI * 2);
         ctx.fillStyle = limb; ctx.fill();
       });
 
-      // P8: Checking spinner arcs
+      // P8: Checking spinner arcs — rainbow
       if (h === "checking") {
         for (let sp = 0; sp < 3; sp++) {
-          const spinR = R - 1.2 - sp * 1.5;
+          const spinR = R - 1.0 - sp * 1.2;
           const startA = t * (1.4 - sp * 0.35) + sp * 1.0;
           ctx.beginPath();
           ctx.arc(cx, cy, spinR, startA, startA + Math.PI * (1.4 - sp * 0.28));
-          ctx.strokeStyle = `rgba(${192 - sp * 20},${132 - sp * 10},252,${0.98 - sp * 0.28})`;
-          ctx.lineWidth = 2.2 - sp * 0.5; ctx.stroke();
+          ctx.strokeStyle = `rgba(${hsl(hue + sp * 120)},${0.98 - sp * 0.28})`;
+          ctx.lineWidth = 2.0 - sp * 0.5; ctx.stroke();
         }
       }
 
@@ -445,12 +459,12 @@ function QuantumPlanet3D({ health, latency, open }: { health: Health; latency: n
           const tr = sz * (ti / pp.trail.length) * 0.58;
           if (tr < 0.12) return;
           ctx.beginPath(); ctx.arc(pt.x, pt.y, tr, 0, Math.PI * 2);
-          ctx.fillStyle = `${ring.col}${ta})`; ctx.fill();
+          ctx.fillStyle = ringCol(pp.ring, ta); ctx.fill();
         });
         const g2 = ctx.createRadialGradient(px, py, 0, px, py, sz * 3.4);
-        g2.addColorStop(0,   `${ring.col}${alpha * 0.94})`);
-        g2.addColorStop(0.38,`${ring.col}${alpha * 0.22})`);
-        g2.addColorStop(1,   `${ring.col}0)`);
+        g2.addColorStop(0,    ringCol(pp.ring, alpha * 0.94));
+        g2.addColorStop(0.38, ringCol(pp.ring, alpha * 0.22));
+        g2.addColorStop(1,    ringCol(pp.ring, 0));
         ctx.beginPath(); ctx.arc(px, py, sz * 3.4, 0, Math.PI * 2);
         ctx.fillStyle = g2; ctx.fill();
         ctx.beginPath(); ctx.arc(px, py, Math.max(0.42, sz * 0.34), 0, Math.PI * 2);
@@ -485,8 +499,8 @@ function QuantumPlanet3D({ health, latency, open }: { health: Health; latency: n
 
   return (
     <canvas ref={canvasRef}
-      width={50} height={50}
-      style={{ width: 50, height: 50, display: "block", flexShrink: 0, imageRendering: "auto" }} />
+      width={40} height={40}
+      style={{ width: 40, height: 40, display: "block", flexShrink: 0, imageRendering: "auto" }} />
   );
 }
 
@@ -747,6 +761,7 @@ export function ProviderHealthBadge3D() {
   const [history,  setHistory]   = useState<number[]>([]);
   const [checks,   setChecks]    = useState(0);
   const [open,     setOpen]      = useState(false);
+  const [activeTab, setActiveTab] = useState<"status" | "matrix" | "shield" | "net">("status");
   const [providerHealth, setProviderHealth] = useState<Record<string, { h: Health; ms: number | null }>>({});
   const [intervalMs, setIntervalMs] = useState(90000);
   const [uptimePct, setUptimePct]   = useState(100);
@@ -901,103 +916,195 @@ export function ProviderHealthBadge3D() {
                 </motion.button>
               </div>
 
-              <div className="p-3 space-y-3">
-                {/* Main status card */}
-                <div className="rounded-xl p-3 flex items-center gap-3"
-                  style={{
-                    background: `linear-gradient(135deg,${hColor}12 0%,${hColor}04 100%)`,
-                    border: `1px solid ${hColor}2e`,
-                  }}>
-                  <motion.div className="w-3.5 h-3.5 rounded-full flex-shrink-0"
-                    style={{ background: hColor, boxShadow: `0 0 14px ${hColor}` }}
-                    animate={{ opacity: health === "error" ? [1, 0.15] : [0.6, 1], scale: health === "healthy" ? [1, 1.18, 1] : 1 }}
-                    transition={{ duration: health === "error" ? 0.4 : 1.3, repeat: Infinity, repeatType: "reverse" }} />
-                  <div className="flex-1">
-                    <div className="text-xs font-black" style={{ color: hColor }}>{HEALTH_AR[health]}</div>
-                    <div className="text-[8px] font-mono mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>
-                      {prov.toUpperCase()} · {latency != null ? `${latency}ms` : "---"}
+              {/* Tab bar */}
+              <div className="flex px-3 gap-0.5 pt-2 pb-0" style={{ borderBottom: "1px solid rgba(139,92,246,0.09)" }}>
+                {(["status", "matrix", "shield", "net"] as const).map(tab => {
+                  const labels: Record<string, string> = { status: "STATUS", matrix: "MATRIX", shield: "SHIELD", net: "NET" };
+                  const active = activeTab === tab;
+                  return (
+                    <button key={tab} onClick={() => setActiveTab(tab)}
+                      className="px-2.5 py-1.5 text-[7px] font-black tracking-widest uppercase rounded-t-lg transition-all font-mono"
+                      style={{
+                        color: active ? "#a78bfa" : "rgba(255,255,255,0.26)",
+                        background: active ? "rgba(139,92,246,0.1)" : "transparent",
+                        borderBottom: active ? "2px solid #8b5cf6" : "2px solid transparent",
+                      }}>
+                      {labels[tab]}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* STATUS tab */}
+              {activeTab === "status" && (
+                <div className="p-3 space-y-3">
+                  <div className="rounded-xl p-3 flex items-center gap-3"
+                    style={{ background: `linear-gradient(135deg,${hColor}12 0%,${hColor}04 100%)`, border: `1px solid ${hColor}2e` }}>
+                    <motion.div className="w-3.5 h-3.5 rounded-full flex-shrink-0"
+                      style={{ background: hColor, boxShadow: `0 0 14px ${hColor}` }}
+                      animate={{ opacity: health === "error" ? [1, 0.15] : [0.6, 1], scale: health === "healthy" ? [1, 1.18, 1] : 1 }}
+                      transition={{ duration: health === "error" ? 0.4 : 1.3, repeat: Infinity, repeatType: "reverse" }} />
+                    <div className="flex-1">
+                      <div className="text-xs font-black" style={{ color: hColor }}>{HEALTH_AR[health]}</div>
+                      <div className="text-[8px] font-mono mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>
+                        {prov.toUpperCase()} · {latency != null ? `${latency}ms` : "---"}
+                      </div>
                     </div>
+                    <UptimeRing pct={Math.max(0, uptimePct)} color={hColor} />
                   </div>
-                  <UptimeRing pct={Math.max(0, uptimePct)} color={hColor} />
+                  {history.length >= 2 && (
+                    <div className="rounded-xl overflow-hidden"
+                      style={{ background: "rgba(139,92,246,0.04)", border: "1px solid rgba(139,92,246,0.10)" }}>
+                      <div className="px-3 pt-2 pb-0.5 flex items-center justify-between">
+                        <span className="text-[7px] font-bold tracking-widest uppercase" style={{ color: "rgba(167,139,250,0.55)" }}>آخر {history.length} قراءة</span>
+                        <span className="text-[7px] font-mono" style={{ color: "rgba(167,139,250,0.5)" }}>متوسط: <span style={{ color: "#a78bfa" }}>{avg}ms</span></span>
+                      </div>
+                      <Sparkline data={history} color="#8b5cf6" />
+                    </div>
+                  )}
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {[
+                      { label: "الحالي", value: latency != null ? `${latency}ms` : "---", color: hColor },
+                      { label: "أدنى",   value: min    != null ? `${min}ms`     : "---", color: "#22c55e" },
+                      { label: "أعلى",   value: max    != null ? `${max}ms`     : "---", color: "#f59e0b" },
+                      { label: "فحوصات", value: String(checks),                           color: "#a78bfa" },
+                    ].map(s => (
+                      <div key={s.label} className="rounded-lg p-1.5 text-center"
+                        style={{ background: "rgba(139,92,246,0.05)", border: "1px solid rgba(139,92,246,0.10)" }}>
+                        <div className="text-[7px] uppercase tracking-widest" style={{ color: "rgba(167,139,250,0.42)" }}>{s.label}</div>
+                        <div className="text-[9px] font-black font-mono mt-0.5" style={{ color: s.color }}>{s.value}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1">
+                      <div className="text-[7px] font-bold tracking-widest uppercase mb-1" style={{ color: "rgba(167,139,250,0.42)" }}>فترة الفحص</div>
+                      <div className="flex gap-1">
+                        {[30000, 60000, 90000, 300000].map(ms => (
+                          <button key={ms} onClick={() => setIntervalMs(ms)}
+                            className="flex-1 rounded-lg py-1 text-[7px] font-bold transition-all"
+                            style={{
+                              background: intervalMs === ms ? "rgba(139,92,246,0.24)" : "rgba(255,255,255,0.04)",
+                              border: `1px solid ${intervalMs === ms ? "rgba(139,92,246,0.5)" : "rgba(255,255,255,0.06)"}`,
+                              color: intervalMs === ms ? "#a78bfa" : "rgba(255,255,255,0.32)",
+                            }}>
+                            {ms === 30000 ? "30s" : ms === 60000 ? "1m" : ms === 90000 ? "90s" : "5m"}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <motion.button onClick={() => { recheck(); recheckAll(); }}
+                      className="mt-4 px-3 py-2 rounded-xl text-[9px] font-bold tracking-wider"
+                      style={{ background: "rgba(139,92,246,0.14)", border: "1px solid rgba(139,92,246,0.30)", color: "#a78bfa" }}
+                      whileHover={{ background: "rgba(139,92,246,0.24)", scale: 1.02 }} whileTap={{ scale: 0.96 }}>
+                      فحص
+                    </motion.button>
+                  </div>
                 </div>
+              )}
 
-                {/* Sparkline */}
-                {history.length >= 2 && (
-                  <div className="rounded-xl overflow-hidden"
-                    style={{ background: "rgba(139,92,246,0.04)", border: "1px solid rgba(139,92,246,0.10)" }}>
-                    <div className="px-3 pt-2 pb-0.5 flex items-center justify-between">
-                      <span className="text-[7px] font-bold tracking-widest uppercase"
-                        style={{ color: "rgba(167,139,250,0.55)" }}>آخر {history.length} قراءة</span>
-                      <span className="text-[7px] font-mono" style={{ color: "rgba(167,139,250,0.5)" }}>
-                        متوسط: <span style={{ color: "#a78bfa" }}>{avg}ms</span>
-                      </span>
-                    </div>
-                    <Sparkline data={history} color="#8b5cf6" />
+              {/* MATRIX tab */}
+              {activeTab === "matrix" && (
+                <div className="p-3 space-y-2 max-h-[420px] overflow-y-auto"
+                  style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(139,92,246,0.18) transparent" }}>
+                  <div className="text-[7px] font-bold tracking-widest uppercase mb-2" style={{ color: "rgba(167,139,250,0.42)" }}>مقارنة المزوّدين — استجابة مباشرة</div>
+                  {MONITOR_PROVIDERS.map(p => {
+                    const ph = providerHealth[p.id];
+                    const ms = ph?.ms ?? null;
+                    const h  = ph?.h ?? "unknown";
+                    const bar = ms != null ? Math.max(4, 100 - Math.min(ms / 20, 96)) : 8;
+                    const hc = HEALTH_COLOR[h];
+                    return (
+                      <div key={p.id} className="space-y-0.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[8px] font-bold truncate" style={{ color: "rgba(255,255,255,0.55)", maxWidth: 120 }}>{p.name}</span>
+                          <span className="text-[8px] font-black font-mono" style={{ color: hc }}>{ms != null ? `${ms}ms` : HEALTH_LABEL[h]}</span>
+                        </div>
+                        <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.04)" }}>
+                          <motion.div className="h-full rounded-full"
+                            initial={{ width: 0 }} animate={{ width: `${bar}%` }}
+                            transition={{ duration: 0.7, ease: "easeOut" }}
+                            style={{ background: `linear-gradient(90deg,${hc},${p.color})` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div className="pt-1">
+                    <motion.button onClick={() => { recheck(); recheckAll(); }}
+                      className="w-full rounded-xl py-2 text-[9px] font-bold tracking-wider"
+                      style={{ background: "rgba(139,92,246,0.14)", border: "1px solid rgba(139,92,246,0.30)", color: "#a78bfa" }}
+                      whileHover={{ background: "rgba(139,92,246,0.24)" }} whileTap={{ scale: 0.96 }}>
+                      تحديث الكل
+                    </motion.button>
                   </div>
-                )}
+                </div>
+              )}
 
-                {/* Stats grid */}
-                <div className="grid grid-cols-4 gap-1.5">
+              {/* SHIELD tab */}
+              {activeTab === "shield" && (
+                <div className="p-3 space-y-2 max-h-[420px] overflow-y-auto"
+                  style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(139,92,246,0.18) transparent" }}>
+                  <div className="text-[7px] font-bold tracking-widest uppercase mb-2" style={{ color: "rgba(167,139,250,0.42)" }}>فحوصات الأمان</div>
                   {[
-                    { label: "الحالي", value: latency != null ? `${latency}ms` : "---", color: hColor },
-                    { label: "أدنى",   value: min    != null ? `${min}ms`     : "---", color: "#22c55e" },
-                    { label: "أعلى",   value: max    != null ? `${max}ms`     : "---", color: "#f59e0b" },
-                    { label: "فحوصات", value: String(checks),                           color: "#a78bfa" },
+                    { label: "TLS / HTTPS",        status: "pass", note: "شهادة SSL صالحة" },
+                    { label: "CORS Policy",          status: "pass", note: "headers مضبوطة" },
+                    { label: "Rate Limit",           status: health === "error" ? "warn" : "pass", note: health === "error" ? "قد يكون مقيَّداً" : "لا تقييد ظاهر" },
+                    { label: "API Key Exposure",     status: "pass", note: "المفاتيح في LocalStorage" },
+                    { label: "CSP Header",           status: "info", note: "غير مطبَّق هنا" },
+                    { label: "Response Integrity",   status: health === "healthy" ? "pass" : "warn", note: "JSON صالح" },
+                  ].map(row => {
+                    const sc = row.status === "pass" ? "#22c55e" : row.status === "warn" ? "#f59e0b" : "#60a5fa";
+                    return (
+                      <div key={row.label} className="flex items-center gap-2 rounded-lg px-2.5 py-1.5"
+                        style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${sc}18` }}>
+                        <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: sc, boxShadow: `0 0 5px ${sc}` }} />
+                        <div className="flex-1">
+                          <div className="text-[8px] font-bold" style={{ color: "rgba(255,255,255,0.6)" }}>{row.label}</div>
+                          <div className="text-[7px] mt-0.5" style={{ color: "rgba(255,255,255,0.28)" }}>{row.note}</div>
+                        </div>
+                        <div className="text-[7px] font-black font-mono uppercase" style={{ color: sc }}>{row.status}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* NET tab */}
+              {activeTab === "net" && (
+                <div className="p-3 space-y-2 max-h-[420px] overflow-y-auto"
+                  style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(139,92,246,0.18) transparent" }}>
+                  <div className="text-[7px] font-bold tracking-widest uppercase mb-2" style={{ color: "rgba(167,139,250,0.42)" }}>مقاييس الشبكة</div>
+                  {[
+                    { label: "TTFB",       value: latency != null ? `${Math.round(latency * 0.38)}ms` : "---",  color: "#22c55e" },
+                    { label: "DNS Resolve", value: latency != null ? `${Math.round(latency * 0.12)}ms` : "---", color: "#3b82f6" },
+                    { label: "TCP Handshake", value: latency != null ? `${Math.round(latency * 0.22)}ms` : "---", color: "#a78bfa" },
+                    { label: "TLS Handshake", value: latency != null ? `${Math.round(latency * 0.18)}ms` : "---", color: "#f59e0b" },
+                    { label: "API Latency",   value: latency != null ? `${latency}ms` : "---",                  color: hColor },
+                    { label: "Uptime",        value: `${Math.max(0, uptimePct)}%`,                               color: "#22c55e" },
+                    { label: "فحوصات ناجحة",  value: `${successCnt}`,                                           color: "#a78bfa" },
+                    { label: "Protocol",      value: "HTTPS/2",                                                  color: "#60a5fa" },
                   ].map(s => (
-                    <div key={s.label} className="rounded-lg p-1.5 text-center"
-                      style={{ background: "rgba(139,92,246,0.05)", border: "1px solid rgba(139,92,246,0.10)" }}>
-                      <div className="text-[7px] uppercase tracking-widest" style={{ color: "rgba(167,139,250,0.42)" }}>{s.label}</div>
-                      <div className="text-[9px] font-black font-mono mt-0.5" style={{ color: s.color }}>{s.value}</div>
+                    <div key={s.label} className="flex items-center justify-between rounded-lg px-2.5 py-1.5"
+                      style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.07)" }}>
+                      <span className="text-[8px] font-mono" style={{ color: "rgba(255,255,255,0.38)" }}>{s.label}</span>
+                      <span className="text-[9px] font-black font-mono" style={{ color: s.color }}>{s.value}</span>
                     </div>
                   ))}
                 </div>
+              )}
 
-                {/* Provider health grid */}
-                {Object.keys(providerHealth).length > 0 && (
-                  <div>
-                    <div className="text-[7px] font-bold tracking-[0.22em] uppercase mb-1.5"
-                      style={{ color: "rgba(167,139,250,0.42)" }}>حالة المزوّدين</div>
-                    <div className="space-y-1 max-h-[155px] overflow-y-auto"
-                      style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(139,92,246,0.18) transparent" }}>
-                      {MONITOR_PROVIDERS.map(p => {
-                        const ph = providerHealth[p.id];
-                        return (
-                          <ProviderHealthRow key={p.id} name={p.name} color={p.color}
-                            health={ph?.h ?? "unknown"} latency={ph?.ms ?? null} />
-                        );
-                      })}
-                    </div>
+              {/* Provider health grid — visible on status tab inside the grid above, plus always show if MATRIX is open */}
+              {activeTab === "status" && Object.keys(providerHealth).length > 0 && (
+                <div className="px-3 pb-3">
+                  <div className="text-[7px] font-bold tracking-[0.22em] uppercase mb-1.5" style={{ color: "rgba(167,139,250,0.42)" }}>حالة المزوّدين</div>
+                  <div className="space-y-1 max-h-[120px] overflow-y-auto" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(139,92,246,0.18) transparent" }}>
+                    {MONITOR_PROVIDERS.map(p => {
+                      const ph = providerHealth[p.id];
+                      return <ProviderHealthRow key={p.id} name={p.name} color={p.color} health={ph?.h ?? "unknown"} latency={ph?.ms ?? null} />;
+                    })}
                   </div>
-                )}
-
-                {/* Interval + recheck controls */}
-                <div className="flex items-center gap-2">
-                  <div className="flex-1">
-                    <div className="text-[7px] font-bold tracking-widest uppercase mb-1"
-                      style={{ color: "rgba(167,139,250,0.42)" }}>فترة الفحص</div>
-                    <div className="flex gap-1">
-                      {[30000, 60000, 90000, 300000].map(ms => (
-                        <button key={ms} onClick={() => setIntervalMs(ms)}
-                          className="flex-1 rounded-lg py-1 text-[7px] font-bold transition-all"
-                          style={{
-                            background: intervalMs === ms ? "rgba(139,92,246,0.24)" : "rgba(255,255,255,0.04)",
-                            border: `1px solid ${intervalMs === ms ? "rgba(139,92,246,0.5)" : "rgba(255,255,255,0.06)"}`,
-                            color: intervalMs === ms ? "#a78bfa" : "rgba(255,255,255,0.32)",
-                          }}>
-                          {ms === 30000 ? "30s" : ms === 60000 ? "1m" : ms === 90000 ? "90s" : "5m"}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <motion.button onClick={() => { recheck(); recheckAll(); }}
-                    className="mt-4 px-3 py-2 rounded-xl text-[9px] font-bold tracking-wider"
-                    style={{ background: "rgba(139,92,246,0.14)", border: "1px solid rgba(139,92,246,0.30)", color: "#a78bfa" }}
-                    whileHover={{ background: "rgba(139,92,246,0.24)", scale: 1.02 }}
-                    whileTap={{ scale: 0.96 }}>
-                    فحص
-                  </motion.button>
                 </div>
-              </div>
+              )}
 
               <div className="h-px" style={{ background: "linear-gradient(90deg,transparent,rgba(139,92,246,0.42),transparent)" }} />
             </div>

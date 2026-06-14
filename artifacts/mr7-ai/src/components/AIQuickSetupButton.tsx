@@ -118,7 +118,7 @@ const ALL_PROVIDERS: ProviderDef[] = [
 
 type Phase = "idle" | "scanning" | "done" | "fail";
 
-// ── ULTRA 3D QUANTUM ATOM ─────────────────────────────────────────────────────
+// ── ULTRA 3D QUANTUM ATOM — RAINBOW SPECTRUM ──────────────────────────────────
 function QuantumAtom3D({ phase, open }: { phase: Phase; open: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef    = useRef(0);
@@ -136,7 +136,7 @@ function QuantumAtom3D({ phase, open }: { phase: Phase; open: boolean }) {
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
 
-    const SIZE = 56;
+    const SIZE = 44;
     const DPR  = Math.min(window.devicePixelRatio * 2, 4);
     cv.width   = SIZE * DPR;
     cv.height  = SIZE * DPR;
@@ -144,13 +144,13 @@ function QuantumAtom3D({ phase, open }: { phase: Phase; open: boolean }) {
     const [cx, cy] = [SIZE / 2, SIZE / 2];
     const FOV = 165;
 
-    // 4 rings: inner magenta, mid green, mid-outer cyan, outer lime
-    type Ring = { r: number; tX: number; tY: number; speed: number; col: string; eCount: number };
+    // 4 rings — rainbow spectrum, hOff staggers hue 90° per ring
+    type Ring = { r: number; tX: number; tY: number; speed: number; hOff: number; eCount: number };
     const RINGS: Ring[] = [
-      { r:  8, tX:  0.22, tY:  0.10, speed:  0.028, col: "rgba(255,0,200,",   eCount: 6  },
-      { r: 13, tX:  0.40, tY:  0.20, speed:  0.018, col: "rgba(0,255,136,",   eCount: 8  },
-      { r: 18, tX: -0.55, tY:  0.50, speed: -0.012, col: "rgba(0,229,255,",   eCount: 10 },
-      { r: 23, tX:  0.75, tY: -0.58, speed:  0.008, col: "rgba(134,255,0,",   eCount: 12 },
+      { r:  7, tX:  0.22, tY:  0.10, speed:  0.028, hOff:   0, eCount: 6  },
+      { r: 10, tX:  0.40, tY:  0.20, speed:  0.018, hOff:  90, eCount: 8  },
+      { r: 14, tX: -0.55, tY:  0.50, speed: -0.012, hOff: 180, eCount: 10 },
+      { r: 18, tX:  0.75, tY: -0.58, speed:  0.008, hOff: 270, eCount: 12 },
     ];
 
     // Quantum foam — micro background dots
@@ -207,6 +207,17 @@ function QuantumAtom3D({ phase, open }: { phase: Phase; open: boolean }) {
       const isO = openRef.current;
       ctx.clearRect(0, 0, SIZE, SIZE);
 
+      // ── Rainbow spectrum cycling ────────────────────────────────────────
+      const hue = (t * 0.6) % 360;
+      function hsl(h: number, s = 1, l = 0.58): string {
+        const hh = ((h % 360) + 360) % 360;
+        const k  = (n: number) => (n + hh / 30) % 12;
+        const aa = s * Math.min(l, 1 - l);
+        const f  = (n: number) => l - aa * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+        return `${Math.round(f(0)*255)},${Math.round(f(8)*255)},${Math.round(f(4)*255)}`;
+      }
+      const ringCol = (ri: number, alpha: number) => `rgba(${hsl(hue + RINGS[ri].hOff)},${alpha})`;
+
       const gRX = Math.sin(t * 0.0045) * 0.35 + 0.18;
       const gRY = t * 0.0055;
       const gRZ = Math.sin(t * 0.0065) * 0.20;
@@ -215,16 +226,16 @@ function QuantumAtom3D({ phase, open }: { phase: Phase; open: boolean }) {
       foam.forEach(f => {
         const a = Math.abs(Math.sin(t * f.va)) * f.a;
         ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(0,255,136,${a})`; ctx.fill();
+        ctx.fillStyle = `rgba(${hsl(hue + 60)},${a})`; ctx.fill();
       });
 
       // ── Deep ambient field ──────────────────────────────────────────────
-      const aR = isO ? 27 : 24;
+      const aR = isO ? 22 : 20;
       const aA = ph === "scanning" ? 0.28 : isO ? 0.22 : 0.13;
       const amb = ctx.createRadialGradient(cx, cy, 0, cx, cy, aR);
-      amb.addColorStop(0,   `rgba(0,255,136,${aA * 2.4})`);
-      amb.addColorStop(0.3, `rgba(0,229,255,${aA * 0.7})`);
-      amb.addColorStop(0.6, `rgba(134,0,255,${aA * 0.2})`);
+      amb.addColorStop(0,   `rgba(${hsl(hue)},${aA * 2.4})`);
+      amb.addColorStop(0.3, `rgba(${hsl(hue + 120)},${aA * 0.7})`);
+      amb.addColorStop(0.6, `rgba(${hsl(hue + 240)},${aA * 0.2})`);
       amb.addColorStop(1,   "rgba(0,0,0,0)");
       ctx.beginPath(); ctx.arc(cx, cy, aR, 0, Math.PI * 2);
       ctx.fillStyle = amb; ctx.fill();
@@ -232,16 +243,16 @@ function QuantumAtom3D({ phase, open }: { phase: Phase; open: boolean }) {
       // ── Magnetosphere outer field lines ────────────────────────────────
       const magPulse = 0.5 + Math.sin(t * 0.022) * 0.5;
       for (let m = 0; m < 3; m++) {
-        const mr = 25 + m * 2.5 + magPulse * 1.2;
+        const mr = 20 + m * 2.0 + magPulse * 1.0;
         ctx.beginPath();
         ctx.ellipse(cx, cy, mr, mr * 0.62, Math.PI * 0.15, 0, Math.PI * 2);
-        ctx.strokeStyle = `rgba(0,229,255,${0.04 + m * 0.015 - magPulse * 0.012})`;
+        ctx.strokeStyle = `rgba(${hsl(hue + 60)},${0.04 + m * 0.015 - magPulse * 0.012})`;
         ctx.lineWidth = 0.6; ctx.stroke();
       }
 
       // ── Holographic hex grid overlay ───────────────────────────────────
       const hexAlpha = 0.04 + Math.sin(t * 0.016) * 0.02;
-      const HEX_R = 5.5;
+      const HEX_R = 4.5;
       const hexCenters = [
         [cx, cy - HEX_R * 2],
         [cx + HEX_R * 1.73, cy - HEX_R],
@@ -261,7 +272,7 @@ function QuantumAtom3D({ phase, open }: { phase: Phase; open: boolean }) {
                   : ctx.lineTo(hx + HEX_R * Math.cos(a), hy + HEX_R * Math.sin(a));
         }
         ctx.closePath();
-        ctx.strokeStyle = `rgba(0,255,136,${hexAlpha})`;
+        ctx.strokeStyle = `rgba(${hsl(hue + 180)},${hexAlpha})`;
         ctx.stroke();
       });
       ctx.setLineDash([]);
@@ -270,33 +281,32 @@ function QuantumAtom3D({ phase, open }: { phase: Phase; open: boolean }) {
       if (ph === "scanning") {
         for (let i = 0; i < 4; i++) {
           const p  = ((t * 1.5 + i * 42) % 168) / 168;
-          const rr = 6 + p * 25;
+          const rr = 5 + p * 20;
           ctx.beginPath(); ctx.arc(cx, cy, rr, 0, Math.PI * 2);
-          ctx.strokeStyle = `rgba(0,229,255,${(1 - p) * 0.60})`;
+          ctx.strokeStyle = `rgba(${hsl(hue + 120)},${(1 - p) * 0.60})`;
           ctx.lineWidth   = 2.0 * (1 - p);
           ctx.stroke();
         }
         const rayA = (t * 0.065) % (Math.PI * 2);
         ctx.save(); ctx.translate(cx, cy); ctx.rotate(rayA);
         ctx.beginPath(); ctx.moveTo(0, 0);
-        ctx.arc(0, 0, 26, -0.60, 0.60); ctx.closePath();
-        const ray = ctx.createRadialGradient(0, 0, 0, 0, 0, 26);
-        ray.addColorStop(0, "rgba(0,229,255,0.80)");
-        ray.addColorStop(0.6, "rgba(0,229,255,0.18)");
-        ray.addColorStop(1, "rgba(0,229,255,0)");
+        ctx.arc(0, 0, 22, -0.60, 0.60); ctx.closePath();
+        const ray = ctx.createRadialGradient(0, 0, 0, 0, 0, 22);
+        ray.addColorStop(0, `rgba(${hsl(hue)},0.80)`);
+        ray.addColorStop(0.6, `rgba(${hsl(hue)},0.18)`);
+        ray.addColorStop(1, `rgba(${hsl(hue)},0)`);
         ctx.fillStyle = ray; ctx.fill(); ctx.restore();
-        // Counter-rotating inner ray (magenta)
         ctx.save(); ctx.translate(cx, cy); ctx.rotate(-rayA * 0.62 + 1.2);
         ctx.beginPath(); ctx.moveTo(0, 0);
-        ctx.arc(0, 0, 16, -0.40, 0.40); ctx.closePath();
-        const ray2 = ctx.createRadialGradient(0, 0, 0, 0, 0, 16);
-        ray2.addColorStop(0, "rgba(255,0,200,0.55)");
-        ray2.addColorStop(1, "rgba(255,0,200,0)");
+        ctx.arc(0, 0, 13, -0.40, 0.40); ctx.closePath();
+        const ray2 = ctx.createRadialGradient(0, 0, 0, 0, 0, 13);
+        ray2.addColorStop(0, `rgba(${hsl(hue + 180)},0.55)`);
+        ray2.addColorStop(1, `rgba(${hsl(hue + 180)},0)`);
         ctx.fillStyle = ray2; ctx.fill(); ctx.restore();
       }
 
       // ── Orbit paths (true 3D projected, 80 samples each) ──────────────
-      RINGS.forEach(ring => {
+      RINGS.forEach((ring, ri) => {
         ctx.beginPath();
         let first = true;
         for (let i = 0; i <= 80; i++) {
@@ -307,7 +317,7 @@ function QuantumAtom3D({ phase, open }: { phase: Phase; open: boolean }) {
         }
         ctx.closePath();
         ctx.setLineDash([1.8, 4.5]);
-        ctx.strokeStyle = `${ring.col}${isO ? 0.42 : 0.26})`;
+        ctx.strokeStyle = ringCol(ri, isO ? 0.42 : 0.26);
         ctx.lineWidth   = 0.65;
         ctx.stroke();
         ctx.setLineDash([]);
@@ -334,14 +344,14 @@ function QuantumAtom3D({ phase, open }: { phase: Phase; open: boolean }) {
             const dx = projected[j].px - projected[i].px;
             const dy = projected[j].py - projected[i].py;
             const dist = Math.sqrt(dx*dx + dy*dy);
-            if (dist < 14 && dist > 2) {
-              const a = (1 - dist / 14) * 0.12;
-              const mx = (projected[i].px + projected[j].px) / 2 + Math.sin(t * 0.03 + i) * 3;
-              const my = (projected[i].py + projected[j].py) / 2 + Math.cos(t * 0.025 + j) * 3;
+            if (dist < 12 && dist > 2) {
+              const a = (1 - dist / 12) * 0.12;
+              const mx = (projected[i].px + projected[j].px) / 2 + Math.sin(t * 0.03 + i) * 2.5;
+              const my = (projected[i].py + projected[j].py) / 2 + Math.cos(t * 0.025 + j) * 2.5;
               ctx.beginPath();
               ctx.moveTo(projected[i].px, projected[i].py);
               ctx.quadraticCurveTo(mx, my, projected[j].px, projected[j].py);
-              ctx.strokeStyle = `rgba(0,255,136,${a})`;
+              ctx.strokeStyle = `rgba(${hsl(hue + 60)},${a})`;
               ctx.lineWidth = 0.5; ctx.stroke();
             }
           }
@@ -351,56 +361,56 @@ function QuantumAtom3D({ phase, open }: { phase: Phase; open: boolean }) {
       // ── Nucleus (depth-sorted between particles) ───────────────────────
       let nucleusDrawn = false;
       const drawNucleus = () => {
-        const cR = 6.2 + (ph === "scanning"
-          ? Math.sin(t * 0.18) * 2.5
-          : isO ? Math.sin(t * 0.055) * 0.9 : 0);
+        const cR = 5.5 + (ph === "scanning"
+          ? Math.sin(t * 0.18) * 2.0
+          : isO ? Math.sin(t * 0.055) * 0.8 : 0);
 
-        // Chromatic aberration — 3 offset halo passes (R/G/B)
-        const chromOffset = 1.2;
+        // Chromatic aberration — 3 offset halo passes, rainbow-shifted
+        const chromOffset = 1.0;
         [
-          [chromOffset, 0,           "rgba(255,0,80,"],
-          [0,           chromOffset, "rgba(0,255,136,"],
-          [-chromOffset, 0,          "rgba(0,200,255,"],
+          [chromOffset,  0,           hsl(hue)],
+          [0,            chromOffset, hsl(hue + 120)],
+          [-chromOffset, 0,           hsl(hue + 240)],
         ].forEach(([ox, oy, col]) => {
           const hc = ctx.createRadialGradient(cx + (ox as number), cy + (oy as number), cR, cx + (ox as number), cy + (oy as number), cR * 5.8);
-          hc.addColorStop(0,   `${col}${ph === "scanning" ? 0.30 : 0.18})`);
-          hc.addColorStop(0.5, `${col}0.03)`);
-          hc.addColorStop(1,   `${col}0)`);
+          hc.addColorStop(0,   `rgba(${col},${ph === "scanning" ? 0.30 : 0.18})`);
+          hc.addColorStop(0.5, `rgba(${col},0.03)`);
+          hc.addColorStop(1,   `rgba(${col},0)`);
           ctx.beginPath(); ctx.arc(cx + (ox as number), cy + (oy as number), cR * 5.8, 0, Math.PI * 2);
           ctx.fillStyle = hc; ctx.fill();
         });
 
-        // Pulsing energy rings around nucleus
+        // Pulsing energy rings — each offset 120° in hue
         for (let r = 0; r < 3; r++) {
           const pulse = 0.5 + Math.sin(t * 0.08 + r * 1.2) * 0.5;
           ctx.beginPath(); ctx.arc(cx, cy, cR * (1.8 + r * 0.6) + pulse * 2, 0, Math.PI * 2);
-          ctx.strokeStyle = `rgba(0,255,136,${(0.18 - r * 0.04) * pulse})`;
+          ctx.strokeStyle = `rgba(${hsl(hue + r * 120)},${(0.18 - r * 0.04) * pulse})`;
           ctx.lineWidth = 1.0 - r * 0.25; ctx.stroke();
         }
 
-        // Body — crystalline PBR sphere
+        // Body — full rainbow spectrum sphere
         const body = ctx.createRadialGradient(cx - cR * 0.34, cy - cR * 0.40, 0, cx, cy, cR);
         body.addColorStop(0,    "rgba(255,255,255,1.0)");
-        body.addColorStop(0.12, "rgba(180,255,220,1.0)");
-        body.addColorStop(0.30, "rgba(0,255,136,1.0)");
-        body.addColorStop(0.58, "rgba(0,190,100,0.95)");
-        body.addColorStop(0.82, "rgba(0,100,55,0.80)");
-        body.addColorStop(1,    "rgba(0,30,15,0.70)");
+        body.addColorStop(0.12, `rgba(${hsl(hue, 1, 0.92)},1.0)`);
+        body.addColorStop(0.30, `rgba(${hsl(hue, 1, 0.72)},1.0)`);
+        body.addColorStop(0.58, `rgba(${hsl(hue, 1, 0.52)},0.95)`);
+        body.addColorStop(0.82, `rgba(${hsl(hue, 1, 0.30)},0.80)`);
+        body.addColorStop(1,    `rgba(${hsl(hue, 1, 0.12)},0.70)`);
         ctx.beginPath(); ctx.arc(cx, cy, cR, 0, Math.PI * 2);
         ctx.fillStyle = body; ctx.fill();
 
-        // Surface plasma swirl
+        // Surface plasma swirl — cascading hue offsets
         ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, cR, 0, Math.PI * 2); ctx.clip();
         const swAngle = t * 0.04;
         for (let sw = 0; sw < 3; sw++) {
           ctx.beginPath();
           ctx.ellipse(cx, cy, cR * 0.85, cR * 0.32, swAngle + sw * 1.05, 0, Math.PI * 2);
-          ctx.strokeStyle = `rgba(0,255,136,${0.14 - sw * 0.03})`;
+          ctx.strokeStyle = `rgba(${hsl(hue + sw * 60)},${0.14 - sw * 0.03})`;
           ctx.lineWidth = 0.5; ctx.stroke();
         }
         ctx.beginPath();
         ctx.ellipse(cx, cy, cR * 0.30, cR * 0.90, -swAngle * 0.7, 0, Math.PI * 2);
-        ctx.strokeStyle = "rgba(0,229,255,0.14)"; ctx.lineWidth = 0.45; ctx.stroke();
+        ctx.strokeStyle = `rgba(${hsl(hue + 180)},0.14)`; ctx.lineWidth = 0.45; ctx.stroke();
         ctx.restore();
 
         // Crystalline facets — 6 subtle highlight lines
@@ -424,10 +434,10 @@ function QuantumAtom3D({ phase, open }: { phase: Phase; open: boolean }) {
         ctx.beginPath(); ctx.arc(cx, cy, cR, 0, Math.PI * 2);
         ctx.fillStyle = spec; ctx.fill();
 
-        // Rim light (cyan backlight)
+        // Rim light — complementary hue
         const rim = ctx.createRadialGradient(cx + cR * 0.58, cy + cR * 0.44, 0, cx + cR * 0.36, cy + cR * 0.26, cR * 0.88);
-        rim.addColorStop(0, "rgba(0,229,255,0.55)");
-        rim.addColorStop(1, "rgba(0,229,255,0)");
+        rim.addColorStop(0, `rgba(${hsl(hue + 180)},0.55)`);
+        rim.addColorStop(1, `rgba(${hsl(hue + 180)},0)`);
         ctx.beginPath(); ctx.arc(cx, cy, cR, 0, Math.PI * 2);
         ctx.fillStyle = rim; ctx.fill();
 
@@ -454,7 +464,6 @@ function QuantumAtom3D({ phase, open }: { phase: Phase; open: boolean }) {
       // ── Draw particles depth-sorted, nucleus at z=0 ────────────────────
       projected.forEach(({ px, py, sc, zd, p: pp }) => {
         if (!nucleusDrawn && zd > 0) { drawNucleus(); nucleusDrawn = true; }
-        const ring  = RINGS[pp.ring];
         const depth = Math.max(0.08, Math.min(1, (sc - 0.36) / 0.70));
         const alpha = 0.16 + depth * 0.84;
         const size  = sc * (2.0 + depth * 3.0);
@@ -464,13 +473,13 @@ function QuantumAtom3D({ phase, open }: { phase: Phase; open: boolean }) {
           const tr = size * (ti / pp.trail.length) * 0.60;
           if (tr < 0.10) return;
           ctx.beginPath(); ctx.arc(pt.x, pt.y, tr, 0, Math.PI * 2);
-          ctx.fillStyle = `${ring.col}${ta})`; ctx.fill();
+          ctx.fillStyle = ringCol(pp.ring, ta); ctx.fill();
         });
 
         const g = ctx.createRadialGradient(px, py, 0, px, py, size * 3.2);
-        g.addColorStop(0,   `${ring.col}${alpha * 0.90})`);
-        g.addColorStop(0.38,`${ring.col}${alpha * 0.20})`);
-        g.addColorStop(1,   `${ring.col}0)`);
+        g.addColorStop(0,    ringCol(pp.ring, alpha * 0.90));
+        g.addColorStop(0.38, ringCol(pp.ring, alpha * 0.20));
+        g.addColorStop(1,    ringCol(pp.ring, 0));
         ctx.beginPath(); ctx.arc(px, py, size * 3.2, 0, Math.PI * 2);
         ctx.fillStyle = g; ctx.fill();
 
@@ -487,8 +496,8 @@ function QuantumAtom3D({ phase, open }: { phase: Phase; open: boolean }) {
 
   return (
     <canvas ref={canvasRef}
-      width={56} height={56}
-      style={{ width: 56, height: 56, display: "block", flexShrink: 0, imageRendering: "auto" }} />
+      width={44} height={44}
+      style={{ width: 44, height: 44, display: "block", flexShrink: 0, imageRendering: "auto" }} />
   );
 }
 
@@ -660,6 +669,7 @@ export function AIQuickSetupButton() {
   const [selectedModels, setSelectedModels] = useState<Record<string, string>>({});
   const [keys, setKeys]           = useState<Record<string, string>>({});
   const [providerSearch, setProviderSearch] = useState("");
+  const [activeTab, setActiveTab] = useState<"nexus" | "metrics" | "arsenal">("nexus");
   const panelRef = useRef<HTMLDivElement>(null);
 
   // Load saved keys on open
@@ -881,86 +891,183 @@ export function AIQuickSetupButton() {
                 </div>
               </div>
 
-              {/* Scan progress */}
-              {phase === "scanning" && (
-                <div className="px-4 py-2.5" style={{ borderBottom: "1px solid rgba(0,255,136,0.06)" }}>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[9px] font-mono" style={{ color: "rgba(0,229,255,0.8)" }}>{scanMsg}</span>
-                    <span className="text-[9px] font-black font-mono" style={{ color: "rgba(0,255,136,0.9)" }}>{scanProgress}%</span>
+              {/* Tab bar */}
+              <div className="flex px-4 gap-1 pt-2 pb-0" style={{ borderBottom: "1px solid rgba(0,255,136,0.08)" }}>
+                {(["nexus", "metrics", "arsenal"] as const).map(tab => {
+                  const labels: Record<string, string> = { nexus: "NEXUS", metrics: "METRICS", arsenal: "ARSENAL" };
+                  const active = activeTab === tab;
+                  return (
+                    <button key={tab} onClick={() => setActiveTab(tab)}
+                      className="px-3 py-1.5 text-[8px] font-black tracking-widest uppercase rounded-t-lg transition-all font-mono"
+                      style={{
+                        color: active ? "rgba(0,255,136,0.95)" : "rgba(255,255,255,0.28)",
+                        background: active ? "rgba(0,255,136,0.08)" : "transparent",
+                        borderBottom: active ? "2px solid rgba(0,255,136,0.85)" : "2px solid transparent",
+                      }}>
+                      {labels[tab]}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* NEXUS tab */}
+              {activeTab === "nexus" && (<>
+                {/* Scan progress */}
+                {phase === "scanning" && (
+                  <div className="px-4 py-2.5" style={{ borderBottom: "1px solid rgba(0,255,136,0.06)" }}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[9px] font-mono" style={{ color: "rgba(0,229,255,0.8)" }}>{scanMsg}</span>
+                      <span className="text-[9px] font-black font-mono" style={{ color: "rgba(0,255,136,0.9)" }}>{scanProgress}%</span>
+                    </div>
+                    <ScanBar progress={scanProgress} color="#00ff88" />
                   </div>
-                  <ScanBar progress={scanProgress} color="#00ff88" />
+                )}
+                <div className="px-4 pt-3 pb-2">
+                  <motion.button onClick={autoScan} disabled={phase === "scanning"}
+                    className="w-full rounded-xl py-2.5 text-[10px] font-black tracking-widest uppercase flex items-center justify-center gap-2"
+                    style={{
+                      background: phase === "scanning"
+                        ? "rgba(0,255,136,0.05)"
+                        : "linear-gradient(135deg,rgba(0,255,136,0.18) 0%,rgba(0,229,255,0.1) 100%)",
+                      border: `1px solid rgba(0,255,136,${phase === "scanning" ? 0.14 : 0.40})`,
+                      color: phase === "scanning" ? "rgba(0,255,136,0.38)" : "rgba(0,255,136,0.92)",
+                    }}
+                    whileHover={phase !== "scanning" ? { scale: 1.01, boxShadow: "0 0 20px rgba(0,255,136,0.2)" } : {}}
+                    whileTap  ={phase !== "scanning" ? { scale: 0.98 } : {}}>
+                    {phase === "scanning" ? (
+                      <><motion.span animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}>◌</motion.span>جارٍ المسح التلقائي...</>
+                    ) : (
+                      <><span style={{ fontSize: 12 }}>⚡</span>مسح تلقائي وتفعيل أفضل مزوّد</>
+                    )}
+                  </motion.button>
+                </div>
+                <div className="px-4 pb-2">
+                  <div className="relative">
+                    <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none"
+                      style={{ color: "rgba(0,255,136,0.45)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+                    </svg>
+                    <input type="text" value={providerSearch} onChange={e => setProviderSearch(e.target.value)}
+                      placeholder="بحث عن مزوّد..."
+                      className="w-full pl-7 pr-2 py-1.5 text-[9px] font-mono rounded-lg outline-none"
+                      style={{
+                        background: "rgba(0,0,0,0.35)",
+                        border: `1px solid rgba(0,255,136,${providerSearch ? 0.38 : 0.15})`,
+                        color: "rgba(255,255,255,0.8)",
+                      }} dir="rtl" />
+                    {providerSearch && (
+                      <button onClick={() => setProviderSearch("")}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-[8px]"
+                        style={{ color: "rgba(255,255,255,0.35)" }}>✕</button>
+                    )}
+                  </div>
+                </div>
+                <div className="px-4 pb-3 space-y-1.5 max-h-[340px] overflow-y-auto"
+                  style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(0,255,136,0.18) transparent" }}>
+                  <div className="text-[7px] font-bold tracking-[0.22em] uppercase mb-2 pt-1"
+                    style={{ color: "rgba(0,255,136,0.38)" }}>
+                    {providerSearch
+                      ? `${ALL_PROVIDERS.filter(p => p.name.toLowerCase().includes(providerSearch.toLowerCase())).length} نتيجة`
+                      : "المزوّدون المتاحون"}
+                  </div>
+                  {ALL_PROVIDERS.filter(p => !providerSearch || p.name.toLowerCase().includes(providerSearch.toLowerCase())).map(p => (
+                    <ProviderCard key={p.id} prov={p}
+                      isActive={state.activeProvider === p.providerName && state.activeProviderModel === (selectedModels[p.id] || p.models[0].id)}
+                      configuredKey={keys[p.id] ?? ""}
+                      selectedModel={selectedModels[p.id] ?? p.models[0].id}
+                      onActivate={handleActivate} onModelChange={handleModelChange} onKeyChange={handleKeyChange} />
+                  ))}
+                </div>
+              </>)}
+
+              {/* METRICS tab */}
+              {activeTab === "metrics" && (
+                <div className="px-4 py-3 space-y-3 max-h-[440px] overflow-y-auto"
+                  style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(0,255,136,0.18) transparent" }}>
+                  <div className="text-[7px] font-bold tracking-widest uppercase" style={{ color: "rgba(0,255,136,0.38)" }}>تصنيف سرعة النماذج</div>
+                  {ALL_PROVIDERS.slice(0, 8).map((p, i) => {
+                    const bar = 100 - i * 11;
+                    return (
+                      <div key={p.id} className="flex items-center gap-2">
+                        <div className="w-16 text-[8px] font-mono truncate" style={{ color: "rgba(255,255,255,0.5)" }}>{p.name}</div>
+                        <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.05)" }}>
+                          <motion.div className="h-full rounded-full"
+                            initial={{ width: 0 }} animate={{ width: `${bar}%` }}
+                            transition={{ duration: 0.8, delay: i * 0.06, ease: "easeOut" }}
+                            style={{ background: `linear-gradient(90deg,${p.color},rgba(0,229,255,0.7))` }} />
+                        </div>
+                        <div className="w-8 text-[8px] font-black font-mono text-right" style={{ color: p.color }}>{bar}%</div>
+                      </div>
+                    );
+                  })}
+                  <div className="h-px" style={{ background: "rgba(0,255,136,0.08)" }} />
+                  <div className="text-[7px] font-bold tracking-widest uppercase" style={{ color: "rgba(0,255,136,0.38)" }}>احصاءات الجلسة</div>
+                  {[
+                    { label: "الجلسة الحالية",  value: state.activeProvider.toUpperCase(), color: "rgba(0,255,136,0.9)" },
+                    { label: "النموذج النشط",    value: (state.activeProviderModel ?? "---").split("/").pop()?.slice(0, 18) ?? "---", color: "rgba(0,229,255,0.8)" },
+                    { label: "المفاتيح المُهيَّأة", value: `${cfgCnt} / ${ALL_PROVIDERS.length}`, color: "#a78bfa" },
+                    { label: "الاستدامة",         value: `${Math.round((cfgCnt / ALL_PROVIDERS.length) * 100)}%`, color: "#22c55e" },
+                  ].map(s => (
+                    <div key={s.label} className="flex items-center justify-between rounded-lg px-2.5 py-1.5"
+                      style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(0,255,136,0.06)" }}>
+                      <span className="text-[8px]" style={{ color: "rgba(255,255,255,0.38)" }}>{s.label}</span>
+                      <span className="text-[9px] font-black font-mono" style={{ color: s.color }}>{s.value}</span>
+                    </div>
+                  ))}
                 </div>
               )}
 
-              {/* Auto-scan button */}
-              <div className="px-4 pt-3 pb-2">
-                <motion.button onClick={autoScan} disabled={phase === "scanning"}
-                  className="w-full rounded-xl py-2.5 text-[10px] font-black tracking-widest uppercase flex items-center justify-center gap-2"
-                  style={{
-                    background: phase === "scanning"
-                      ? "rgba(0,255,136,0.05)"
-                      : "linear-gradient(135deg,rgba(0,255,136,0.18) 0%,rgba(0,229,255,0.1) 100%)",
-                    border: `1px solid rgba(0,255,136,${phase === "scanning" ? 0.14 : 0.40})`,
-                    color: phase === "scanning" ? "rgba(0,255,136,0.38)" : "rgba(0,255,136,0.92)",
-                  }}
-                  whileHover={phase !== "scanning" ? { scale: 1.01, boxShadow: "0 0 20px rgba(0,255,136,0.2)" } : {}}
-                  whileTap  ={phase !== "scanning" ? { scale: 0.98 } : {}}>
-                  {phase === "scanning" ? (
-                    <>
-                      <motion.span animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}>◌</motion.span>
-                      جارٍ المسح التلقائي...
-                    </>
-                  ) : (
-                    <><span style={{ fontSize: 12 }}>⚡</span>مسح تلقائي وتفعيل أفضل مزوّد</>
-                  )}
-                </motion.button>
-              </div>
-
-              {/* Search bar */}
-              <div className="px-4 pb-2">
-                <div className="relative">
-                  <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none"
-                    style={{ color: "rgba(0,255,136,0.45)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
-                  </svg>
-                  <input
-                    type="text"
-                    value={providerSearch}
-                    onChange={e => setProviderSearch(e.target.value)}
-                    placeholder="بحث عن مزوّد..."
-                    className="w-full pl-7 pr-2 py-1.5 text-[9px] font-mono rounded-lg outline-none"
-                    style={{
-                      background: "rgba(0,0,0,0.35)",
-                      border: `1px solid rgba(0,255,136,${providerSearch ? 0.38 : 0.15})`,
-                      color: "rgba(255,255,255,0.8)",
+              {/* ARSENAL tab */}
+              {activeTab === "arsenal" && (
+                <div className="px-4 py-3 space-y-3 max-h-[440px] overflow-y-auto"
+                  style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(0,255,136,0.18) transparent" }}>
+                  <div className="text-[7px] font-bold tracking-widest uppercase" style={{ color: "rgba(0,255,136,0.38)" }}>اختصارات لوحة المفاتيح</div>
+                  {[
+                    { keys: ["Ctrl", "Shift", "A"], desc: "فتح / إغلاق لوحة AI" },
+                    { keys: ["Ctrl", "Enter"],      desc: "إرسال الرسالة" },
+                    { keys: ["Ctrl", "K"],           desc: "البحث السريع" },
+                    { keys: ["Esc"],                 desc: "إلغاء / إغلاق" },
+                  ].map(row => (
+                    <div key={row.desc} className="flex items-center justify-between rounded-lg px-2.5 py-1.5"
+                      style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(0,255,136,0.06)" }}>
+                      <span className="text-[8px]" style={{ color: "rgba(255,255,255,0.45)" }}>{row.desc}</span>
+                      <div className="flex items-center gap-0.5">
+                        {row.keys.map((k, i) => (
+                          <span key={k} className="flex items-center gap-0.5">
+                            {i > 0 && <span className="text-[7px]" style={{ color: "rgba(255,255,255,0.18)" }}>+</span>}
+                            <kbd className="text-[7px] px-1.5 py-0.5 rounded font-mono"
+                              style={{ background: "#0a0d10", border: "1px solid rgba(0,255,136,0.18)", color: "rgba(0,255,136,0.6)" }}>{k}</kbd>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  <div className="h-px" style={{ background: "rgba(0,255,136,0.08)" }} />
+                  <div className="text-[7px] font-bold tracking-widest uppercase" style={{ color: "rgba(0,255,136,0.38)" }}>أدوار سريعة</div>
+                  {[
+                    { role: "محلل أمني", desc: "خبير في تحليل الثغرات والهجمات",    color: "#ef4444" },
+                    { role: "مطوّر",      desc: "مساعد برمجي متخصص في الكود",        color: "#3b82f6" },
+                    { role: "باحث OSINT", desc: "جمع المعلومات من مصادر مفتوحة",     color: "#f59e0b" },
+                    { role: "محلل CTF",   desc: "حل تحديات Capture The Flag",         color: "#8b5cf6" },
+                    { role: "عام",        desc: "مساعد ذكاء اصطناعي عام",             color: "#22c55e" },
+                  ].map(r => (
+                    <motion.button key={r.role} onClick={() => {
+                      const active = ALL_PROVIDERS.find(p => p.providerName === state.activeProvider);
+                      if (active) { applyProvider(active, selectedModels[active.id] || active.models[0].id, keys[active.id] ?? ""); }
+                      toast({ description: `دور نشط: ${r.role}` });
                     }}
-                    dir="rtl"
-                  />
-                  {providerSearch && (
-                    <button onClick={() => setProviderSearch("")}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-[8px]"
-                      style={{ color: "rgba(255,255,255,0.35)" }}>✕</button>
-                  )}
+                      className="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2"
+                      style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${r.color}22` }}
+                      whileHover={{ background: `${r.color}0d`, borderColor: `${r.color}44` }}>
+                      <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: r.color }} />
+                      <div className="flex-1 text-left">
+                        <div className="text-[9px] font-black" style={{ color: r.color }}>{r.role}</div>
+                        <div className="text-[7px] mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>{r.desc}</div>
+                      </div>
+                    </motion.button>
+                  ))}
                 </div>
-              </div>
-
-              {/* Provider list */}
-              <div className="px-4 pb-3 space-y-1.5 max-h-[380px] overflow-y-auto"
-                style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(0,255,136,0.18) transparent" }}>
-                <div className="text-[7px] font-bold tracking-[0.22em] uppercase mb-2 pt-1"
-                  style={{ color: "rgba(0,255,136,0.38)" }}>
-                  {providerSearch
-                    ? `${ALL_PROVIDERS.filter(p => p.name.toLowerCase().includes(providerSearch.toLowerCase())).length} نتيجة`
-                    : "المزوّدون المتاحون"}
-                </div>
-                {ALL_PROVIDERS.filter(p => !providerSearch || p.name.toLowerCase().includes(providerSearch.toLowerCase())).map(p => (
-                  <ProviderCard key={p.id} prov={p}
-                    isActive={state.activeProvider === p.providerName && state.activeProviderModel === (selectedModels[p.id] || p.models[0].id)}
-                    configuredKey={keys[p.id] ?? ""}
-                    selectedModel={selectedModels[p.id] ?? p.models[0].id}
-                    onActivate={handleActivate} onModelChange={handleModelChange} onKeyChange={handleKeyChange} />
-                ))}
-              </div>
+              )}
 
               {/* Footer */}
               <div className="px-4 py-2.5 flex items-center justify-between"
