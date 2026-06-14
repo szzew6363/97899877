@@ -182,6 +182,7 @@ const CveTimeline3DModal    = lazy(() => import("./components/modals/CveTimeline
 const CyberHierarchy3DModal = lazy(() => import("./components/modals/CyberHierarchy3DModal").then(m=>({default:m.CyberHierarchy3DModal})));
 const CognitiveWarfareModal = lazy(() => import("./components/modals/CognitiveWarfareModal").then(m=>({default:m.CognitiveWarfareModal})));
 const AutonomousOffensiveModal = lazy(() => import("./components/modals/AutonomousOffensiveModal").then(m=>({default:m.AutonomousOffensiveModal})));
+const AttackGraph3DModal = lazy(() => import("./components/modals/AttackGraph3DModal").then(m=>({default:m.AttackGraph3DModal})));
 
 // ── MODAL STATE REDUCER ───────────────────────────────────────────────────────
 const MODAL_IDS = [
@@ -208,7 +209,7 @@ const MODAL_IDS = [
   'multiAgentSOC','orchestrationEngine','globalVulnHeatmap','cyberWarfareMatrix',
   'sentientCyberSphere','perfDash','costDash','dedupViz','threatFeed','securityDash',
   'contextMemory','prefetch','masterHud','anomalyLog','net3D','autoSetup','cyberHub','sidebar',
-  'cisaLive','cveTimeline','cyberHierarchy','cognitiveWarfare','autonomousOffense',
+  'cisaLive','cveTimeline','cyberHierarchy','cognitiveWarfare','autonomousOffense','attackGraph',
 ] as const;
 
 type ModalId = typeof MODAL_IDS[number];
@@ -536,6 +537,7 @@ function AppContent() {
           onOpenCognitiveWarfare={() => open('cognitiveWarfare')}
           onOpenAutonomousOffense={() => open('autonomousOffense')}
           onOpenCyberHierarchy={() => toggle('cyberHierarchy')}
+          onOpenAttackGraph={() => open('attackGraph')}
         />
         <ChatView onOpenOsintDash={() => open('osintDash')} />
         {modals.compare && <CompareView onClose={() => close('compare')} />}
@@ -771,6 +773,9 @@ function AppContent() {
 
       {/* Autonomous Offensive Framework */}
       <AutonomousOffensiveModal open={modals.autonomousOffense} onOpenChange={(v) => mDispatch({type:'SET',id:'autonomousOffense',value:v})} />
+
+      {/* Attack Graph 3D Visualizer */}
+      <AttackGraph3DModal open={modals.attackGraph} onOpenChange={(v) => mDispatch({type:'SET',id:'attackGraph',value:v})} />
     </div>
   );
 }
