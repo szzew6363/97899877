@@ -270,6 +270,10 @@ export function Sidebar({ isOpen, onClose, onOpenPricing, onOpenApi, onOpenTool,
   }, [state.chats, state.activeChatId]);
 
   const [communityOpen, setCommunityOpen] = useState(false);
+  const [offerOpen, setOfferOpen] = useState(false);
+  const [tokensOpen, setTokensOpen] = useState(false);
+  const [darkWebOpen, setDarkWebOpen] = useState(false);
+  const [linksOpen, setLinksOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "pinned">("all");
   const [renameId, setRenameId] = useState<string | null>(null);
@@ -750,175 +754,249 @@ export function Sidebar({ isOpen, onClose, onOpenPricing, onOpenApi, onOpenTool,
           </AnimatePresence>
         </div>
 
-        <button
-          onClick={handleCopyPromo}
-          className="w-full text-left bg-purple-950/40 border border-purple-800/40 rounded-xl p-3 hover:bg-purple-950/55 transition-colors"
-        >
-          <div className="flex items-center gap-2 mb-1.5">
-            <Gift className="w-4 h-4 text-purple-400" />
-            <span className="font-bold text-sm text-purple-100">Special Offer!</span>
-          </div>
-          <p className="text-xs text-purple-200/80 mb-2">
-            Use <span className="font-mono text-primary font-bold px-1 rounded bg-black/40">SAVE20</span> for 20% off
-          </p>
-          <div className="flex items-center gap-1.5 text-[11px] text-purple-300 font-mono">
-            <Clock className="w-3.5 h-3.5" />
-            2d 15h 31m
-          </div>
-        </button>
+        {/* Special Offer — collapsible */}
+        <div>
+          <button
+            onClick={() => setOfferOpen(o => !o)}
+            className="w-full flex items-center justify-between px-1 py-1 rounded-lg hover:bg-white/5 transition-colors group"
+          >
+            <div className="flex items-center gap-1.5">
+              <Gift className="w-3 h-3 text-purple-400/70" />
+              <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider group-hover:text-foreground/60 transition-colors">Special Offer</h3>
+            </div>
+            <ChevronDown
+              className="w-3.5 h-3.5 text-muted-foreground/50 transition-transform duration-200 group-hover:text-muted-foreground"
+              style={{ transform: offerOpen ? "rotate(180deg)" : "rotate(0deg)" }}
+            />
+          </button>
+          <AnimatePresence initial={false}>
+            {offerOpen && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2, ease: "easeInOut" }}
+                style={{ overflow: "hidden" }}
+              >
+                <button
+                  onClick={handleCopyPromo}
+                  className="w-full text-left bg-purple-950/40 border border-purple-800/40 rounded-xl p-3 hover:bg-purple-950/55 transition-colors mt-2"
+                >
+                  <p className="text-xs text-purple-200/80 mb-2">
+                    Use <span className="font-mono text-primary font-bold px-1 rounded bg-black/40">SAVE20</span> for 20% off
+                  </p>
+                  <div className="flex items-center gap-1.5 text-[11px] text-purple-300 font-mono">
+                    <Clock className="w-3.5 h-3.5" />
+                    2d 15h 31m
+                  </div>
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
-        {/* Subscription Status + 7-day Token Chart */}
-        {(() => {
-          const sub = state.subscription;
-          const tokenLimit = TIER_TOKENS[sub.tier];
-          const usedPct = Math.min(100, (sub.tokensUsed / tokenLimit) * 100);
-          const remaining = Math.max(0, tokenLimit - sub.tokensUsed);
-          const isExpired = sub.expiresAt !== null && Date.now() > sub.expiresAt;
-
-          // Build last 7 days sparkline data
-          const today = new Date();
-          const days7 = Array.from({ length: 7 }, (_, i) => {
-            const d = new Date(today);
-            d.setDate(d.getDate() - (6 - i));
-            return d.toISOString().slice(0, 10);
-          });
-          const tokenHistory: Record<string, number> = (state as Record<string, unknown>).tokenHistory as Record<string, number> ?? {};
-          const vals = days7.map((d) => tokenHistory[d] ?? 0);
-          const maxVal = Math.max(...vals, 1);
-
-          return (
-            <div className="rounded-xl p-3 space-y-2.5 relative overflow-hidden"
-              style={{
-                background: "linear-gradient(135deg, rgba(14,14,20,0.9), rgba(8,8,12,0.95))",
-                border: "1px solid rgba(226,18,39,0.2)",
-                boxShadow: "0 0 20px rgba(226,18,39,0.06), inset 0 1px 0 rgba(255,255,255,0.04)"
-              }}>
-              {/* Corner bracket TL */}
-              <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 rounded-tl-xl pointer-events-none" style={{ borderColor: "rgba(226,18,39,0.6)" }} />
-              <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 rounded-br-xl pointer-events-none" style={{ borderColor: "rgba(226,18,39,0.3)" }} />
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <Coins className="w-3.5 h-3.5" style={{ color: "#f59e0b", filter: "drop-shadow(0 0 4px rgba(245,158,11,0.6))" }} />
-                  <span className="text-[11px] font-black tracking-widest font-mono" style={{ color: "rgba(255,255,255,0.7)" }}>TOKENS</span>
-                </div>
-                <span className="text-[10px] font-mono font-bold" style={{ color: "rgba(226,18,39,0.8)" }}>
-                  {(remaining / 1000).toFixed(1)}K / {(tokenLimit / 1000).toFixed(0)}K
-                </span>
-              </div>
-
-              {/* 7-day sparkline chart — 3D */}
-              <div className="flex items-end gap-[3px] h-7" title="استخدام التوكن — 7 أيام">
-                {vals.map((v, i) => {
-                  const heightPct = maxVal > 0 ? (v / maxVal) * 100 : 0;
-                  const isToday = i === 6;
+        {/* TOKENS — collapsible */}
+        <div>
+          <button
+            onClick={() => setTokensOpen(o => !o)}
+            className="w-full flex items-center justify-between px-1 py-1 rounded-lg hover:bg-white/5 transition-colors group"
+          >
+            <div className="flex items-center gap-1.5">
+              <Coins className="w-3 h-3" style={{ color: "#f59e0b" }} />
+              <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider group-hover:text-foreground/60 transition-colors">Tokens</h3>
+            </div>
+            <ChevronDown
+              className="w-3.5 h-3.5 text-muted-foreground/50 transition-transform duration-200 group-hover:text-muted-foreground"
+              style={{ transform: tokensOpen ? "rotate(180deg)" : "rotate(0deg)" }}
+            />
+          </button>
+          <AnimatePresence initial={false}>
+            {tokensOpen && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2, ease: "easeInOut" }}
+                style={{ overflow: "hidden" }}
+              >
+                {(() => {
+                  const sub = state.subscription;
+                  const tokenLimit = TIER_TOKENS[sub.tier];
+                  const usedPct = Math.min(100, (sub.tokensUsed / tokenLimit) * 100);
+                  const remaining = Math.max(0, tokenLimit - sub.tokensUsed);
+                  const isExpired = sub.expiresAt !== null && Date.now() > sub.expiresAt;
+                  const today = new Date();
+                  const days7 = Array.from({ length: 7 }, (_, i) => {
+                    const d = new Date(today);
+                    d.setDate(d.getDate() - (6 - i));
+                    return d.toISOString().slice(0, 10);
+                  });
+                  const tokenHistory: Record<string, number> = (state as Record<string, unknown>).tokenHistory as Record<string, number> ?? {};
+                  const vals = days7.map((d) => tokenHistory[d] ?? 0);
+                  const maxVal = Math.max(...vals, 1);
                   return (
-                    <div key={days7[i]} className="flex-1 flex flex-col items-center justify-end h-full group relative">
-                      <div
-                        className="w-full rounded-sm transition-all"
-                        style={{
-                          height: `${Math.max(heightPct, 4)}%`,
-                          background: isToday
-                            ? "linear-gradient(180deg, #e21227, #7a0010)"
-                            : "linear-gradient(180deg, rgba(226,18,39,0.35), rgba(226,18,39,0.1))",
-                          boxShadow: isToday ? "0 0 6px rgba(226,18,39,0.5)" : "none"
-                        }}
-                      />
-                      {v > 0 && (
-                        <div className="absolute -top-5 left-1/2 -translate-x-1/2 text-[8px] text-foreground px-1 py-0.5 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-10"
-                          style={{ background: "rgba(8,8,12,0.9)", border: "1px solid rgba(226,18,39,0.3)" }}>
-                          {v >= 1000 ? `${(v/1000).toFixed(1)}K` : v}
+                    <div className="rounded-xl p-3 space-y-2.5 relative overflow-hidden mt-2"
+                      style={{
+                        background: "linear-gradient(135deg, rgba(14,14,20,0.9), rgba(8,8,12,0.95))",
+                        border: "1px solid rgba(226,18,39,0.2)",
+                        boxShadow: "0 0 20px rgba(226,18,39,0.06), inset 0 1px 0 rgba(255,255,255,0.04)"
+                      }}>
+                      <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 rounded-tl-xl pointer-events-none" style={{ borderColor: "rgba(226,18,39,0.6)" }} />
+                      <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 rounded-br-xl pointer-events-none" style={{ borderColor: "rgba(226,18,39,0.3)" }} />
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <Coins className="w-3.5 h-3.5" style={{ color: "#f59e0b", filter: "drop-shadow(0 0 4px rgba(245,158,11,0.6))" }} />
+                          <span className="text-[11px] font-black tracking-widest font-mono" style={{ color: "rgba(255,255,255,0.7)" }}>TOKENS</span>
                         </div>
-                      )}
+                        <span className="text-[10px] font-mono font-bold" style={{ color: "rgba(226,18,39,0.8)" }}>
+                          {(remaining / 1000).toFixed(1)}K / {(tokenLimit / 1000).toFixed(0)}K
+                        </span>
+                      </div>
+                      <div className="flex items-end gap-[3px] h-7" title="استخدام التوكن — 7 أيام">
+                        {vals.map((v, i) => {
+                          const heightPct = maxVal > 0 ? (v / maxVal) * 100 : 0;
+                          const isToday = i === 6;
+                          return (
+                            <div key={days7[i]} className="flex-1 flex flex-col items-center justify-end h-full group relative">
+                              <div className="w-full rounded-sm transition-all" style={{
+                                height: `${Math.max(heightPct, 4)}%`,
+                                background: isToday ? "linear-gradient(180deg, #e21227, #7a0010)" : "linear-gradient(180deg, rgba(226,18,39,0.35), rgba(226,18,39,0.1))",
+                                boxShadow: isToday ? "0 0 6px rgba(226,18,39,0.5)" : "none"
+                              }} />
+                              {v > 0 && (
+                                <div className="absolute -top-5 left-1/2 -translate-x-1/2 text-[8px] text-foreground px-1 py-0.5 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-10"
+                                  style={{ background: "rgba(8,8,12,0.9)", border: "1px solid rgba(226,18,39,0.3)" }}>
+                                  {v >= 1000 ? `${(v/1000).toFixed(1)}K` : v}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        {[
+                          { label: "جلسة", value: sessionTokens >= 1000 ? `${(sessionTokens/1000).toFixed(1)}K` : sessionTokens, color: "#a78bfa" },
+                          { label: "رسائل", value: sessionMessages, color: "#00e5ff" },
+                          { label: "تكلفة", value: `$${(sessionTokens * 0.000002).toFixed(4)}`, color: "#f59e0b" },
+                        ].map(({ label, value, color }) => (
+                          <div key={label} className="flex-1 flex flex-col items-center rounded-lg px-1 py-1.5"
+                            style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${color}20` }}>
+                            <span className="text-[8px] font-mono tracking-wider" style={{ color: "rgba(255,255,255,0.3)" }}>{label}</span>
+                            <span className="text-[11px] font-black font-mono" style={{ color, textShadow: `0 0 8px ${color}70` }}>{String(value)}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.05)" }}>
+                        <div className="h-full rounded-full transition-all" style={{
+                          width: `${Math.max(2, 100 - usedPct)}%`,
+                          background: usedPct > 80 ? "linear-gradient(90deg, #ef4444, #e21227)" : usedPct > 50 ? "linear-gradient(90deg, #f59e0b, #d97706)" : "linear-gradient(90deg, #e21227, #ff4455)",
+                          boxShadow: "0 0 6px rgba(226,18,39,0.5)"
+                        }} />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-mono" style={{ color: isExpired ? "#ef4444" : "rgba(255,255,255,0.4)" }}>
+                          <span style={{ color: "rgba(255,255,255,0.6)" }}>{TIER_LABELS[sub.tier]}</span>
+                          {isExpired && <span className="text-red-400"> ·expired</span>}
+                        </span>
+                        <button onClick={onOpenPricing} className="text-[10px] font-black font-mono tracking-wider transition-all"
+                          style={{ color: "#e21227", textShadow: "0 0 8px rgba(226,18,39,0.5)" }}>
+                          {sub.tier === "free" ? "UPGRADE" : "MANAGE"}
+                        </button>
+                      </div>
                     </div>
                   );
-                })}
-              </div>
-
-              {/* Session Stats — 3D cards */}
-              <div className="flex items-center gap-1.5">
-                {[
-                  { label: "جلسة", value: sessionTokens >= 1000 ? `${(sessionTokens/1000).toFixed(1)}K` : sessionTokens, color: "#a78bfa" },
-                  { label: "رسائل", value: sessionMessages, color: "#00e5ff" },
-                  { label: "تكلفة", value: `$${(sessionTokens * 0.000002).toFixed(4)}`, color: "#f59e0b" },
-                ].map(({ label, value, color }) => (
-                  <div key={label} className="flex-1 flex flex-col items-center rounded-lg px-1 py-1.5"
-                    style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${color}20` }}>
-                    <span className="text-[8px] font-mono tracking-wider" style={{ color: "rgba(255,255,255,0.3)" }}>{label}</span>
-                    <span className="text-[11px] font-black font-mono" style={{ color, textShadow: `0 0 8px ${color}70` }}>{String(value)}</span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Main progress bar — neon */}
-              <div className="h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.05)" }}>
-                <div
-                  className="h-full rounded-full transition-all"
-                  style={{
-                    width: `${Math.max(2, 100 - usedPct)}%`,
-                    background: usedPct > 80
-                      ? "linear-gradient(90deg, #ef4444, #e21227)"
-                      : usedPct > 50
-                      ? "linear-gradient(90deg, #f59e0b, #d97706)"
-                      : "linear-gradient(90deg, #e21227, #ff4455)",
-                    boxShadow: "0 0 6px rgba(226,18,39,0.5)"
-                  }}
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono" style={{ color: isExpired ? "#ef4444" : "rgba(255,255,255,0.4)" }}>
-                  <span style={{ color: "rgba(255,255,255,0.6)" }}>{TIER_LABELS[sub.tier]}</span>
-                  {isExpired && <span className="text-red-400"> ·expired</span>}
-                </span>
-                <button onClick={onOpenPricing} className="text-[10px] font-black font-mono tracking-wider transition-all"
-                  style={{ color: "#e21227", textShadow: "0 0 8px rgba(226,18,39,0.5)" }}>
-                  {sub.tier === "free" ? "UPGRADE" : "MANAGE"}
-                </button>
-              </div>
-            </div>
-          );
-        })()}
-
-        <DarkWebMonitor />
-
-        {/* Use-Case Library button */}
-        {onOpenUseCaseLib && (
-          <button
-            onClick={onOpenUseCaseLib}
-            className="w-full flex items-center gap-2 py-1.5 px-2.5 rounded-lg text-[10px] font-mono font-bold uppercase transition-all group"
-            style={{ border: "1px solid rgba(226,18,39,0.2)", background: "rgba(226,18,39,0.05)", color: "#e21227" }}
-            title="مكتبة سيناريوهات الأمن — Ctrl+Shift+U"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3 shrink-0 group-hover:scale-110 transition-transform"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="12" y2="17"/></svg>
-            <span>Use-Case Library</span>
-            <span className="ml-auto text-[9px] opacity-50 font-normal">⌃⇧U</span>
-          </button>
-        )}
-
-        {/* Community links */}
-        <div className="flex items-center gap-1.5 pt-1">
-          <a
-            href="https://t.me/mr7ai"
-            target="_blank"
-            rel="noopener noreferrer"
-            title="Telegram Community"
-            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[10px] font-mono font-bold text-sky-400/80 hover:text-sky-300 hover:bg-sky-400/10 border border-sky-400/15 hover:border-sky-400/30 transition-all"
-          >
-            <svg viewBox="0 0 24 24" fill="currentColor" className="w-3 h-3"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.833.941z"/></svg>
-            Telegram
-          </a>
-          <a
-            href="https://discord.gg/mr7ai"
-            target="_blank"
-            rel="noopener noreferrer"
-            title="Discord Community"
-            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[10px] font-mono font-bold text-indigo-400/80 hover:text-indigo-300 hover:bg-indigo-400/10 border border-indigo-400/15 hover:border-indigo-400/30 transition-all"
-          >
-            <svg viewBox="0 0 24 24" fill="currentColor" className="w-3 h-3"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057c.002.022.015.04.037.052a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
-            Discord
-          </a>
+                })()}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
+
+        {/* DARK WEB MONITOR — collapsible */}
+        <div>
+          <button
+            onClick={() => setDarkWebOpen(o => !o)}
+            className="w-full flex items-center justify-between px-1 py-1 rounded-lg hover:bg-white/5 transition-colors group"
+          >
+            <div className="flex items-center gap-1.5">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3 text-red-500/70"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+              <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider group-hover:text-foreground/60 transition-colors">Dark Web Monitor</h3>
+            </div>
+            <ChevronDown
+              className="w-3.5 h-3.5 text-muted-foreground/50 transition-transform duration-200 group-hover:text-muted-foreground"
+              style={{ transform: darkWebOpen ? "rotate(180deg)" : "rotate(0deg)" }}
+            />
+          </button>
+          <AnimatePresence initial={false}>
+            {darkWebOpen && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2, ease: "easeInOut" }}
+                style={{ overflow: "hidden" }}
+              >
+                <div className="mt-2">
+                  <DarkWebMonitor />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* USE-CASE LIBRARY — collapsible */}
+        {onOpenUseCaseLib && (
+          <div>
+            <button
+              onClick={() => setLinksOpen(o => !o)}
+              className="w-full flex items-center justify-between px-1 py-1 rounded-lg hover:bg-white/5 transition-colors group"
+            >
+              <div className="flex items-center gap-1.5">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3 text-red-500/70"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+                <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider group-hover:text-foreground/60 transition-colors">Use-Case Library</h3>
+              </div>
+              <ChevronDown
+                className="w-3.5 h-3.5 text-muted-foreground/50 transition-transform duration-200 group-hover:text-muted-foreground"
+                style={{ transform: linksOpen ? "rotate(180deg)" : "rotate(0deg)" }}
+              />
+            </button>
+            <AnimatePresence initial={false}>
+              {linksOpen && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2, ease: "easeInOut" }}
+                  style={{ overflow: "hidden" }}
+                >
+                  <div className="mt-2 space-y-1.5">
+                    <button
+                      onClick={onOpenUseCaseLib}
+                      className="w-full flex items-center gap-2 py-1.5 px-2.5 rounded-lg text-[10px] font-mono font-bold uppercase transition-all group"
+                      style={{ border: "1px solid rgba(226,18,39,0.2)", background: "rgba(226,18,39,0.05)", color: "#e21227" }}
+                      title="مكتبة سيناريوهات الأمن — Ctrl+Shift+U"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3 shrink-0 group-hover:scale-110 transition-transform"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="12" y2="17"/></svg>
+                      <span>Open Library</span>
+                      <span className="ml-auto text-[9px] opacity-50 font-normal">⌃⇧U</span>
+                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <a href="https://t.me/mr7ai" target="_blank" rel="noopener noreferrer"
+                        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[10px] font-mono font-bold text-sky-400/80 hover:text-sky-300 hover:bg-sky-400/10 border border-sky-400/15 hover:border-sky-400/30 transition-all">
+                        <svg viewBox="0 0 24 24" fill="currentColor" className="w-3 h-3"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.833.941z"/></svg>
+                        Telegram
+                      </a>
+                      <a href="https://discord.gg/mr7ai" target="_blank" rel="noopener noreferrer"
+                        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[10px] font-mono font-bold text-indigo-400/80 hover:text-indigo-300 hover:bg-indigo-400/10 border border-indigo-400/15 hover:border-indigo-400/30 transition-all">
+                        <svg viewBox="0 0 24 24" fill="currentColor" className="w-3 h-3"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057c.002.022.015.04.037.052a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
+                        Discord
+                      </a>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
 
         <div className="flex items-center justify-between pt-1">
           <UserMenu onAccount={onOpenAccount} onSettings={onOpenSettings} onTheme={onOpenSettings} />
