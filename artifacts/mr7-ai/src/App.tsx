@@ -19,7 +19,8 @@ import { CompareView } from "./components/CompareView";
 import { ArsenalFullPage } from "./components/ArsenalFullPage";
 import { QRSyncModal, useQRSyncImport } from "./components/modals/QRSyncModal";
 import { AmbientParticleField } from "./components/AmbientParticleField";
-import { NeuralParticleBackground } from "./components/NeuralParticleBackground";
+import { initDisplayCapabilities } from "./lib/adaptive-quality";
+import { getThreatNotifier } from "./lib/threatNotifier";
 import { HoloDataStream } from "./components/HoloDataStream";
 import { CyberHUDOverlay } from "./components/CyberWidgetsDock";
 import { SystemStatusWidget } from "./components/SystemStatusWidget";
@@ -303,6 +304,12 @@ function AppContent() {
 
   // ── QR sync ───────────────────────────────────────────────────────────────
   useQRSyncImport();
+
+  // ── Display capability detection (refresh rate, WebGL2, OffscreenCanvas) ──
+  useEffect(() => { initDisplayCapabilities(); }, []);
+
+  // ── Real-time threat notification service (CISA KEV via WebSocket) ────────
+  useEffect(() => { getThreatNotifier(); }, []);
 
   // ── Subscription expiry check ─────────────────────────────────────────────
   useEffect(() => {

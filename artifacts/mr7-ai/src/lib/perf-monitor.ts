@@ -1,3 +1,5 @@
+import { getDetectedRefreshRate } from "./adaptive-quality";
+
 export type PerfSnapshot = {
   fps: number;
   frameTimeMs: number;    /* actual ms per frame — precise on high-Hz displays */
@@ -41,7 +43,7 @@ class PerfMonitor {
   start() {
     if (this.running) return;
     this.running = true;
-    this.tick();
+    this.rafId = requestAnimationFrame(this.tick);
     setInterval(() => this.broadcast(), 500);
   }
 
@@ -119,8 +121,6 @@ class PerfMonitor {
       memoryPct = mem.usedJSHeapSize / mem.jsHeapSizeLimit;
     }
 
-    /* Import here to avoid circular dep at module level */
-    const { getDetectedRefreshRate } = await import("./adaptive-quality").catch(() => ({ getDetectedRefreshRate: () => 60 }));
     const targetFps = getDetectedRefreshRate();
     const fpsDrop = this.fps < targetFps * 0.8;
 

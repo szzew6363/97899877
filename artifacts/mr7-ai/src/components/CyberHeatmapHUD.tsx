@@ -136,10 +136,19 @@ export function CyberHeatmapHUD() {
       };
     }
 
-    function draw(timestamp: number) {
+    function draw(_timestamp: number) {
       const now2 = performance.now();
+
+      /* Mobile 20fps cap — skip frame if < 50ms since last draw */
+      if (isMobile && lastFrameRef.current > 0 && now2 - lastFrameRef.current < 50) {
+        frameRef.current = requestAnimationFrame(draw);
+        return;
+      }
+
+      /* Delta-time: normalise to target frame interval so speed is display-Hz agnostic */
+      const targetFrameMs = isMobile ? 50 : 16.67;
       const delta = lastFrameRef.current
-        ? Math.min((now2 - lastFrameRef.current) / 16.67, 4)
+        ? Math.max(0.1, Math.min((now2 - lastFrameRef.current) / targetFrameMs, 4))
         : 1;
       lastFrameRef.current = now2;
 
