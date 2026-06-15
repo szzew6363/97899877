@@ -140,7 +140,7 @@ function QuantumAtom3D({ phase, open, hover }: { phase: Phase; open: boolean; ho
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
 
-    const SIZE = 38;
+    const SIZE = 46;
     const DPR  = Math.min(window.devicePixelRatio * 2, 4);
     cv.width   = SIZE * DPR;
     cv.height  = SIZE * DPR;
@@ -151,15 +151,17 @@ function QuantumAtom3D({ phase, open, hover }: { phase: Phase; open: boolean; ho
     // 4 rings — rainbow spectrum, hOff staggers hue 90° per ring
     type Ring = { r: number; tX: number; tY: number; speed: number; hOff: number; eCount: number };
     const RINGS: Ring[] = [
-      { r:  7, tX:  0.22, tY:  0.10, speed:  0.028, hOff:   0, eCount: 6  },
-      { r: 10, tX:  0.40, tY:  0.20, speed:  0.018, hOff:  90, eCount: 8  },
-      { r: 14, tX: -0.55, tY:  0.50, speed: -0.012, hOff: 180, eCount: 10 },
-      { r: 18, tX:  0.75, tY: -0.58, speed:  0.008, hOff: 270, eCount: 12 },
+      { r:  7, tX:  0.22, tY:  0.10, speed:  0.030, hOff:   0, eCount: 7  },
+      { r: 10, tX:  0.40, tY:  0.20, speed:  0.020, hOff:  60, eCount: 9  },
+      { r: 14, tX: -0.55, tY:  0.50, speed: -0.014, hOff: 120, eCount: 11 },
+      { r: 18, tX:  0.75, tY: -0.58, speed:  0.009, hOff: 180, eCount: 13 },
+      { r: 22, tX: -0.38, tY:  0.32, speed: -0.007, hOff: 240, eCount: 10 },
+      { r: 26, tX:  0.52, tY: -0.45, speed:  0.005, hOff: 300, eCount: 8  },
     ];
 
     // Quantum foam — micro background dots
     type Foam = { x: number; y: number; r: number; a: number; va: number };
-    const foam: Foam[] = Array.from({ length: 18 }, () => ({
+    const foam: Foam[] = Array.from({ length: 28 }, () => ({
       x: Math.random() * SIZE, y: Math.random() * SIZE,
       r: 0.3 + Math.random() * 0.5,
       a: 0.02 + Math.random() * 0.06,

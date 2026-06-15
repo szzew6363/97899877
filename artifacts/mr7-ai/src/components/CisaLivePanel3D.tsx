@@ -657,7 +657,7 @@ function KevNotifCard({ vuln, index, onDismiss }: KevNotifCardProps) {
         backdropFilter: "blur(24px)",
         overflow: "hidden",
         position: "relative",
-        width: 320,
+        width: 400,
       }}
     >
       {/* Top scan line */}

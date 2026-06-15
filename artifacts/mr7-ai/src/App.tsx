@@ -39,6 +39,9 @@ import { SystemMasterHUD3D } from "./components/SystemMasterHUD3D";
 import { AnomalyLog3D } from "./components/AnomalyLog3D";
 import { NetworkTopology3D } from "./components/NetworkTopology3D";
 import { CisaLivePanel3D, CisaKevAlertToaster } from "./components/CisaLivePanel3D";
+import { ThreatWorldMap3D } from "./components/ThreatWorldMap3D";
+import { ThreatIntelDashboard3D } from "./components/ThreatIntelDashboard3D";
+import { LiveOpsDashboard3D } from "./components/LiveOpsDashboard3D";
 import { contextMemory } from "./lib/context-memory";
 import { securityLayer } from "./lib/security-layer";
 import { prefetchEngine } from "./lib/prefetch-engine";
@@ -217,6 +220,7 @@ const MODAL_IDS = [
   'contextMemory','prefetch','masterHud','anomalyLog','net3D','autoSetup','cyberHub','sidebar','widgetsDock',
   'cisaLive','cveTimeline','cyberHierarchy','cognitiveWarfare','autonomousOffense','attackGraph',
   'cyberIntel',
+  'threatMap','cveTracker','liveOps',
   'artpPlatform','pentestLabPro','socCommand',
 ] as const;
 
@@ -573,6 +577,9 @@ function AppContent() {
           onOpenWidgetsDock={() => open('widgetsDock')}
           onOpenCisaLive={() => toggle('cisaLive')}
           onOpenCveTimeline={() => toggle('cveTimeline')}
+          onOpenThreatMap={() => toggle('threatMap')}
+          onOpenCveTracker={() => toggle('cveTracker')}
+          onOpenLiveOps={() => toggle('liveOps')}
           onOpenCyberHierarchy={() => toggle('cyberHierarchy')}
           onOpenCognitiveWarfare={() => open('cognitiveWarfare')}
           onOpenAutonomousOffense={() => open('autonomousOffense')}
@@ -792,7 +799,10 @@ function AppContent() {
       {modals.perfDash    && <PerformanceDashboard3D onClose={() => close('perfDash')} />}
       {modals.costDash    && <CostDashboard3D entries={costEntries} onClose={() => close('costDash')} />}
       {modals.dedupViz    && <DedupVisualizer3D onClose={() => close('dedupViz')} />}
-      {modals.threatFeed  && <ThreatFeed3D onClose={() => close('threatFeed')} />}
+      {modals.threatFeed    && <ThreatFeed3D onClose={() => close('threatFeed')} />}
+      {modals.threatMap     && <ThreatWorldMap3D onClose={() => close('threatMap')} />}
+      {modals.cveTracker    && <ThreatIntelDashboard3D onClose={() => close('cveTracker')} />}
+      {modals.liveOps       && <LiveOpsDashboard3D onClose={() => close('liveOps')} />}
       {modals.securityDash && <SecurityDashboard3D onClose={() => close('securityDash')} />}
       {modals.contextMemory && <ContextMemoryPanel3D onClose={() => close('contextMemory')} />}
       {modals.prefetch    && <PrefetchIntelligence3D onClose={() => close('prefetch')} />}

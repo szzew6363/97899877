@@ -1659,6 +1659,8 @@ function DockButton({
   const [tilt,             setTilt]             = useState({ x: 0, y: 0 });
   const [showFullRec,      setShowFullRec]      = useState(false);
   const [showPacketInsp,   setShowPacketInsp]   = useState(false);
+  const [aiHov,            setAiHov]            = useState(false);
+  const [sysHov,           setSysHov]           = useState(false);
   const posRef  = useRef(pos);
   const dragRef = useRef({ active: false, sx: 0, sy: 0, spx: 0, spy: 0, moved: false });
   const btnRef  = useRef<HTMLDivElement>(null);
@@ -1765,66 +1767,133 @@ function DockButton({
               onExpandRec={() => setShowFullRec(v => !v)}
               onExpandPacket={() => setShowPacketInsp(v => !v)}
             />
-            {/* AI INTEL satellite action button */}
-            <motion.button
-              initial={{ opacity: 0, scale: 0, y: 6 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0, y: 6 }}
-              transition={{ delay: 0.10, type: "spring", stiffness: 300, damping: 22 }}
-              onClick={(e) => { e.stopPropagation(); onOpenAiIntel(); }}
-              style={{
-                position: "absolute",
-                bottom: "86px",
-                left: "50%",
-                transform: "translateX(-50%)",
-                padding: "5px 12px",
-                borderRadius: "10px",
-                background: "linear-gradient(135deg, rgba(139,92,246,0.22) 0%, rgba(109,40,217,0.14) 100%)",
-                border: "1px solid rgba(139,92,246,0.55)",
-                color: "#c4b5fd",
-                fontSize: "7.5px",
-                fontFamily: "monospace",
-                fontWeight: 900,
-                letterSpacing: "2px",
-                cursor: "pointer",
-                whiteSpace: "nowrap",
-                boxShadow: "0 0 22px rgba(139,92,246,0.40), inset 0 1px 0 rgba(196,181,253,0.12)",
-                backdropFilter: "blur(12px)",
-                zIndex: 10,
-              }}
+            {/* AI INTEL satellite action button + 3D hover tooltip */}
+            <div
+              style={{ position: "absolute", bottom: "86px", left: "50%", transform: "translateX(-50%)", zIndex: 12 }}
+              onMouseEnter={() => setAiHov(true)}
+              onMouseLeave={() => setAiHov(false)}
             >
-              AI INTEL
-            </motion.button>
-            {/* SYS satellite action button */}
-            <motion.button
-              initial={{ opacity: 0, scale: 0, y: 6 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0, y: 6 }}
-              transition={{ delay: 0.15, type: "spring", stiffness: 300, damping: 22 }}
-              onClick={(e) => { e.stopPropagation(); onOpenSys(); }}
-              style={{
-                position: "absolute",
-                bottom: "116px",
-                left: "50%",
-                transform: "translateX(-50%)",
-                padding: "5px 12px",
-                borderRadius: "10px",
-                background: "linear-gradient(135deg, rgba(16,185,129,0.22) 0%, rgba(5,150,105,0.14) 100%)",
-                border: "1px solid rgba(16,185,129,0.55)",
-                color: "#6ee7b7",
-                fontSize: "7.5px",
-                fontFamily: "monospace",
-                fontWeight: 900,
-                letterSpacing: "2px",
-                cursor: "pointer",
-                whiteSpace: "nowrap",
-                boxShadow: "0 0 22px rgba(16,185,129,0.40), inset 0 1px 0 rgba(110,231,183,0.12)",
-                backdropFilter: "blur(12px)",
-                zIndex: 10,
-              }}
+              <motion.button
+                initial={{ opacity: 0, scale: 0, y: 6 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0, y: 6 }}
+                transition={{ delay: 0.10, type: "spring", stiffness: 300, damping: 22 }}
+                onClick={(e) => { e.stopPropagation(); onOpenAiIntel(); }}
+                style={{
+                  padding: "5px 12px", borderRadius: "10px",
+                  background: aiHov
+                    ? "linear-gradient(135deg, rgba(139,92,246,0.36) 0%, rgba(109,40,217,0.26) 100%)"
+                    : "linear-gradient(135deg, rgba(139,92,246,0.22) 0%, rgba(109,40,217,0.14) 100%)",
+                  border: `1px solid rgba(139,92,246,${aiHov ? "0.80" : "0.55"})`,
+                  color: "#c4b5fd", fontSize: "7.5px", fontFamily: "monospace", fontWeight: 900, letterSpacing: "2px",
+                  cursor: "pointer", whiteSpace: "nowrap",
+                  boxShadow: aiHov
+                    ? "0 0 36px rgba(139,92,246,0.65), inset 0 1px 0 rgba(196,181,253,0.22)"
+                    : "0 0 22px rgba(139,92,246,0.40), inset 0 1px 0 rgba(196,181,253,0.12)",
+                  backdropFilter: "blur(12px)", transition: "all 0.18s ease",
+                }}
+              >
+                AI INTEL
+              </motion.button>
+              <AnimatePresence>
+                {aiHov && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 6, scale: 0.88 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 6, scale: 0.88 }}
+                    transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                      position: "absolute", bottom: "calc(100% + 10px)", left: "50%", transform: "translateX(-50%)",
+                      minWidth: "164px", background: "rgba(4,2,20,0.98)", border: "1px solid rgba(139,92,246,0.50)",
+                      borderRadius: "13px", padding: "11px 13px", backdropFilter: "blur(24px)",
+                      boxShadow: "0 0 50px rgba(139,92,246,0.22), 0 0 0 1px rgba(139,92,246,0.12), 0 12px 40px rgba(0,0,0,0.95)",
+                    }}
+                  >
+                    <div style={{ height: "1px", background: "linear-gradient(90deg, transparent, rgba(139,92,246,0.6), transparent)", marginBottom: "9px" }} />
+                    <div style={{ fontSize: "6.5px", fontFamily: "monospace", fontWeight: 900, letterSpacing: "2.5px", color: "rgba(139,92,246,0.65)", marginBottom: "9px" }}>
+                      ◈ AI INTEL HUD
+                    </div>
+                    {[
+                      { label: "CPU LOAD",   value: `${stats.cpu}%`,          color: "#8b5cf6" },
+                      { label: "THREATS",    value: `${stats.thr}`,            color: "#e21227" },
+                      { label: "API CALLS",  value: `${stats.api}`,            color: "#00e5ff" },
+                      { label: "STATUS",     value: "ONLINE",                  color: "#22c55e" },
+                    ].map(({ label, value, color }) => (
+                      <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "5px" }}>
+                        <span style={{ fontSize: "7px", fontFamily: "monospace", color: "rgba(255,255,255,0.28)", letterSpacing: "1px" }}>{label}</span>
+                        <span style={{ fontSize: "8.5px", fontFamily: "monospace", fontWeight: 900, color, textShadow: `0 0 10px ${color}80` }}>{value}</span>
+                      </div>
+                    ))}
+                    <div style={{ height: "1px", background: "linear-gradient(90deg, transparent, rgba(139,92,246,0.3), transparent)", marginTop: "6px" }} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* SYS satellite action button + 3D hover tooltip */}
+            <div
+              style={{ position: "absolute", bottom: "116px", left: "50%", transform: "translateX(-50%)", zIndex: 12 }}
+              onMouseEnter={() => setSysHov(true)}
+              onMouseLeave={() => setSysHov(false)}
             >
-              SYS
-            </motion.button>
+              <motion.button
+                initial={{ opacity: 0, scale: 0, y: 6 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0, y: 6 }}
+                transition={{ delay: 0.15, type: "spring", stiffness: 300, damping: 22 }}
+                onClick={(e) => { e.stopPropagation(); onOpenSys(); }}
+                style={{
+                  padding: "5px 12px", borderRadius: "10px",
+                  background: sysHov
+                    ? "linear-gradient(135deg, rgba(16,185,129,0.36) 0%, rgba(5,150,105,0.26) 100%)"
+                    : "linear-gradient(135deg, rgba(16,185,129,0.22) 0%, rgba(5,150,105,0.14) 100%)",
+                  border: `1px solid rgba(16,185,129,${sysHov ? "0.80" : "0.55"})`,
+                  color: "#6ee7b7", fontSize: "7.5px", fontFamily: "monospace", fontWeight: 900, letterSpacing: "2px",
+                  cursor: "pointer", whiteSpace: "nowrap",
+                  boxShadow: sysHov
+                    ? "0 0 36px rgba(16,185,129,0.65), inset 0 1px 0 rgba(110,231,183,0.22)"
+                    : "0 0 22px rgba(16,185,129,0.40), inset 0 1px 0 rgba(110,231,183,0.12)",
+                  backdropFilter: "blur(12px)", transition: "all 0.18s ease",
+                }}
+              >
+                SYS
+              </motion.button>
+              <AnimatePresence>
+                {sysHov && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 6, scale: 0.88 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 6, scale: 0.88 }}
+                    transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                      position: "absolute", bottom: "calc(100% + 10px)", left: "50%", transform: "translateX(-50%)",
+                      minWidth: "164px", background: "rgba(2,14,8,0.98)", border: "1px solid rgba(16,185,129,0.50)",
+                      borderRadius: "13px", padding: "11px 13px", backdropFilter: "blur(24px)",
+                      boxShadow: "0 0 50px rgba(16,185,129,0.22), 0 0 0 1px rgba(16,185,129,0.12), 0 12px 40px rgba(0,0,0,0.95)",
+                    }}
+                  >
+                    <div style={{ height: "1px", background: "linear-gradient(90deg, transparent, rgba(16,185,129,0.6), transparent)", marginBottom: "9px" }} />
+                    <div style={{ fontSize: "6.5px", fontFamily: "monospace", fontWeight: 900, letterSpacing: "2.5px", color: "rgba(16,185,129,0.65)", marginBottom: "9px" }}>
+                      ◈ SYS STATUS
+                    </div>
+                    {[
+                      { label: "MEMORY",  value: `${stats.mem}%`,                                 color: "#10b981" },
+                      { label: "CPU",     value: `${stats.cpu}%`,                                 color: "#22c55e" },
+                      { label: "NET I/O", value: "ACTIVE",                                        color: "#00e5ff" },
+                      { label: "STATUS",  value: stats.thr > 60 ? "ALERT" : "NOMINAL",            color: stats.thr > 60 ? "#e21227" : "#22c55e" },
+                    ].map(({ label, value, color }) => (
+                      <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "5px" }}>
+                        <span style={{ fontSize: "7px", fontFamily: "monospace", color: "rgba(255,255,255,0.28)", letterSpacing: "1px" }}>{label}</span>
+                        <span style={{ fontSize: "8.5px", fontFamily: "monospace", fontWeight: 900, color, textShadow: `0 0 10px ${color}80` }}>{value}</span>
+                      </div>
+                    ))}
+                    <div style={{ height: "1px", background: "linear-gradient(90deg, transparent, rgba(16,185,129,0.3), transparent)", marginTop: "6px" }} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </>
         )}
       </AnimatePresence>

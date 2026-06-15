@@ -54,14 +54,14 @@ function QuantumPlanet3D({ health, latency, open, hover }: { health: Health; lat
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
 
-    const SIZE = 34;
+    const SIZE = 44;
     const DPR  = Math.min(window.devicePixelRatio * 2, 4);
     cv.width   = SIZE * DPR;
     cv.height  = SIZE * DPR;
     ctx.scale(DPR, DPR);
     const [cx, cy] = [SIZE / 2, SIZE / 2];
-    const R   = 9;
-    const FOV = 152;
+    const R   = 12;
+    const FOV = 185;
 
     // ── 3D math ──────────────────────────────────────────────────────────
     function rotX(x: number, y: number, z: number, a: number): [number,number,number] {
@@ -84,19 +84,21 @@ function QuantumPlanet3D({ health, latency, open, hover }: { health: Health; lat
     // 4 orbital rings — rainbow spectrum, hOff staggers hue 90° per ring
     type OrbRing = { r: number; tX: number; tY: number; speed: number; hOff: number; moonR: number };
     const ORB_RINGS: OrbRing[] = [
-      { r: 13, tX:  0.42, tY:  0.20, speed:  0.022, hOff:   0, moonR: 1.3 },
-      { r: 16, tX: -0.58, tY:  0.50, speed: -0.014, hOff:  90, moonR: 1.0 },
-      { r: 19, tX:  0.78, tY: -0.60, speed:  0.010, hOff: 180, moonR: 0.85},
-      { r: 22, tX: -0.30, tY:  0.35, speed: -0.007, hOff: 270, moonR: 0.7 },
+      { r: 16, tX:  0.42, tY:  0.20, speed:  0.026, hOff:   0, moonR: 1.5 },
+      { r: 20, tX: -0.58, tY:  0.50, speed: -0.017, hOff:  60, moonR: 1.2 },
+      { r: 24, tX:  0.78, tY: -0.60, speed:  0.012, hOff: 120, moonR: 1.0 },
+      { r: 28, tX: -0.30, tY:  0.35, speed: -0.009, hOff: 180, moonR: 0.85},
+      { r: 32, tX:  0.62, tY:  0.28, speed:  0.007, hOff: 240, moonR: 0.7 },
+      { r: 36, tX: -0.45, tY: -0.42, speed: -0.005, hOff: 300, moonR: 0.55},
     ];
 
     // Saturn-like flat planetary ring (scaled to SIZE 40)
-    const RING_DISC = { rInner: 11, rOuter: 16, tX: 0.55, tY: 0.10 };
+    const RING_DISC = { rInner: 15, rOuter: 22, tX: 0.55, tY: 0.10 };
 
     type P = { ring: number; angle: number; trail: Array<{ x: number; y: number }> };
     const particles: P[] = ORB_RINGS.flatMap((_, ri) =>
-      Array.from({ length: 7 }, (_, i) => ({
-        ring: ri, angle: (i / 7) * Math.PI * 2 + ri * 1.05, trail: [],
+      Array.from({ length: 10 }, (_, i) => ({
+        ring: ri, angle: (i / 10) * Math.PI * 2 + ri * 1.05, trail: [],
       }))
     );
 
@@ -115,7 +117,7 @@ function QuantumPlanet3D({ health, latency, open, hover }: { health: Health; lat
 
     // Deep-field background stars
     type Star = { x: number; y: number; r: number; a: number; va: number };
-    const stars: Star[] = Array.from({ length: 20 }, () => ({
+    const stars: Star[] = Array.from({ length: 35 }, () => ({
       x: Math.random() * SIZE, y: Math.random() * SIZE,
       r: 0.25 + Math.random() * 0.45,
       a: 0.15 + Math.random() * 0.55,
@@ -124,9 +126,9 @@ function QuantumPlanet3D({ health, latency, open, hover }: { health: Health; lat
 
     // Nebula cloud particles
     type NebP = { x: number; y: number; vx: number; vy: number; r: number; a: number };
-    const nebula: NebP[] = Array.from({ length: 12 }, () => ({
-      x: cx + (Math.random() - 0.5) * 24,
-      y: cy + (Math.random() - 0.5) * 24,
+    const nebula: NebP[] = Array.from({ length: 22 }, () => ({
+      x: cx + (Math.random() - 0.5) * 34,
+      y: cy + (Math.random() - 0.5) * 34,
       vx: (Math.random() - 0.5) * 0.08,
       vy: (Math.random() - 0.5) * 0.08,
       r: 1.5 + Math.random() * 3.0,

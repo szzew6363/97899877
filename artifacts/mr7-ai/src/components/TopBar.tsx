@@ -52,6 +52,9 @@ interface TopBarProps {
   onOpenWidgetsDock?: () => void;
   onOpenCisaLive?: () => void;
   onOpenCveTimeline?: () => void;
+  onOpenThreatMap?: () => void;
+  onOpenCveTracker?: () => void;
+  onOpenLiveOps?: () => void;
   onOpenCyberHierarchy?: () => void;
   onOpenCognitiveWarfare?: () => void;
   onOpenAutonomousOffense?: () => void;
@@ -624,6 +627,7 @@ export function TopBar({
   onOpenCostDash, onOpenDedupViz, onOpenThreatFeed, onOpenSecurityDash,
   onOpenContextMemory, onOpenPrefetch, onOpenMasterHud, onOpenAnomalyLog,
   onOpenNetworkTopo, onOpenCyberHub, onOpenWidgetsDock, onOpenCisaLive, onOpenCveTimeline,
+  onOpenThreatMap, onOpenCveTracker, onOpenLiveOps,
   onOpenCyberHierarchy, onOpenCognitiveWarfare, onOpenAutonomousOffense, onOpenAttackGraph,
   hudsVisible,
 }: TopBarProps) {
@@ -766,6 +770,9 @@ export function TopBar({
           {/* ── GROUP 4 — Cyber Intel ────────────────────────────────────── */}
           {onOpenCisaLive       && <HUDBtn icon={ShieldAlert}  label="CISA Live"    color="#e21227" onClick={onOpenCisaLive} />}
           {onOpenCveTimeline    && <HUDBtn icon={BarChart2}    label="CVE Timeline" color="#f97316" onClick={onOpenCveTimeline} />}
+          {onOpenThreatMap      && <HUDBtn icon={Globe}        label="Threat Map"   color="#00e5ff" onClick={onOpenThreatMap}   badge="3D" />}
+          {onOpenCveTracker     && <HUDBtn icon={ShieldAlert}  label="CVE Intel"    color="#e21227" onClick={onOpenCveTracker} />}
+          {onOpenLiveOps        && <HUDBtn icon={Activity}     label="Live Ops"     color="#8b5cf6" onClick={onOpenLiveOps} />}
           {onOpenCyberHierarchy && <HUDBtn icon={Cpu}          label="Cyber Hier."  color="#00ff41" onClick={onOpenCyberHierarchy} />}
           {onOpenDedupViz       && <HUDBtn icon={GitMerge}     label="Dedup"        color="#a78bfa" onClick={onOpenDedupViz} />}
           {onOpenThreatFeed     && <HUDBtn icon={ShieldAlert}  label="Threat Feed"  color="#e21227" onClick={onOpenThreatFeed} />}
