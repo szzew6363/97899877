@@ -86,6 +86,8 @@ export type ChatMsg = {
   isContextSummary?: boolean;
   // Message reactions: emoji → list of user IDs (we use "me" for local user)
   reactions?: Record<string, string[]>;
+  // AI Master Controller — orchestrator commands executed in this message
+  orchCmds?: import("./agent-orchestrator").OrchestratorCmd[];
 };
 
 export type Folder = { id: string; label: string; color: string };

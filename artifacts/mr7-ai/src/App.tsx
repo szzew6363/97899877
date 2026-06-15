@@ -490,6 +490,31 @@ function AppContent() {
     setArsenalPage(id);
   }
 
+  // ── AI Master Controller — orchestrator event bus ────────────────────────
+  useEffect(() => {
+    function onOpenModule(e: Event) {
+      const { moduleId } = (e as CustomEvent<{ moduleId: string }>).detail;
+      if (moduleId === "app") return;
+      const modalId = ARSENAL_MAP[moduleId];
+      if (modalId) { open(modalId); return; }
+      setArsenalPage(moduleId as ArsenalModuleId);
+    }
+    function onOpenArsenal() { open('arsenal'); }
+    function onNewChat(e: Event) {
+      const { title } = (e as CustomEvent<{ title?: string }>).detail;
+      dispatch({ type: "NEW_CHAT" });
+      if (title) setTimeout(() => dispatch({ type: "RENAME_CHAT", id: "", title }), 50);
+    }
+    window.addEventListener("kali:open-module", onOpenModule);
+    window.addEventListener("kali:open-arsenal", onOpenArsenal);
+    window.addEventListener("kali:new-chat", onNewChat);
+    return () => {
+      window.removeEventListener("kali:open-module", onOpenModule);
+      window.removeEventListener("kali:open-arsenal", onOpenArsenal);
+      window.removeEventListener("kali:new-chat", onNewChat);
+    };
+  }, [open, dispatch]);
+
   void state;
 
   return (

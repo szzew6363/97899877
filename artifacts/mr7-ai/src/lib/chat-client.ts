@@ -25,7 +25,7 @@ export type ChatRequest = {
   language: "en" | "ar";
   memory: string[];
   messages: ChatMessage[];
-  mode?: "chat" | "code" | "web" | "reason" | "polymorphic" | "soceng" | "vulnrecon" | "antiforensics" | "agentic" | "localllm";
+  mode?: "chat" | "code" | "web" | "reason" | "polymorphic" | "soceng" | "vulnrecon" | "antiforensics" | "agentic" | "localllm" | "orchestrator";
   webContext?: string | null;
   customSystemPrompt?: string;
   provider?: string;

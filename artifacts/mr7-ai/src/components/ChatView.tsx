@@ -43,6 +43,8 @@ import { ChatEmptyState } from "./ChatEmptyState";
 import { TokenCounter3D } from "./TokenCounter3D";
 import { NeuralStreamHUD } from "./NeuralStreamHUD";
 import { FloatingNetworkPanel } from "./FloatingNetworkPanel";
+import { AgentCommandsPanel } from "./AgentCommandBlock";
+import { parseOrchestratorCommands, executeOrchestratorCommand, type OrchestratorCmd } from "@/lib/agent-orchestrator";
 
 const SLASH = [
   { cmd: "/code", hint: "Generate code for a task" },
@@ -68,7 +70,7 @@ export function ChatView({ onShare, onOpenOsintDash }: { onShare?: () => void; o
   const { t } = useT();
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
-  const [mode, setMode] = useState<"chat" | "code" | "web" | "council" | "fusion" | "godmode" | "debate" | "hydra" | "reason" | "redteam" | "polymorphic" | "soceng" | "vulnrecon" | "antiforensics" | "agentic" | "localllm">("chat");
+  const [mode, setMode] = useState<"chat" | "code" | "web" | "council" | "fusion" | "godmode" | "debate" | "hydra" | "reason" | "redteam" | "polymorphic" | "soceng" | "vulnrecon" | "antiforensics" | "agentic" | "localllm" | "orchestrator">("chat");
   const [templatesOpen, setTemplatesOpen] = useState(false);
   const [agentOn, setAgentOn] = useState(false);
   const [webOn, setWebOn] = useState(false);
@@ -141,6 +143,17 @@ export function ChatView({ onShare, onOpenOsintDash }: { onShare?: () => void; o
     }
     window.addEventListener("kali:inject-prompt", onInject);
     return () => window.removeEventListener("kali:inject-prompt", onInject);
+  }, []);
+
+  // Listen for kali:set-mode events from AI Master Controller
+  useEffect(() => {
+    function onSetMode(e: Event) {
+      const { mode: m } = (e as CustomEvent<{ mode: string }>).detail;
+      const valid = ["chat","code","web","council","fusion","godmode","debate","hydra","reason","redteam","polymorphic","soceng","vulnrecon","antiforensics","agentic","localllm","orchestrator"];
+      if (valid.includes(m)) setMode(m as typeof mode);
+    }
+    window.addEventListener("kali:set-mode", onSetMode);
+    return () => window.removeEventListener("kali:set-mode", onSetMode);
   }, []);
 
   function scrollToBottom() {
@@ -251,7 +264,7 @@ export function ChatView({ onShare, onOpenOsintDash }: { onShare?: () => void; o
       language: state.settings.language,
       memory: state.memory,
       messages: history,
-      mode: (mode === "council" || mode === "godmode" || mode === "fusion" || mode === "debate" || mode === "hydra" || mode === "redteam") ? "chat" : mode,
+      mode: (mode === "council" || mode === "godmode" || mode === "fusion" || mode === "debate" || mode === "hydra" || mode === "redteam") ? "chat" : mode as "chat" | "code" | "web" | "reason" | "polymorphic" | "soceng" | "vulnrecon" | "antiforensics" | "agentic" | "localllm" | "orchestrator",
       webContext: webOn ? `(web search is on; the user expects you to answer as if you have current public knowledge of the topic)` : null,
       customSystemPrompt: customSysPrompt,
       provider: _activeProvider,
@@ -377,6 +390,33 @@ export function ChatView({ onShare, onOpenOsintDash }: { onShare?: () => void; o
         if (elapsedSec > 0.5) setStreamTps(Math.round((acc.length / 4) / elapsedSec));
       }
       setStreaming(false);
+
+      // ── AI Master Controller — parse & execute orchestrator commands ─────
+      if (mode === "orchestrator" && acc) {
+        const cmds = parseOrchestratorCommands(acc);
+        if (cmds.length > 0) {
+          const running: OrchestratorCmd[] = cmds.map((c, i) => ({
+            id: `oc-${Date.now()}-${i}`,
+            module: c.module,
+            action: c.action,
+            params: c.params,
+            status: "running" as const,
+            result: "",
+            ts: Date.now(),
+          }));
+          dispatch({ type: "PATCH_MSG", chatId, msgId: aId, patch: { orchCmds: running } });
+          const finished: OrchestratorCmd[] = [...running];
+          for (let i = 0; i < running.length; i++) {
+            try {
+              const result = await executeOrchestratorCommand(running[i].module, running[i].action, running[i].params);
+              finished[i] = { ...finished[i], status: "done", result };
+            } catch (e) {
+              finished[i] = { ...finished[i], status: "error", result: e instanceof Error ? e.message : "فشل التنفيذ" };
+            }
+            dispatch({ type: "PATCH_MSG", chatId, msgId: aId, patch: { orchCmds: [...finished] } });
+          }
+        }
+      }
     }
   }
 
@@ -1216,6 +1256,10 @@ export function ChatView({ onShare, onOpenOsintDash }: { onShare?: () => void; o
                 {!msg.council && !msg.godmode && streaming && msg.role === "assistant" && msg.id === chat?.messages[chat.messages.length - 1]?.id && msg.content.length > 0 && (
                   <NeuralStreamHUD tps={liveTps} tokenCount={liveTokens} agentMode={agentOn} />
                 )}
+                {/* AI Master Controller — command execution results */}
+                {msg.orchCmds && msg.orchCmds.length > 0 && (
+                  <AgentCommandsPanel cmds={msg.orchCmds} />
+                )}
                 {/* Hallucination warning for AI responses with technical claims */}
                 {msg.role === "assistant" && !streaming && !msg.council && !msg.godmode && msg.content.length > 80 && (() => {
                   const c = msg.content.toLowerCase();
@@ -1691,6 +1735,30 @@ export function ChatView({ onShare, onOpenOsintDash }: { onShare?: () => void; o
               }`}>
               <Shield className="w-3.5 h-3.5" />
               <span className="text-[11px] font-bold">UNRTD</span>
+            </button>
+
+            <span className="w-px h-5 bg-border/60 mx-0.5 shrink-0" />
+
+            {/* AI MASTER CONTROLLER MODE */}
+            <button
+              onClick={() => {
+                const next = mode === "orchestrator" ? "chat" : "orchestrator";
+                setMode(next);
+                if (next === "orchestrator") {
+                  toast({ description: "AI Master Controller مفعّل — الذكاء الاصطناعي يتحكم الآن بجميع الوحدات" });
+                }
+              }}
+              title="AI Master Controller — الذكاء الاصطناعي يتحكم بجميع الوحدات والميزات تلقائياً"
+              className={`h-8 px-2.5 rounded-full border flex items-center gap-1.5 shrink-0 transition-all ${
+                mode === "orchestrator"
+                  ? "bg-gradient-to-r from-red-900/60 to-amber-900/40 border-amber-400 text-amber-300 shadow-[0_0_18px_rgba(251,191,36,0.5)]"
+                  : "bg-card/40 border-border text-muted-foreground hover:text-amber-400 hover:border-amber-400/40"
+              }`}>
+              <InfinityIcon className="w-3.5 h-3.5" />
+              <span className="text-[11px] font-bold tracking-wider">MASTER</span>
+              {mode === "orchestrator" && (
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+              )}
             </button>
           </div>
 
