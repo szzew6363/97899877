@@ -66,7 +66,9 @@ export type ArsenalModuleId =
   | "networktopo" | "binaryanalysis" | "webfuzzing" | "multiagentsoc"
   | "orchestrationengine" | "globalvulnheatmap"
   | "cyberwarfarematrix"
-  | "sentientcybersphere";
+  | "sentientcybersphere"
+  // Batch 12 — Enterprise ARTP + PentestLab Pro + SOC Command
+  | "artpplatform" | "pentestlabpro" | "soccommand";
 
 export type ArsenalModule = {
   id: ArsenalModuleId;
@@ -916,6 +918,25 @@ export const ARSENAL_MODULES: ArsenalModule[] = [
     desc: "The ultimate cognitive deterrence arsenal. Three.js neural particle sphere (4,200 pts), Digital Twin infrastructure clone with live attack simulation, 500-agent swarm intelligence, Ghost Supremacy Protocol (harmonic vibrations + trace erasure), Genesis Pulse shockwave, Dimensional Cryptography (Shor/Grover on 5 ciphers), Predictive War-Gaming 2025–2030. Full military voice synthesis + sub-bass audio engine.",
     icon: Cpu, color: "#00e5ff", border: "rgba(0,229,255,0.5)", bg: "rgba(0,229,255,0.08)", glow: "rgba(0,229,255,0.35)",
     source: "KaliGPT Native", tag: "GODMODE",
+  },
+  // ── Batch 12 — Enterprise ARTP + PentestLab Pro + SOC Command Center ─────────
+  {
+    id: "artpplatform", name: "ARTP — Enterprise Red Team", subtitle: "Autonomous Red Team Platform · MITRE ATT&CK · Kill Chain · Engagement Mgmt",
+    desc: "Enterprise-grade authorized red team platform. Full MITRE ATT&CK v14 matrix (12 tactics, 60+ techniques), autonomous kill-chain execution with kill switch, OSINT engine, CVE correlation, exploit framework, phishing simulation, C2 management, post-exploitation, compliance mapping (NIST/ISO/PCI) and AI-generated reports.",
+    icon: Swords, color: "#e21227", border: "rgba(226,18,39,0.45)", bg: "rgba(226,18,39,0.08)", glow: "rgba(226,18,39,0.3)",
+    source: "KaliGPT Native", tag: "ENTERPRISE",
+  },
+  {
+    id: "pentestlabpro", name: "PentestLab Pro", subtitle: "Hands-On Security Training · 30+ Labs · Web · Network · Exploit · Mobile",
+    desc: "Comprehensive interactive penetration testing lab environment. 30+ categorized labs covering Web App (SQLi, XSS, SSRF, JWT, SSTI, XXE, Deserialization), Network (Nmap, MITM, Kerberoasting, SMB Relay), Binary Exploitation (BOF, ROP, Heap, ret2libc), Mobile (Android/iOS), Cryptanalysis, and Forensics. Isolated Docker environments per lab with built-in terminal.",
+    icon: Target, color: "#4ade80", border: "rgba(74,222,128,0.4)", bg: "rgba(74,222,128,0.07)", glow: "rgba(74,222,128,0.25)",
+    source: "KaliGPT Native", tag: "LAB",
+  },
+  {
+    id: "soccommand", name: "SOC Command Center", subtitle: "Unified Security Operations · SIEM · Threat Intel · Playbooks · Hunt",
+    desc: "Enterprise Security Operations Center with real-time alert triage (CRITICAL→LOW), multi-SIEM integration (Splunk, Elastic, Wazuh, Suricata, Zeek), threat intelligence feeds (CISA KEV, OTX, VirusTotal, AbuseIPDB), automated playbook execution, Lucene/KQL query builder, and proactive threat hunting with pre-built Sigma/YARA rules.",
+    icon: Shield, color: "#00e5ff", border: "rgba(0,229,255,0.4)", bg: "rgba(0,229,255,0.07)", glow: "rgba(0,229,255,0.25)",
+    source: "KaliGPT Native", tag: "SOC",
   },
 ];
 

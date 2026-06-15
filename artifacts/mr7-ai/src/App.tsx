@@ -186,6 +186,9 @@ const CyberHierarchy3DModal = lazy(() => import("./components/modals/CyberHierar
 const CognitiveWarfareModal = lazy(() => import("./components/modals/CognitiveWarfareModal").then(m=>({default:m.CognitiveWarfareModal})));
 const AutonomousOffensiveModal = lazy(() => import("./components/modals/AutonomousOffensiveModal").then(m=>({default:m.AutonomousOffensiveModal})));
 const AttackGraph3DModal = lazy(() => import("./components/modals/AttackGraph3DModal").then(m=>({default:m.AttackGraph3DModal})));
+const ARTPlatformModal   = lazy(() => import("./components/modals/ARTPlatformModal").then(m=>({default:m.ARTPlatformModal})));
+const PentestLabProModal = lazy(() => import("./components/modals/PentestLabProModal").then(m=>({default:m.PentestLabProModal})));
+const SOCCommandModal    = lazy(() => import("./components/modals/SOCCommandModal").then(m=>({default:m.SOCCommandModal})));
 
 // ── MODAL STATE REDUCER ───────────────────────────────────────────────────────
 const MODAL_IDS = [
@@ -214,6 +217,7 @@ const MODAL_IDS = [
   'contextMemory','prefetch','masterHud','anomalyLog','net3D','autoSetup','cyberHub','sidebar','widgetsDock',
   'cisaLive','cveTimeline','cyberHierarchy','cognitiveWarfare','autonomousOffense','attackGraph',
   'cyberIntel',
+  'artpPlatform','pentestLabPro','socCommand',
 ] as const;
 
 type ModalId = typeof MODAL_IDS[number];
@@ -265,6 +269,9 @@ const ARSENAL_MAP: Partial<Record<string, ModalId>> = {
   "globalvulnheatmap": "globalVulnHeatmap",
   "cyberwarfarematrix": "cyberWarfareMatrix",
   "sentientcybersphere": "sentientCyberSphere",
+  "artpplatform": "artpPlatform",
+  "pentestlabpro": "pentestLabPro",
+  "soccommand": "socCommand",
 };
 
 const queryClient = new QueryClient();
@@ -819,6 +826,11 @@ function AppContent() {
 
       {/* Attack Graph 3D Visualizer */}
       <AttackGraph3DModal open={modals.attackGraph} onOpenChange={(v) => mDispatch({type:'SET',id:'attackGraph',value:v})} />
+
+      {/* ── Batch 12: Enterprise ARTP + PentestLab Pro + SOC Command Center ── */}
+      <ARTPlatformModal   open={modals.artpPlatform}  onOpenChange={(v) => mDispatch({type:'SET',id:'artpPlatform',value:v})} />
+      <PentestLabProModal open={modals.pentestLabPro} onOpenChange={(v) => mDispatch({type:'SET',id:'pentestLabPro',value:v})} />
+      <SOCCommandModal    open={modals.socCommand}    onOpenChange={(v) => mDispatch({type:'SET',id:'socCommand',value:v})} />
     </div>
   );
 }
