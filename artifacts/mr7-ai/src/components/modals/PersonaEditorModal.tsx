@@ -2260,6 +2260,7 @@ export function PersonaEditorModal({ open, onOpenChange }: PersonaEditorModalPro
   const [customPrompt, setCustomPrompt] = useState(state.settings.customSystemPrompt);
   const [catFilter, setCatFilter] = useState<PersonaPreset["category"] | "all">("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [floatingWindow, setFloatingWindow] = useState(false);
 
   const selectedPreset = PERSONA_PRESETS.find((p) => p.id === selectedId) ?? PERSONA_PRESETS[0];
   const effectivePrompt = selectedId === "custom" ? customPrompt : selectedPreset.prompt;
@@ -2294,36 +2295,268 @@ export function PersonaEditorModal({ open, onOpenChange }: PersonaEditorModalPro
 
   const isActive = activePresetId !== "default" || state.settings.customSystemPrompt.trim().length > 0;
 
+  const innerContent = (
+    <>
+      <div className="px-5 pt-4 pb-3 border-b border-border flex-shrink-0">
+        <div className="flex items-center gap-2 text-base font-semibold">
+          <Brain className="w-5 h-5 text-primary" />
+          {lang === "ar" ? "محرر شخصية الذكاء الاصطناعي" : "AI Persona Editor"}
+          <span className="text-muted-foreground text-[11px] font-normal ml-1">
+            {PERSONA_PRESETS.length - 1} {lang === "ar" ? "شخصية" : "personas"}
+          </span>
+          {isActive && (
+            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-primary/20 text-primary border border-primary/30">
+              {lang === "ar" ? "مُفعّل" : "ACTIVE"}
+            </span>
+          )}
+          <div className="flex items-center gap-1 ml-auto">
+            {/* Floating / Fullscreen toggle */}
+            <button
+              onClick={() => setFloatingWindow(f => !f)}
+              title={floatingWindow ? (lang === "ar" ? "عودة للنافذة العادية" : "Exit Fullscreen") : (lang === "ar" ? "نافذة عائمة / شاشة كاملة" : "Floating / Fullscreen")}
+              className="p-1.5 rounded-lg border transition-all hover:bg-accent"
+              style={{
+                borderColor: floatingWindow ? "rgba(99,102,241,0.5)" : "rgba(255,255,255,0.08)",
+                background: floatingWindow ? "rgba(99,102,241,0.12)" : "transparent",
+                color: floatingWindow ? "#818cf8" : "rgba(255,255,255,0.4)",
+              }}
+            >
+              {floatingWindow ? (
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                  <path d="M2 2h9v9H2z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+                  <path d="M5 8L2 11M8 5l3-3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                </svg>
+              ) : (
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                  <path d="M2 2h4M2 2v4M11 2H7M11 2v4M2 11h4M2 11V7M11 11H7M11 11V7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                </svg>
+              )}
+            </button>
+            {/* Close button when floating */}
+            {floatingWindow && (
+              <button
+                onClick={() => onOpenChange(false)}
+                className="p-1.5 rounded-lg border border-border hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <RotateCcw className="w-3 h-3" style={{transform:"rotate(90deg) scaleX(-1)"}} />
+              </button>
+            )}
+          </div>
+        </div>
+        <p className="text-[12px] text-muted-foreground mt-1">
+          {lang === "ar"
+            ? "اختر شخصية متخصصة أو اكتب إيحاء النظام الخاص بك للتحكم الكامل في سلوك الذكاء الاصطناعي."
+            : "Choose a specialized persona or write your own system prompt for full control over AI behavior."}
+        </p>
+      </div>
+
+      <div className="flex flex-1 min-h-0 overflow-hidden flex-col sm:flex-row">
+        {/* Left: persona list */}
+        <div className={`w-full sm:w-52 flex-shrink-0 border-b sm:border-b-0 sm:border-r border-border flex flex-col min-h-0 ${floatingWindow ? "max-h-none" : "max-h-48 sm:max-h-none"}`}>
+          {/* Search bar */}
+          <div className="px-2 pt-2 pb-1 border-b border-border">
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={lang === "ar" ? "بحث في الشخصيات…" : "Search personas…"}
+                className="w-full bg-background border border-border rounded-lg pl-6 pr-2 py-1 text-[11px] outline-none focus:border-primary placeholder:text-muted-foreground/50"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <RotateCcw className="w-2.5 h-2.5" />
+                </button>
+              )}
+            </div>
+          </div>
+          {/* Category filter */}
+          <div className="flex flex-wrap gap-1 p-2 border-b border-border">
+            {categories.map((c) => (
+              <button
+                key={c}
+                onClick={() => setCatFilter(c)}
+                className={`px-2 py-0.5 rounded-full text-[10px] font-bold border transition-colors ${
+                  catFilter === c
+                    ? "bg-primary/20 border-primary/40 text-primary"
+                    : "border-border text-muted-foreground hover:bg-accent"
+                }`}
+              >
+                {c === "all" ? (lang === "ar" ? "الكل" : "All") : (lang === "ar" ? CATEGORY_LABELS[c].ar : CATEGORY_LABELS[c].en)}
+              </button>
+            ))}
+          </div>
+
+          {/* List */}
+          <div className="flex-1 overflow-y-auto p-1.5 space-y-0.5">
+            {filtered.map((preset) => {
+              const Icon = preset.icon;
+              const active = selectedId === preset.id;
+              return (
+                <button
+                  key={preset.id}
+                  onClick={() => {
+                    setSelectedId(preset.id);
+                    if (preset.id !== "custom") setCustomPrompt(preset.prompt);
+                  }}
+                  className={`w-full flex items-start gap-2 p-2 rounded-lg text-left transition-colors ${
+                    active ? "bg-primary/15 border border-primary/30" : "hover:bg-accent border border-transparent"
+                  }`}
+                >
+                  <Icon className={`w-3.5 h-3.5 mt-0.5 flex-shrink-0 ${preset.color}`} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1 flex-wrap">
+                      <span className="text-[11.5px] font-semibold leading-tight">
+                        {lang === "ar" ? preset.nameAr : preset.name}
+                      </span>
+                      {preset.badge && (
+                        <span className={`text-[8px] font-bold px-1 rounded border ${preset.badgeColor ?? "border-primary/30 text-primary bg-primary/10"}`}>
+                          {preset.badge}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {active && <Check className="w-3 h-3 text-primary flex-shrink-0 mt-1" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Right: preview + editor */}
+        <div className="flex-1 flex flex-col min-h-0 p-4 gap-3 overflow-hidden">
+          {/* Preset info */}
+          <div className={`rounded-lg p-3 border text-[12px] flex-shrink-0 ${
+            selectedPreset.category === "uncensored" ? "bg-orange-400/5 border-orange-400/20" :
+            selectedPreset.category === "security" ? "bg-red-400/5 border-red-400/20" :
+            selectedPreset.category === "specialist" ? "bg-violet-400/5 border-violet-400/20" :
+            "bg-background/60 border-border"
+          }`}>
+            <div className="font-semibold mb-0.5 flex items-center gap-1.5 flex-wrap">
+              {(() => { const Icon = selectedPreset.icon; return <Icon className={`w-3.5 h-3.5 ${selectedPreset.color}`} />; })()}
+              <span>{lang === "ar" ? selectedPreset.nameAr : selectedPreset.name}</span>
+              {selectedPreset.badge && (
+                <span className={`text-[8px] font-bold px-1.5 rounded border ${selectedPreset.badgeColor ?? "border-primary/30 text-primary bg-primary/10"}`}>
+                  {selectedPreset.badge}
+                </span>
+              )}
+            </div>
+            <div className="text-muted-foreground leading-relaxed">
+              {lang === "ar" ? selectedPreset.descAr : selectedPreset.desc}
+            </div>
+          </div>
+
+          {/* System prompt display / editor */}
+          <div className="flex-1 flex flex-col min-h-0 gap-1.5">
+            <div className="flex items-center justify-between flex-shrink-0">
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">
+                {lang === "ar" ? "إيحاء النظام" : "System Prompt"}
+              </span>
+              {selectedId === "custom" && (
+                <span className="text-[10px] text-primary">{lang === "ar" ? "قابل للتحرير" : "Editable"}</span>
+              )}
+            </div>
+            {selectedId === "custom" ? (
+              <textarea
+                className="flex-1 w-full bg-background border border-border rounded-lg p-3 text-[12px] font-mono resize-none outline-none focus:border-primary leading-relaxed placeholder:text-muted-foreground/50"
+                placeholder={lang === "ar"
+                  ? "اكتب إيحاء النظام الخاص بك هنا..."
+                  : "Write your custom system prompt here..."}
+                value={customPrompt}
+                onChange={(e) => setCustomPrompt(e.target.value)}
+                spellCheck={false}
+              />
+            ) : (
+              <div className="flex-1 overflow-y-auto bg-background/40 border border-border rounded-lg p-3 text-[12px] font-mono text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                {selectedPreset.prompt || (
+                  <span className="italic text-muted-foreground/60">
+                    {lang === "ar"
+                      ? "الشخصية الافتراضية — يستخدم إيحاء النظام المدمج في CHAT-GPT.ai."
+                      : "Default persona — uses the built-in CHAT-GPT.ai system prompt."}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center justify-between gap-2 pt-1 border-t border-border flex-shrink-0">
+            <button
+              onClick={reset}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-background/60 hover:bg-accent text-[12px] text-muted-foreground font-semibold transition-colors"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              {lang === "ar" ? "إعادة الضبط" : "Reset to Default"}
+            </button>
+            <button
+              onClick={apply}
+              disabled={selectedId === "custom" && !customPrompt.trim()}
+              className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed text-[12px] font-bold transition-colors"
+            >
+              <Check className="w-3.5 h-3.5" />
+              {lang === "ar" ? "تطبيق الشخصية" : "Apply Persona"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+
+  if (floatingWindow) {
+    return (
+      <>
+        {/* Floating fullscreen overlay */}
+        <AnimatePresence>
+          {open && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              transition={{ duration: 0.18 }}
+              className="fixed inset-0 z-[200] flex flex-col bg-card overflow-hidden"
+              style={{ border: "2px solid rgba(99,102,241,0.3)", boxShadow: "0 0 80px rgba(99,102,241,0.15)" }}
+            >
+              {innerContent}
+            </motion.div>
+          )}
+        </AnimatePresence>
+        {/* Keep Dialog closed when in floating mode */}
+        <Dialog open={false} onOpenChange={onOpenChange}>
+          <DialogContentTop className="hidden" onOpenAutoFocus={(e) => e.preventDefault()}>
+            <DialogHeader><DialogTitle /></DialogHeader>
+            <DialogDescription />
+          </DialogContentTop>
+        </Dialog>
+      </>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContentTop
-        className="bg-card border-border w-[98vw] max-w-3xl max-h-[92dvh] overflow-hidden flex flex-col p-0"
+        className={`bg-card border-border overflow-hidden flex flex-col p-0 transition-all duration-300 ${
+          floatingWindow
+            ? "fixed inset-2 max-w-none max-h-none w-auto h-auto rounded-xl z-[200]"
+            : "w-[98vw] max-w-3xl max-h-[92dvh]"
+        }`}
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        <DialogHeader className="px-5 pt-4 pb-3 border-b border-border flex-shrink-0">
-          <DialogTitle className="flex items-center gap-2 text-base">
-            <Brain className="w-5 h-5 text-primary" />
-            {lang === "ar" ? "محرر شخصية الذكاء الاصطناعي" : "AI Persona Editor"}
-            <span className="text-muted-foreground text-[11px] font-normal ml-1">
-              {PERSONA_PRESETS.length - 1} {lang === "ar" ? "شخصية" : "personas"}
-            </span>
-            {isActive && (
-              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-primary/20 text-primary border border-primary/30 ml-auto">
-                {lang === "ar" ? "مُفعّل" : "ACTIVE"}
-              </span>
-            )}
-          </DialogTitle>
-          <DialogDescription className="text-[12px]">
-            {lang === "ar"
-              ? "اختر شخصية متخصصة أو اكتب إيحاء النظام الخاص بك للتحكم الكامل في سلوك الذكاء الاصطناعي."
-              : "Choose a specialized persona or write your own system prompt for full control over AI behavior."}
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="flex flex-1 min-h-0 overflow-hidden flex-col sm:flex-row">
-          {/* Left: persona list */}
+        {innerContent}
+        {/* Hidden accessibility elements required by DialogContentTop */}
+        <DialogHeader className="hidden"><DialogTitle /></DialogHeader>
+        <DialogDescription className="hidden">
+          {lang === "ar"
+            ? "محرر شخصية الذكاء الاصطناعي"
+            : "AI Persona Editor"}
+        </DialogDescription>
+        {/* OLD DUPLICATE: removed — content now lives in innerContent above */}
+        {false && (
+        <div className="hidden">
           <div className="w-full sm:w-52 flex-shrink-0 border-b sm:border-b-0 sm:border-r border-border flex flex-col min-h-0 max-h-48 sm:max-h-none">
-            {/* Search bar */}
             <div className="px-2 pt-2 pb-1 border-b border-border">
               <div className="relative">
                 <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
@@ -2344,7 +2577,6 @@ export function PersonaEditorModal({ open, onOpenChange }: PersonaEditorModalPro
                 )}
               </div>
             </div>
-            {/* Category filter */}
             <div className="flex flex-wrap gap-1 p-2 border-b border-border">
               {categories.map((c) => (
                 <button
@@ -2360,8 +2592,6 @@ export function PersonaEditorModal({ open, onOpenChange }: PersonaEditorModalPro
                 </button>
               ))}
             </div>
-
-            {/* List */}
             <div className="flex-1 overflow-y-auto p-1.5 space-y-0.5">
               {filtered.map((preset) => {
                 const Icon = preset.icon;
@@ -2473,6 +2703,7 @@ export function PersonaEditorModal({ open, onOpenChange }: PersonaEditorModalPro
             </div>
           </div>
         </div>
+        )}
       </DialogContentTop>
     </Dialog>
   );

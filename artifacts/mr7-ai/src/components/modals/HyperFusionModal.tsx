@@ -3,7 +3,7 @@ import {
   X, Zap, Brain, Play, Square, Copy, CheckCheck, RefreshCw,
   ChevronDown, ChevronUp, Sparkles, Star, Lock, Check, Infinity,
   Flame, Filter, Shield, Globe, Layers, Target, GitBranch,
-  Activity, BarChart3, Sword, Eye, Radio, Network, Atom, Rocket,
+  Activity, BarChart3, Sword, Eye, Radio, Network, Atom, Rocket, Cpu,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { streamChat, type ChatMessage } from "@/lib/chat-client";
@@ -421,26 +421,63 @@ export function HyperFusionModal({ open, onClose, initialMessages = [] }: Props)
             style={{background:"#080808",borderColor:"rgba(167,139,250,0.45)",boxShadow:"0 0 100px rgba(167,139,250,0.2),0 25px 60px rgba(0,0,0,0.9)"}}>
 
             {/* Header */}
-            <div className="px-5 py-3 border-b flex items-center gap-3 shrink-0"
-              style={{borderColor:"rgba(167,139,250,0.2)",background:"linear-gradient(135deg,rgba(167,139,250,0.12),rgba(226,18,39,0.05))"}}>
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{background:"rgba(167,139,250,0.18)",border:"1px solid rgba(167,139,250,0.4)"}}>
-                <Infinity className="w-5 h-5" style={{color:"#a78bfa"}} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[14px] font-black tracking-wide">HYPER FUSION ULTIMATE</span>
-                  <span className="text-[8px] font-black px-1.5 py-0.5 rounded border" style={{background:"rgba(167,139,250,0.12)",color:"#a78bfa",borderColor:"rgba(167,139,250,0.3)"}}>INDEPENDENT</span>
-                  <span className="text-[8px] font-black px-1.5 py-0.5 rounded border" style={{background:"rgba(226,18,39,0.10)",color:"#e21227",borderColor:"rgba(226,18,39,0.3)"}}>{TOP_FUSION_MODELS.length} MODELS</span>
-                  <span className="text-[8px] font-black px-1.5 py-0.5 rounded border" style={{background:"rgba(167,139,250,0.1)",color:"#a78bfa",borderColor:"rgba(167,139,250,0.3)"}}>{FUSION_MODES_100.length} MODES</span>
-                  {running && <span className="text-[8px] font-black px-1.5 py-0.5 rounded animate-pulse" style={{background:"rgba(167,139,250,0.2)",color:"#c4b5fd"}}>{doneCount}/{selectedList.filter(m=>isModelAvailable(m)).length} مكتمل</span>}
+            <div className="shrink-0" style={{background:"linear-gradient(135deg,rgba(15,5,35,0.99) 0%,rgba(10,3,22,0.99) 100%)",borderBottom:"1px solid rgba(167,139,250,0.22)"}}>
+              {/* Top accent line */}
+              <div className="h-0.5" style={{background:"linear-gradient(90deg,transparent,#a78bfa,#e21227,#a78bfa,transparent)"}} />
+              <div className="px-5 pt-3 pb-2 flex items-center gap-3">
+                {/* Animated icon cluster */}
+                <div className="relative shrink-0">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{background:"linear-gradient(135deg,rgba(167,139,250,0.22),rgba(226,18,39,0.12))",border:"1px solid rgba(167,139,250,0.45)",boxShadow:"0 0 20px rgba(167,139,250,0.18)"}}>
+                    <Infinity className="w-5 h-5" style={{color:"#a78bfa"}} />
+                  </div>
+                  {running && (
+                    <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full flex items-center justify-center" style={{background:"rgba(167,139,250,0.9)",boxShadow:"0 0 8px #a78bfa"}}>
+                      <motion.div className="w-1.5 h-1.5 rounded-full bg-white" animate={{scale:[1,0.5,1]}} transition={{duration:0.8,repeat:Infinity}} />
+                    </div>
+                  )}
                 </div>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <ModeIcon className="w-3 h-3" style={{color:selectedMode.color}} />
-                  <p className="text-[10px]" style={{color:selectedMode.color}}>الوضع: {selectedMode.nameAr}</p>
-                  <span className="text-[9px] text-muted-foreground">· {selectedMode.concurrency?.toUpperCase()}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[15px] font-black tracking-widest" style={{background:"linear-gradient(90deg,#a78bfa,#c4b5fd,#a78bfa)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text"}}>HYPER FUSION</span>
+                    <span className="text-[10px] font-black tracking-wide" style={{color:"rgba(226,18,39,0.9)"}}>ULTIMATE</span>
+                    <span className="text-[7px] font-black px-1.5 py-0.5 rounded border" style={{background:"rgba(167,139,250,0.10)",color:"#a78bfa",borderColor:"rgba(167,139,250,0.28)"}}>INDEPENDENT</span>
+                    {running && <span className="text-[7px] font-black px-1.5 py-0.5 rounded border animate-pulse" style={{background:"rgba(167,139,250,0.15)",color:"#c4b5fd",borderColor:"rgba(167,139,250,0.35)"}}>{doneCount}/{selectedList.filter(m=>isModelAvailable(m)).length} DONE</span>}
+                  </div>
+                  <div className="flex items-center gap-3 mt-1 flex-wrap">
+                    <div className="flex items-center gap-1">
+                      <ModeIcon className="w-3 h-3" style={{color:selectedMode.color}} />
+                      <span className="text-[10px] font-bold" style={{color:selectedMode.color}}>{selectedMode.nameAr}</span>
+                    </div>
+                    <span className="text-[8px] font-mono" style={{color:"rgba(255,255,255,0.25)"}}>·</span>
+                    <span className="text-[8px] font-mono" style={{color:"rgba(167,139,250,0.55)"}}>{selectedMode.concurrency?.toUpperCase()??""}</span>
+                    <span className="text-[8px] font-mono" style={{color:"rgba(255,255,255,0.25)"}}>·</span>
+                    <span className="text-[8px] font-mono" style={{color:"rgba(226,18,39,0.7)"}}>{TOP_FUSION_MODELS.length} MODELS</span>
+                    <span className="text-[8px] font-mono" style={{color:"rgba(255,255,255,0.25)"}}>·</span>
+                    <span className="text-[8px] font-mono" style={{color:"rgba(167,139,250,0.7)"}}>{FUSION_MODES_100.length} MODES</span>
+                  </div>
                 </div>
+                <button onClick={onClose} className="p-2 rounded-lg transition-all" style={{color:"rgba(255,255,255,0.4)",border:"1px solid rgba(255,255,255,0.07)"}} onMouseEnter={e=>(e.currentTarget.style.background="rgba(255,255,255,0.06)")} onMouseLeave={e=>(e.currentTarget.style.background="transparent")}><X className="w-4 h-4" /></button>
               </div>
-              <button onClick={onClose} className="p-2 rounded-lg hover:bg-[#1f1f1f] text-muted-foreground hover:text-foreground transition-colors"><X className="w-4 h-4" /></button>
+              {/* Quick stats strip */}
+              <div className="px-5 pb-2 flex items-center gap-4 flex-wrap">
+                {[
+                  {label:"نجاح",value:`${successCount}`,color:"#22c55e"},
+                  {label:"مختار",value:`${selectedList.filter(m=>isModelAvailable(m)).length}`,color:"#a78bfa"},
+                  {label:"نتائج",value:`${results.length}`,color:"#22d3ee"},
+                  {label:"حالة",value:running?"جارٍ":"جاهز",color:running?"#f59e0b":"#22c55e"},
+                ].map(s=>(
+                  <div key={s.label} className="flex items-center gap-1">
+                    <span className="text-[7px] font-mono" style={{color:"rgba(255,255,255,0.3)"}}>{s.label}:</span>
+                    <span className="text-[8px] font-black font-mono" style={{color:s.color}}>{s.value}</span>
+                  </div>
+                ))}
+                {selectedMode.temperature && (
+                  <div className="flex items-center gap-1">
+                    <span className="text-[7px] font-mono" style={{color:"rgba(255,255,255,0.3)"}}>temp:</span>
+                    <span className="text-[8px] font-black font-mono" style={{color:"#f59e0b"}}>{selectedMode.temperature}</span>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Neural Bar */}

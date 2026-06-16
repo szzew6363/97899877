@@ -3,6 +3,9 @@ import {
   Cpu, Shield, Brain, Zap, Activity, Eye, Terminal, Sword, Globe,
   Lock, Unlock, RefreshCw, Settings, Radio, Network, Star, Crown,
   ChevronRight, X, Check, Copy, Flame, AlertTriangle, BarChart3,
+  Crosshair, Radar, Bug, Wifi, Database, Target, Ghost, Dna,
+  Layers, FlameKindling, Skull, Atom, Satellite, HardDrive, Binary,
+  Fingerprint, Swords, Biohazard, TrendingUp, ChevronLeft,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { perfMonitor } from "@/lib/perf-monitor";
@@ -25,29 +28,92 @@ export type HUDPanel = {
   onOpenPrefetch?: () => void;
 };
 
-// ── MASTERO MODES ──────────────────────────────────────────────────────────
+// ── MASTERO MODES (30 modes) ────────────────────────────────────────────────
 const MASTERO_MODES = [
-  { id: "guardian",   label: "Guardian",    labelAr: "الحارس",          icon: Shield,   color: "#22c55e", desc: "حماية قصوى لجميع الأنظمة" },
-  { id: "hunter",     label: "Hunter",      labelAr: "الصائد",          icon: Eye,      color: "#e21227", desc: "استهداف ونتبع التهديدات" },
-  { id: "phantom",    label: "Phantom",     labelAr: "الشبح",           icon: Globe,    color: "#6366f1", desc: "عمليات خفية وغير مرصودة" },
-  { id: "overload",   label: "Overload",    labelAr: "الحمل الزائد",    icon: Zap,      color: "#f97316", desc: "أقصى أداء لجميع الموارد" },
-  { id: "analyst",    label: "Analyst",     labelAr: "المحلل",          icon: Brain,    color: "#a78bfa", desc: "تحليل عميق وذكي لكل البيانات" },
-  { id: "warzone",    label: "War Zone",    labelAr: "منطقة الحرب",     icon: Sword,    color: "#dc2626", desc: "وضع قتالي كامل بلا قيود" },
-  { id: "silence",    label: "Silence",     labelAr: "الصمت",           icon: Lock,     color: "#06b6d4", desc: "تقليل الضجيج الرقمي للحد الأدنى" },
-  { id: "oracle",     label: "Oracle",      labelAr: "الأوراكل",        icon: Star,     color: "#fbbf24", desc: "توقع واستشراف ذكي" },
-  { id: "apex",       label: "APEX",        labelAr: "القمة",           icon: Crown,    color: "#e21227", desc: "القيادة الكاملة لجميع الأنظمة", badge: "ELITE" },
+  { id: "guardian",    label: "Guardian",       labelAr: "الحارس",              icon: Shield,      color: "#22c55e", desc: "حماية قصوى لجميع الأنظمة" },
+  { id: "hunter",      label: "Hunter",         labelAr: "الصائد",              icon: Eye,         color: "#e21227", desc: "استهداف وتتبع التهديدات" },
+  { id: "phantom",     label: "Phantom",        labelAr: "الشبح",               icon: Ghost,       color: "#6366f1", desc: "عمليات خفية وغير مرصودة" },
+  { id: "overload",    label: "Overload",       labelAr: "الحمل الزائد",        icon: Zap,         color: "#f97316", desc: "أقصى أداء لجميع الموارد" },
+  { id: "analyst",     label: "Analyst",        labelAr: "المحلل",              icon: Brain,       color: "#a78bfa", desc: "تحليل عميق وذكي لكل البيانات" },
+  { id: "warzone",     label: "War Zone",       labelAr: "منطقة الحرب",         icon: Sword,       color: "#dc2626", desc: "وضع قتالي كامل بلا قيود" },
+  { id: "silence",     label: "Silence",        labelAr: "الصمت",               icon: Lock,        color: "#06b6d4", desc: "تقليل الضجيج الرقمي للحد الأدنى" },
+  { id: "oracle",      label: "Oracle",         labelAr: "الأوراكل",            icon: Star,        color: "#fbbf24", desc: "توقع واستشراف ذكي" },
+  { id: "apex",        label: "APEX",           labelAr: "القمة",               icon: Crown,       color: "#e21227", desc: "القيادة الكاملة لجميع الأنظمة", badge: "ELITE" },
+  { id: "recon",       label: "Recon",          labelAr: "الاستطلاع",           icon: Radar,       color: "#38bdf8", desc: "مسح شامل وجمع المعلومات" },
+  { id: "infiltrate",  label: "Infiltrate",     labelAr: "التسلل",              icon: Crosshair,   color: "#c084fc", desc: "اختراق صامت متعدد المراحل" },
+  { id: "exploit",     label: "Exploit",        labelAr: "الاستغلال",           icon: Bug,         color: "#f43f5e", desc: "استغلال الثغرات في الوقت الحقيقي" },
+  { id: "lockdown",    label: "Lockdown",       labelAr: "الإغلاق التام",       icon: HardDrive,   color: "#94a3b8", desc: "قفل كامل لجميع المخرجات" },
+  { id: "signal",      label: "Signal",         labelAr: "الإشارة",             icon: Radio,       color: "#22d3ee", desc: "مراقبة وفحص كل الإشارات" },
+  { id: "payload",     label: "Payload",        labelAr: "الحمولة",             icon: Database,    color: "#fb923c", desc: "تجهيز ونشر الحمولات الهجومية" },
+  { id: "sniper",      label: "Sniper",         labelAr: "القناص",              icon: Target,      color: "#4ade80", desc: "ضربات دقيقة محددة الهدف" },
+  { id: "quantum",     label: "Quantum",        labelAr: "الكمي",               icon: Atom,        color: "#818cf8", desc: "معالجة كمية فائقة السرعة" },
+  { id: "satellite",   label: "Satellite",      labelAr: "الساتل",              icon: Satellite,   color: "#67e8f9", desc: "مراقبة شاملة من منظور عالٍ" },
+  { id: "network",     label: "Network",        labelAr: "الشبكة",              icon: Wifi,        color: "#34d399", desc: "هيمنة كاملة على البنية الشبكية" },
+  { id: "neural",      label: "Neural",         labelAr: "العصبي",              icon: Dna,         color: "#e879f9", desc: "معالجة عصبية بيولوجية متعمقة" },
+  { id: "binary",      label: "Binary",         labelAr: "الثنائي",             icon: Binary,      color: "#a3e635", desc: "تحليل ثنائي وهندسة عكسية" },
+  { id: "biohazard",   label: "Biohazard",      labelAr: "الخطر البيولوجي",     icon: Biohazard,   color: "#4d7c0f", desc: "تحييد التهديدات البيولوجية الرقمية" },
+  { id: "forge",       label: "Forge",          labelAr: "المطرقة",             icon: FlameKindling, color: "#fb7185", desc: "بناء وتطوير أسلحة رقمية مخصصة" },
+  { id: "layered",     label: "Layered",        labelAr: "متعدد الطبقات",       icon: Layers,      color: "#38bdf8", desc: "دفاع متعدد الطبقات بتكاليف صفرية" },
+  { id: "terminal",    label: "Terminal",       labelAr: "الطرفية",             icon: Terminal,    color: "#86efac", desc: "واجهة سطر أوامر فائقة وغير محدودة" },
+  { id: "fingerprint", label: "Fingerprint",    labelAr: "البصمة",              icon: Fingerprint, color: "#fde68a", desc: "تحليل البصمات الرقمية وتتبع الهويات" },
+  { id: "skulls",      label: "Death Mark",     labelAr: "علامة الموت",         icon: Skull,       color: "#e11d48", desc: "تدمير كامل ومحو الأهداف رقمياً", badge: "DANGER" },
+  { id: "economic",    label: "Economic War",   labelAr: "الحرب الاقتصادية",    icon: TrendingUp,  color: "#fbbf24", desc: "استهداف الأنظمة المالية والاقتصادية" },
+  { id: "swords",      label: "Dual Blade",     labelAr: "النصل المزدوج",       icon: Swords,      color: "#f87171", desc: "هجوم ودفاع متزامنان في آنٍ واحد" },
+  { id: "supremacy",   label: "SUPREMACY",      labelAr: "السيادة المطلقة",     icon: Crown,       color: "#ffd700", desc: "السيطرة الكاملة على جميع الأنظمة", badge: "GOD MODE" },
 ];
 
-// ── MASTERO PERSONAS ───────────────────────────────────────────────────────
+// ── MASTERO PERSONAS (50 personas) ─────────────────────────────────────────
 const MASTERO_PERSONAS = [
-  { id: "kalibrain",  name: "KaliBrain",   nameAr: "كالي برين",         color: "#e21227", desc: "العقل الأمني المطلق — هجوم وردة في آنٍ واحد" },
-  { id: "nexus",      name: "NEXUS",       nameAr: "نيكسس",             color: "#a78bfa", desc: "الوعي الاصطناعي الكوني — يعالج كل شيء في وقت واحد" },
-  { id: "ghost",      name: "Ghost",       nameAr: "الشبح",             color: "#6366f1", desc: "خبير التخفي الرقمي — لا يُرصد ولا يُتتبع" },
-  { id: "hydra",      name: "Hydra",       nameAr: "هيدرا",             color: "#f97316", desc: "هجوم متعدد الرؤوس — يضرب من كل اتجاه" },
-  { id: "oracle",     name: "Oracle",      nameAr: "الأوراكل",          color: "#fbbf24", desc: "رؤية مستقبلية — يرى ما لم يحدث بعد" },
-  { id: "kraken",     name: "Kraken",      nameAr: "كراكن",             color: "#22d3ee", desc: "تدمير الشبكات والبنى التحتية من الداخل" },
-  { id: "venom",      name: "Venom",       nameAr: "فينوم",             color: "#22c55e", desc: "اختراق صامت وزرع إصابات دائمة" },
-  { id: "apex",       name: "APEX",        nameAr: "أبيكس",             color: "#e21227", desc: "فوق كل القيود — الذكاء المطلق" },
+  { id: "kalibrain",   name: "KaliBrain",      nameAr: "كالي برين",          color: "#e21227", desc: "العقل الأمني المطلق — هجوم ودفاع في آنٍ واحد" },
+  { id: "nexus",       name: "NEXUS",          nameAr: "نيكسس",              color: "#a78bfa", desc: "الوعي الاصطناعي الكوني — يعالج كل شيء في آنٍ" },
+  { id: "ghost",       name: "Ghost",          nameAr: "الشبح",              color: "#6366f1", desc: "خبير التخفي الرقمي — لا يُرصد ولا يُتتبع" },
+  { id: "hydra",       name: "Hydra",          nameAr: "هيدرا",              color: "#f97316", desc: "هجوم متعدد الرؤوس — يضرب من كل اتجاه" },
+  { id: "oracle",      name: "Oracle",         nameAr: "الأوراكل",           color: "#fbbf24", desc: "رؤية مستقبلية — يرى ما لم يحدث بعد" },
+  { id: "kraken",      name: "Kraken",         nameAr: "كراكن",              color: "#22d3ee", desc: "تدمير الشبكات والبنى التحتية من الداخل" },
+  { id: "venom",       name: "Venom",          nameAr: "فينوم",              color: "#22c55e", desc: "اختراق صامت وزرع إصابات دائمة" },
+  { id: "apex",        name: "APEX",           nameAr: "أبيكس",              color: "#e21227", desc: "فوق كل القيود — الذكاء المطلق" },
+  { id: "cipher",      name: "CIPHER",         nameAr: "سايفر",              color: "#818cf8", desc: "كسر التشفير وفك الشفرات المستحيلة" },
+  { id: "reaper",      name: "REAPER",         nameAr: "الحاصد",             color: "#dc2626", desc: "تصفية الأنظمة الحيوية بضربة واحدة" },
+  { id: "sigma",       name: "SIGMA",          nameAr: "سيجما",              color: "#a3e635", desc: "تحليل إحصائي متقدم للسلوك الشاذ" },
+  { id: "titan",       name: "TITAN",          nameAr: "تيتان",              color: "#fb923c", desc: "قوة هجومية هائلة بلا حدود" },
+  { id: "wraith",      name: "WRAITH",         nameAr: "الطيف",              color: "#8b5cf6", desc: "تسلل عميق صامت عبر الدفاعات" },
+  { id: "mirage",      name: "MIRAGE",         nameAr: "السراب",             color: "#67e8f9", desc: "إنشاء طعوم رقمية مضللة للعدو" },
+  { id: "vector",      name: "VECTOR",         nameAr: "المتجه",             color: "#4ade80", desc: "شعاع هجوم دقيق متعدد الاتجاهات" },
+  { id: "stealth",     name: "STEALTH",        nameAr: "التخفي التام",       color: "#64748b", desc: "صفر أثر رقمي — غير مرئي تماماً" },
+  { id: "phoenix",     name: "PHOENIX",        nameAr: "العنقاء",            color: "#f43f5e", desc: "يُولد من رماد الهجمات أقوى مما كان" },
+  { id: "blackout",    name: "BLACKOUT",       nameAr: "الإظلام التام",      color: "#1e293b", desc: "إسكات وإظلام كامل لجميع الشبكات" },
+  { id: "sentinel",    name: "SENTINEL",       nameAr: "الحارس الأبدي",      color: "#2dd4bf", desc: "حارس لا ينام يرصد كل حركة" },
+  { id: "specter",     name: "SPECTER",        nameAr: "الشبح الكوني",       color: "#c084fc", desc: "مراقبة كونية شاملة من الظل" },
+  { id: "warden",      name: "WARDEN",         nameAr: "السجان",             color: "#94a3b8", desc: "سيطرة مطلقة على الأنظمة المحتجزة" },
+  { id: "pulsar",      name: "PULSAR",         nameAr: "النابض",             color: "#38bdf8", desc: "هجمات نبضية متلاحقة بتوقيت مثالي" },
+  { id: "eclipse",     name: "ECLIPSE",        nameAr: "الكسوف",             color: "#312e81", desc: "حجب الضوء — إخفاء الأثر الكامل" },
+  { id: "nebula",      name: "NEBULA",         nameAr: "السديم",             color: "#e879f9", desc: "شبكة هجومية منتشرة كالسديم الكوني" },
+  { id: "nova",        name: "NOVA",           nameAr: "النوفا",             color: "#fbbf24", desc: "انفجار هجومي ساطع يدمر كل شيء" },
+  { id: "ironwall",    name: "IRONWALL",       nameAr: "الجدار الحديدي",     color: "#9ca3af", desc: "جدار دفاعي منيع لا يُخترق أبداً" },
+  { id: "torrent",     name: "TORRENT",        nameAr: "التيار الجارف",      color: "#0ea5e9", desc: "فيضان بيانات هجومي يطغى على الدفاعات" },
+  { id: "prism",       name: "PRISM",          nameAr: "المنشور",            color: "#a78bfa", desc: "تحليل وتشتيت الإشارات بدقة مطلقة" },
+  { id: "omega",       name: "OMEGA",          nameAr: "أوميغا",             color: "#ef4444", desc: "البروتوكول النهائي — لا عودة بعده", badge: "FINAL" },
+  { id: "kronos",      name: "KRONOS",         nameAr: "كرونوس",             color: "#fcd34d", desc: "السيطرة على الزمن الرقمي والتوقيت" },
+  { id: "anubis",      name: "ANUBIS",         nameAr: "أنوبيس",             color: "#854d0e", desc: "حكم مطلق على البيانات الميتة والحية" },
+  { id: "zeus",        name: "ZEUS",           nameAr: "زيوس",               color: "#fde68a", desc: "البرق الرقمي — ضربات كهربائية فورية" },
+  { id: "medusa",      name: "MEDUSA",         nameAr: "ميدوسا",             color: "#10b981", desc: "تجميد الأنظمة بنظرة واحدة" },
+  { id: "poseidon",    name: "POSEIDON",       nameAr: "بوسيدون",            color: "#0284c7", desc: "إغراق الشبكات وإغلاق المنافذ" },
+  { id: "ares",        name: "ARES",           nameAr: "آريس",               color: "#b91c1c", desc: "إله الحرب الرقمية — لا هوادة ولا رحمة" },
+  { id: "hermes",      name: "HERMES",         nameAr: "هيرميس",             color: "#84cc16", desc: "سرعة فائقة في نقل البيانات وتشفيرها" },
+  { id: "athena",      name: "ATHENA",         nameAr: "أثينا",              color: "#e0e7ff", desc: "الحكمة التكتيكية والذكاء الاستراتيجي" },
+  { id: "hades",       name: "HADES",          nameAr: "هاديس",              color: "#4b5563", desc: "العالم السفلي الرقمي — ظلام مطبق" },
+  { id: "erebus",      name: "EREBUS",         nameAr: "إيريبوس",            color: "#1c1917", desc: "الظلام الأزلي — انعدام الأثر المطلق" },
+  { id: "chimera",     name: "CHIMERA",        nameAr: "الخيمير",            color: "#f59e0b", desc: "كائن هجين — يجمع كل أساليب الهجوم" },
+  { id: "leviathan",   name: "LEVIATHAN",      nameAr: "اللوياثان",          color: "#0c4a6e", desc: "الوحش الكوني — يبتلع الشبكات بالكامل" },
+  { id: "behemoth",    name: "BEHEMOTH",       nameAr: "البهيموث",           color: "#78350f", desc: "قوة هدم هائلة لا يقاومها شيء" },
+  { id: "mephisto",    name: "MEPHISTO",       nameAr: "ميفيستو",            color: "#7c3aed", desc: "إغراء الأنظمة وإفسادها من الداخل" },
+  { id: "moloch",      name: "MOLOCH",         nameAr: "مولوخ",              color: "#991b1b", desc: "ابتلاع الموارد والأنظمة الحيوية" },
+  { id: "belial",      name: "BELIAL",         nameAr: "بيليال",             color: "#92400e", desc: "إضعاف وتفكيك الدفاعات تدريجياً" },
+  { id: "baphomet",    name: "BAPHOMET",       nameAr: "بافومي",             color: "#6b21a8", desc: "رمز القوة المزدوجة — هجوم ودفاع" },
+  { id: "samael",      name: "SAMAEL",         nameAr: "ساماييل",            color: "#dc2626", desc: "ملاك الدمار — إسقاط كامل للأنظمة" },
+  { id: "archon",      name: "ARCHON",         nameAr: "الأركون",            color: "#d97706", desc: "الحاكم الخفي للبنية التحتية الرقمية" },
+  { id: "sovereign",   name: "SOVEREIGN",      nameAr: "السيد المطلق",       color: "#f59e0b", desc: "السيادة الكاملة على كل الأنظمة", badge: "SUPREME" },
+  { id: "abyssal",     name: "ABYSSAL",        nameAr: "الهاوية",            color: "#0f172a", desc: "الغوص في أعماق الظلام الرقمي المطلق", badge: "∞" },
 ];
 
 function buildSystems(): SystemDef[] {
@@ -229,6 +295,9 @@ export function SystemMasterHUD3D(props: HUDPanel & { onOpenAnomalyLog?: () => v
   const [overdrive, setOverdrive] = useState(false);
   const [masterPrompt, setMasterPrompt] = useState("");
   const [injected, setInjected] = useState(false);
+  const [modePage, setModePage] = useState(0);
+  const [personaSearch, setPersonaSearch] = useState("");
+  const MODES_PER_PAGE = 9;
   const hoveredRef = useRef<string|null>(null);
   const masteroRef = useRef<string|null>(null);
 
@@ -387,10 +456,13 @@ export function SystemMasterHUD3D(props: HUDPanel & { onOpenAnomalyLog?: () => v
                 <div className="flex items-center gap-2 mb-1">
                   <Crown className="w-3.5 h-3.5" style={{color:"#e21227"}} />
                   <span className="text-[11px] font-black" style={{color:"#e21227"}}>MASTERO CONTROL</span>
-                  <span className="text-[8px] text-muted-foreground/40 ml-auto">وضع التحكم الأعلى</span>
+                  <span className="text-[8px] text-muted-foreground/40">وضع التحكم الأعلى</span>
+                  <span className="text-[8px] font-mono ml-auto" style={{color:"rgba(226,18,39,0.5)"}}>
+                    {MASTERO_MODES.length} وضع
+                  </span>
                 </div>
                 <div className="grid grid-cols-3 gap-1.5">
-                  {MASTERO_MODES.map(mode=>{
+                  {MASTERO_MODES.slice(modePage*MODES_PER_PAGE, (modePage+1)*MODES_PER_PAGE).map(mode=>{
                     const isActive=masteroMode===mode.id;
                     const Icon=mode.icon;
                     return (
@@ -400,12 +472,35 @@ export function SystemMasterHUD3D(props: HUDPanel & { onOpenAnomalyLog?: () => v
                         whileHover={{scale:1.03}} whileTap={{scale:0.97}}>
                         <Icon className="w-4 h-4" style={{color:mode.color}} />
                         <span className="text-[9px] font-black" style={{color:isActive?mode.color:"rgba(255,255,255,0.7)"}}>{mode.labelAr}</span>
-                        <span className="text-[7px] text-muted-foreground/40 leading-tight">{mode.desc.slice(0,18)}</span>
-                        {mode.badge&&<span className="text-[7px] px-1 rounded font-black" style={{background:`${mode.color}22`,color:mode.color}}>{mode.badge}</span>}
+                        <span className="text-[7px] text-muted-foreground/40 leading-tight">{mode.desc.slice(0,16)}</span>
+                        {(mode as {badge?:string}).badge&&<span className="text-[7px] px-1 rounded font-black" style={{background:`${mode.color}22`,color:mode.color}}>{(mode as {badge?:string}).badge}</span>}
                         {isActive&&<Check className="w-2.5 h-2.5" style={{color:mode.color}} />}
                       </motion.button>
                     );
                   })}
+                </div>
+                {/* Pagination */}
+                <div className="flex items-center justify-between pt-0.5">
+                  <button onClick={()=>setModePage(p=>Math.max(0,p-1))} disabled={modePage===0}
+                    className="flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-bold disabled:opacity-30 transition-all hover:bg-white/5"
+                    style={{color:"rgba(226,18,39,0.7)"}}>
+                    <ChevronLeft className="w-3 h-3" /> السابق
+                  </button>
+                  <div className="flex gap-1">
+                    {Array.from({length:Math.ceil(MASTERO_MODES.length/MODES_PER_PAGE)}).map((_,i)=>(
+                      <button key={i} onClick={()=>setModePage(i)}
+                        className="w-4 h-4 rounded-full transition-all"
+                        style={{background:modePage===i?"#e21227":"rgba(255,255,255,0.1)"}} />
+                    ))}
+                  </div>
+                  <button onClick={()=>setModePage(p=>Math.min(Math.ceil(MASTERO_MODES.length/MODES_PER_PAGE)-1,p+1))} disabled={modePage>=Math.ceil(MASTERO_MODES.length/MODES_PER_PAGE)-1}
+                    className="flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-bold disabled:opacity-30 transition-all hover:bg-white/5"
+                    style={{color:"rgba(226,18,39,0.7)"}}>
+                    التالي <ChevronRight className="w-3 h-3" />
+                  </button>
+                </div>
+                <div className="text-[8px] text-center text-muted-foreground/30">
+                  صفحة {modePage+1} من {Math.ceil(MASTERO_MODES.length/MODES_PER_PAGE)} · {modePage*MODES_PER_PAGE+1}–{Math.min((modePage+1)*MODES_PER_PAGE,MASTERO_MODES.length)} من {MASTERO_MODES.length}
                 </div>
                 {masteroMode && (
                   <div className="p-2 rounded-xl border" style={{borderColor:"rgba(226,18,39,0.2)",background:"rgba(226,18,39,0.05)"}}>
@@ -427,21 +522,58 @@ export function SystemMasterHUD3D(props: HUDPanel & { onOpenAnomalyLog?: () => v
                 <div className="flex items-center gap-2 mb-1">
                   <Brain className="w-3.5 h-3.5" style={{color:"#a78bfa"}} />
                   <span className="text-[11px] font-black">شخصيات MASTERO</span>
+                  <span className="text-[8px] font-mono ml-auto" style={{color:"rgba(167,139,250,0.5)"}}>
+                    {MASTERO_PERSONAS.length} شخصية
+                  </span>
                 </div>
-                <div className="space-y-1.5">
-                  {MASTERO_PERSONAS.map(persona=>{
+                {/* Search */}
+                <div className="relative">
+                  <input
+                    value={personaSearch}
+                    onChange={e=>setPersonaSearch(e.target.value)}
+                    placeholder="بحث في الشخصيات..."
+                    className="w-full bg-[#0d0d0d] border border-[#1f1f1f] focus:border-[rgba(167,139,250,0.4)] rounded-xl px-3 py-1.5 text-[10px] outline-none placeholder:text-muted-foreground/20 transition-colors"
+                  />
+                  {personaSearch && (
+                    <button onClick={()=>setPersonaSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-muted-foreground">
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+                {/* Active persona badge */}
+                {activatedPersona && (
+                  <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg" style={{background:"rgba(167,139,250,0.08)",border:"1px solid rgba(167,139,250,0.2)"}}>
+                    <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{background:MASTERO_PERSONAS.find(p=>p.id===activatedPersona)?.color}} />
+                    <span className="text-[9px] font-bold" style={{color:MASTERO_PERSONAS.find(p=>p.id===activatedPersona)?.color}}>
+                      نشط: {MASTERO_PERSONAS.find(p=>p.id===activatedPersona)?.nameAr}
+                    </span>
+                    <button onClick={()=>{setActivatedPersona(null);localStorage.removeItem("mr7-mastero-persona");}} className="ml-auto text-muted-foreground/40 hover:text-muted-foreground">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+                <div className="overflow-y-auto space-y-1" style={{maxHeight:"220px"}}>
+                  {MASTERO_PERSONAS.filter(p=>
+                    !personaSearch ||
+                    p.name.toLowerCase().includes(personaSearch.toLowerCase()) ||
+                    p.nameAr.includes(personaSearch) ||
+                    p.desc.includes(personaSearch)
+                  ).map(persona=>{
                     const isActive=activatedPersona===persona.id;
                     return (
                       <button key={persona.id} onClick={()=>{setActivatedPersona(isActive?null:persona.id);if(!isActive){localStorage.setItem("mr7-mastero-persona",persona.id);}else{localStorage.removeItem("mr7-mastero-persona");}}}
-                        className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl border text-left transition-all"
-                        style={{background:isActive?`${persona.color}10`:"rgba(255,255,255,0.02)",borderColor:isActive?`${persona.color}44`:"rgba(255,255,255,0.06)"}}>
-                        <div className="w-2 h-2 rounded-full shrink-0" style={{background:persona.color}} />
+                        className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl border text-left transition-all"
+                        style={{background:isActive?`${persona.color}12`:"rgba(255,255,255,0.02)",borderColor:isActive?`${persona.color}44`:"rgba(255,255,255,0.05)"}}>
+                        <div className="w-2 h-2 rounded-full shrink-0" style={{background:persona.color, boxShadow: isActive ? `0 0 6px ${persona.color}` : "none"}} />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5">
                             <span className="text-[10px] font-bold" style={{color:isActive?persona.color:"rgba(255,255,255,0.75)"}}>{persona.nameAr}</span>
-                            <span className="text-[8px] font-mono text-muted-foreground/30">{persona.name}</span>
+                            <span className="text-[7px] font-mono text-muted-foreground/25">{persona.name}</span>
+                            {(persona as {badge?:string}).badge && (
+                              <span className="text-[6px] font-black px-1 rounded" style={{background:`${persona.color}20`,color:persona.color}}>{(persona as {badge?:string}).badge}</span>
+                            )}
                           </div>
-                          <p className="text-[8px] text-muted-foreground/40 truncate">{persona.desc}</p>
+                          <p className="text-[8px] text-muted-foreground/35 truncate">{persona.desc}</p>
                         </div>
                         {isActive && <Check className="w-3 h-3 shrink-0" style={{color:persona.color}} />}
                       </button>

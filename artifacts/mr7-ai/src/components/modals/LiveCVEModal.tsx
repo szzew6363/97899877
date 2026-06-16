@@ -205,11 +205,14 @@ function PacketNetworkViz({ active, threatLevel }: { active: boolean; threatLeve
 }
 
 // ── Attack Globe 3D ─────────────────────────────────────────────────────────
+type AttackPacket = { srcLat: number; srcLon: number; progress: number; speed: number; color: string; size: number; };
 function AttackGlobe3D({ attacks }: { attacks: [number, number][] }) {
   const cvRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef(0);
   const tRef = useRef(0);
   const beamsRef = useRef<{lat:number;lon:number;age:number;maxAge:number;color:string}[]>([]);
+  const packetsRef = useRef<AttackPacket[]>([]);
+  const packetTimerRef = useRef(0);
 
   useEffect(() => {
     const cv = cvRef.current; if (!cv) return;
@@ -235,8 +238,30 @@ function AttackGlobe3D({ attacks }: { attacks: [number, number][] }) {
       [51,-0.1],[53,-2],[56,-3],[57,-4],[54,-6],[50,-5],[48,2],[47,6],[50,8],[52,5],
     ];
 
+    const PACKET_COLORS = ["#e21227","#f97316","#ff6b35","#dc2626","#ef4444","#fb923c"];
+
     function draw() {
       tRef.current += 0.01; const t = tRef.current;
+
+      // Spawn new attack packets periodically
+      packetTimerRef.current++;
+      if (attacks.length > 0 && packetTimerRef.current % 18 === 0) {
+        const src = attacks[Math.floor(Math.random() * attacks.length)];
+        packetsRef.current.push({
+          srcLat: src[0], srcLon: src[1],
+          progress: 0,
+          speed: 0.008 + Math.random() * 0.012,
+          color: PACKET_COLORS[Math.floor(Math.random() * PACKET_COLORS.length)],
+          size: 1.5 + Math.random() * 2,
+        });
+        // Keep max 40 packets
+        if (packetsRef.current.length > 40) packetsRef.current.shift();
+      }
+      // Advance packet progress; remove completed ones
+      packetsRef.current = packetsRef.current.filter(p => {
+        p.progress += p.speed;
+        return p.progress < 1.0;
+      });
       ctx.clearRect(0, 0, W, H);
       const rotY = t*15;
 
@@ -307,6 +332,48 @@ function AttackGlobe3D({ attacks }: { attacks: [number, number][] }) {
           ctx.fillStyle = `rgba(226,18,39,${0.6+pulse*0.4})`; ctx.fill();
           ctx.beginPath(); ctx.arc(src.x, src.y, 6+pulse*3, 0, Math.PI*2);
           ctx.strokeStyle = `rgba(226,18,39,${0.2+pulse*0.3})`; ctx.lineWidth=1; ctx.stroke();
+        }
+      });
+
+      // ── Animated 3D Attack Packets ──────────────────────────────────────
+      const rotYNow = t * 15;
+      packetsRef.current.forEach(pkt => {
+        const { srcLat, srcLon, progress, color, size } = pkt;
+        const src3d = latLonToXY(srcLat, srcLon, rotYNow);
+        if (src3d.z < -0.3) return; // behind globe
+
+        // Bezier from src to center with an arc lift
+        const midX = (src3d.x + cx) / 2;
+        const midY = (src3d.y + cy) / 2 - R * 0.35 * (1 - Math.abs(src3d.z));
+        const px = (1-progress)*(1-progress)*src3d.x + 2*(1-progress)*progress*midX + progress*progress*cx;
+        const py = (1-progress)*(1-progress)*src3d.y + 2*(1-progress)*progress*midY + progress*progress*cy;
+
+        // Depth fade based on src z
+        const depthAlpha = 0.4 + src3d.z * 0.6;
+        const brightness = 0.6 + progress * 0.4;
+
+        // Glow halo
+        const grd = ctx.createRadialGradient(px, py, 0, px, py, size * 4);
+        const hexToRgb = (hex: string) => {
+          const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+          return `${r},${g},${b}`;
+        };
+        const rgb = hexToRgb(color);
+        grd.addColorStop(0, `rgba(${rgb},${depthAlpha * brightness * 0.9})`);
+        grd.addColorStop(0.5, `rgba(${rgb},${depthAlpha * brightness * 0.3})`);
+        grd.addColorStop(1, `rgba(${rgb},0)`);
+        ctx.beginPath(); ctx.arc(px, py, size * 4, 0, Math.PI * 2);
+        ctx.fillStyle = grd; ctx.fill();
+
+        // Core dot
+        ctx.beginPath(); ctx.arc(px, py, size * 0.7, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,255,255,${depthAlpha})`; ctx.fill();
+
+        // Impact flash at center when arriving
+        if (progress > 0.9) {
+          const flash = (progress - 0.9) / 0.1;
+          ctx.beginPath(); ctx.arc(cx, cy, flash * 8, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(${rgb},${flash * 0.8})`; ctx.lineWidth = 1.5; ctx.stroke();
         }
       });
 

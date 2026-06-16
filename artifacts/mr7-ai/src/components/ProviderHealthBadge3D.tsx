@@ -33,14 +33,16 @@ const MONITOR_PROVIDERS = [
 
 // ── ULTRA 3D QUANTUM PLANET — RAINBOW SPECTRUM ────────────────────────────────
 function QuantumPlanet3D({ health, latency, open, hover }: { health: Health; latency: number | null; open: boolean; hover: boolean }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const rafRef    = useRef(0);
-  const tRef      = useRef(0);
-  const healthRef = useRef<Health>(health);
-  const latRef    = useRef<number | null>(latency);
-  const openRef   = useRef(open);
-  const hoverRef  = useRef(hover);
-  const burstRef  = useRef(0);
+  const canvasRef   = useRef<HTMLCanvasElement>(null);
+  const rafRef      = useRef(0);
+  const tRef        = useRef(0);
+  const healthRef   = useRef<Health>(health);
+  const latRef      = useRef<number | null>(latency);
+  const openRef     = useRef(open);
+  const hoverRef    = useRef(hover);
+  const burstRef    = useRef(0);
+  const dragRef     = useRef<{ dragging: boolean; lastX: number; lastY: number }>({ dragging: false, lastX: 0, lastY: 0 });
+  const manualRotRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   useEffect(() => { healthRef.current = health;  }, [health]);
   useEffect(() => { latRef.current    = latency; }, [latency]);
   useEffect(() => { openRef.current   = open;    }, [open]);
@@ -171,8 +173,8 @@ function QuantumPlanet3D({ health, latency, open, hover }: { health: Health; lat
       const bg = Math.round((hg + hueRgb[1]) / 2);
       const bb = Math.round((hb + hueRgb[2]) / 2);
 
-      const gRX = Math.sin(t * 0.22) * 0.32 + 0.14;
-      const gRY = t * (isH ? 0.33 : 0.18);
+      const gRX = Math.sin(t * 0.22) * 0.32 + 0.14 + manualRotRef.current.x;
+      const gRY = t * (isH ? 0.33 : 0.18) + manualRotRef.current.y;
       const gRZ = Math.sin(t * 0.30) * 0.18;
 
       // ── Deep-field stars ────────────────────────────────────────────────
@@ -570,9 +572,26 @@ function QuantumPlanet3D({ health, latency, open, hover }: { health: Health; lat
   return (
     <canvas ref={canvasRef}
       width={36} height={36}
-      style={{ width: 36, height: 36, display: "block", flexShrink: 0, imageRendering: "auto", cursor: "crosshair" }}
+      style={{ width: 36, height: 36, display: "block", flexShrink: 0, imageRendering: "auto", cursor: dragRef.current.dragging ? "grabbing" : "grab" }}
       onMouseEnter={() => { hoverRef.current = true; burstRef.current = tRef.current; }}
-      onMouseLeave={() => { hoverRef.current = false; }}
+      onMouseLeave={() => {
+        hoverRef.current = false;
+        if (dragRef.current.dragging) dragRef.current.dragging = false;
+      }}
+      onMouseDown={(e) => {
+        dragRef.current = { dragging: true, lastX: e.clientX, lastY: e.clientY };
+        e.preventDefault();
+      }}
+      onMouseMove={(e) => {
+        if (!dragRef.current.dragging) return;
+        const dx = e.clientX - dragRef.current.lastX;
+        const dy = e.clientY - dragRef.current.lastY;
+        manualRotRef.current.y += dx * 0.025;
+        manualRotRef.current.x += dy * 0.025;
+        dragRef.current.lastX = e.clientX;
+        dragRef.current.lastY = e.clientY;
+      }}
+      onMouseUp={() => { dragRef.current.dragging = false; }}
     />
   );
 }
