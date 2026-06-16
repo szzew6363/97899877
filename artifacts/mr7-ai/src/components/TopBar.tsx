@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { AIQuickSetupButton } from "./AIQuickSetupButton";
 import { ProviderHealthBadge3D } from "./ProviderHealthBadge3D";
 import { PersonaSwitcher3D } from "./PersonaSwitcher3D";
+import { QuantumPersona3D } from "./QuantumPersona3D";
 import { NotificationsPanel } from "./NotificationsPanel";
 import { ThemePopover } from "./ThemePopover";
 import { TokensPopover } from "./TokensPopover";
@@ -710,10 +711,11 @@ export function TopBar({
         <ModelSelector3D onOpenPricing={onOpenPricing} />
       </div>
 
-      {/* ── CENTER: health + auto AI (between model and toolbar) ─────── */}
+      {/* ── CENTER: health + auto AI + persona (between model and toolbar) ─ */}
       <div className="flex items-center gap-1.5 flex-shrink-0 relative z-10 mx-1.5" style={{ minWidth: 0, overflow: "visible" }}>
         <ProviderHealthBadge3D />
         <AIQuickSetupButton />
+        <QuantumPersona3D onOpenPersonaManager={onOpenPersonaManager} />
       </div>
 
       {/* ── RIGHT: scrollable toolbar ─────────────────────────────────── */}

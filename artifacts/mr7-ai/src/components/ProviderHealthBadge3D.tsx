@@ -550,6 +550,51 @@ function QuantumPlanet3D({ health, latency, open, hover }: { health: Health; lat
         ctx.fillStyle = "rgba(255,255,255,0.97)"; ctx.fill();
       });
 
+      // ── Lens flare effect (hover only) ──────────────────────────────────
+      if (isH) {
+        const lfX = cx - R * 0.40, lfY = cy - R * 0.42;
+        const lfAge = t % 5.0;
+        const lfAlpha = 0.3 + Math.sin(t * 2.5) * 0.15;
+        // Main lens flare core
+        const lfc = ctx.createRadialGradient(lfX, lfY, 0, lfX, lfY, 8);
+        lfc.addColorStop(0, `rgba(255,255,255,${lfAlpha * 1.8})`);
+        lfc.addColorStop(0.3, `rgba(${hsl(hue)},${lfAlpha * 0.8})`);
+        lfc.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.beginPath(); ctx.arc(lfX, lfY, 8, 0, Math.PI * 2);
+        ctx.fillStyle = lfc; ctx.fill();
+        // Star rays
+        for (let ray = 0; ray < 8; ray++) {
+          const ra = (ray / 8) * Math.PI * 2 + t * 0.18;
+          const rLen = 5 + (ray % 2 === 0 ? 8 : 4) + Math.sin(t * 2 + ray) * 2;
+          const rAlpha = lfAlpha * (ray % 2 === 0 ? 0.55 : 0.30);
+          ctx.beginPath();
+          ctx.moveTo(lfX, lfY);
+          ctx.lineTo(lfX + Math.cos(ra) * rLen, lfY + Math.sin(ra) * rLen);
+          ctx.strokeStyle = `rgba(${hsl(hue + ray * 45)},${rAlpha})`;
+          ctx.lineWidth = 0.7 - ray * 0.04; ctx.stroke();
+        }
+        // Secondary lens artifacts along flare axis
+        const lfAxis = Math.atan2(cy - lfY, cx - lfX);
+        [0.35, 0.55, 0.80, 1.10, 1.40].forEach((dist, ai) => {
+          const ax = cx + Math.cos(lfAxis) * (dist * 12 + Math.sin(t + ai) * 1.5);
+          const ay = cy + Math.sin(lfAxis) * (dist * 12 + Math.cos(t + ai) * 1.5);
+          const ar = (4 - ai * 0.6) * (0.5 + Math.sin(t * 1.5 + ai) * 0.25);
+          const ac = ctx.createRadialGradient(ax, ay, 0, ax, ay, ar * 2);
+          ac.addColorStop(0, `rgba(${hsl(hue + ai * 60)},${lfAlpha * (0.35 - ai * 0.04)})`);
+          ac.addColorStop(1, "rgba(0,0,0,0)");
+          ctx.beginPath(); ctx.arc(ax, ay, ar * 2, 0, Math.PI * 2);
+          ctx.fillStyle = ac; ctx.fill();
+        });
+        // Void (occlusion) at center
+        const lfVoid = ctx.createRadialGradient(lfX - 0.5, lfY - 0.5, 0, lfX, lfY, 2.5);
+        lfVoid.addColorStop(0, "rgba(255,255,255,0.95)");
+        lfVoid.addColorStop(0.5, `rgba(${hsl(hue, 0.8, 0.95)},0.6)`);
+        lfVoid.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.beginPath(); ctx.arc(lfX, lfY, 2.5, 0, Math.PI * 2);
+        ctx.fillStyle = lfVoid; ctx.fill();
+        void lfAge;
+      }
+
       // ── Health blip (top-right, with pulse ring) ────────────────────────
       const blinkA =
         h === "healthy"  ? 0.85 + Math.sin(t * 2.0)  * 0.15 :

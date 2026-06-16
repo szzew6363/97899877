@@ -243,114 +243,301 @@ function draw(canvas: HTMLCanvasElement, t: number, systems: SystemDef[], hovere
   const cx = cw/2, cy = ch/2, orbR = 95;
   const health = getOverallHealth(systems);
   const healthCol = health>0.75?"#22c55e":health>0.45?"#f59e0b":"#e21227";
+  const hRGB = health>0.75?"34,197,94":health>0.45?"245,158,11":"226,18,39";
 
-  // Background
-  ctx.fillStyle = "rgba(4,6,14,0.96)";
-  ctx.beginPath(); ctx.arc(cx,cy,cx-1,0,Math.PI*2); ctx.fill();
-  ctx.strokeStyle = "rgba(255,255,255,0.08)"; ctx.lineWidth=1;
-  ctx.beginPath(); ctx.arc(cx,cy,cx-1,0,Math.PI*2); ctx.stroke();
+  // ── Deep space starfield background ────────────────────────────────────────
+  const bgGrad = ctx.createRadialGradient(cx,cy,0,cx,cy,cx);
+  bgGrad.addColorStop(0,"rgba(8,12,28,0.99)");
+  bgGrad.addColorStop(0.55,"rgba(4,6,16,0.98)");
+  bgGrad.addColorStop(1,"rgba(2,3,8,0.99)");
+  ctx.save(); ctx.beginPath(); ctx.arc(cx,cy,cx-1,0,Math.PI*2); ctx.clip();
+  ctx.fillStyle=bgGrad; ctx.fillRect(0,0,cw,ch);
 
-  // Grid rings
-  for (let r=20; r<=orbR; r+=20) {
-    ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2);
-    ctx.strokeStyle = "rgba(255,255,255,0.03)"; ctx.lineWidth=0.5; ctx.stroke();
+  // Stars (seeded positions using golden ratio spiral)
+  const golden = 2.399963;
+  for (let si=0; si<80; si++) {
+    const sr = Math.sqrt(si/80)*cx*0.92;
+    const sa = si*golden;
+    const sx = cx+Math.cos(sa)*sr, sy = cy+Math.sin(sa)*sr;
+    const ss = 0.3+((si*1374)%100)*0.012;
+    const sa2 = 0.2+Math.sin(t*0.5+si)*0.18;
+    ctx.beginPath(); ctx.arc(sx,sy,ss,0,Math.PI*2);
+    ctx.fillStyle=`rgba(255,255,255,${sa2})`; ctx.fill();
   }
 
-  // MASTERO mode glow
+  // Nebula cloud layers (2 passes)
+  for (let ni=0; ni<2; ni++) {
+    const ncx = cx+Math.cos(t*0.04+ni*1.57)*18, ncy = cy+Math.sin(t*0.05+ni*1.57)*14;
+    const nGrad = ctx.createRadialGradient(ncx,ncy,0,ncx,ncy,cx*0.55);
+    nGrad.addColorStop(0,`rgba(${ni===0?"60,80,160":"80,30,120"},0.05)`);
+    nGrad.addColorStop(0.5,`rgba(${ni===0?"30,50,120":"50,20,90"},0.02)`);
+    nGrad.addColorStop(1,"rgba(0,0,0,0)");
+    ctx.beginPath(); ctx.arc(ncx,ncy,cx*0.55,0,Math.PI*2);
+    ctx.fillStyle=nGrad; ctx.fill();
+  }
+  ctx.restore();
+
+  // Outer boundary ring (3 concentric halos)
+  for (let hi=0; hi<3; hi++) {
+    ctx.beginPath(); ctx.arc(cx,cy,cx-1-hi*2,0,Math.PI*2);
+    ctx.strokeStyle=`rgba(${hRGB},${0.08-hi*0.025})`; ctx.lineWidth=1-hi*0.3; ctx.stroke();
+  }
+
+  // ── 3D perspective hex-grid overlay ────────────────────────────────────────
+  {
+    const hexR = 12, hexA = 0.022;
+    ctx.strokeStyle=`rgba(${hRGB},${hexA})`; ctx.lineWidth=0.3;
+    for (let hxi=-7; hxi<=7; hxi++) {
+      for (let hyi=-7; hyi<=7; hyi++) {
+        const hx = cx+hxi*hexR*1.732, hy = cy+hyi*hexR*2+(hxi%2)*hexR;
+        const dist = Math.sqrt((hx-cx)**2+(hy-cy)**2);
+        if (dist>cx-4) continue;
+        const persp = 0.6+0.4*(1-dist/cx);
+        ctx.globalAlpha=hexA*persp;
+        ctx.beginPath();
+        for (let hk=0; hk<6; hk++) {
+          const hka=(hk/6)*Math.PI*2+t*0.008;
+          const hpx=hx+Math.cos(hka)*hexR*0.48, hpy=hy+Math.sin(hka)*hexR*0.48;
+          hk===0?ctx.moveTo(hpx,hpy):ctx.lineTo(hpx,hpy);
+        }
+        ctx.closePath(); ctx.stroke();
+      }
+    }
+    ctx.globalAlpha=1;
+  }
+
+  // ── Concentric grid rings (depth-faded) ────────────────────────────────────
+  for (let r=18; r<=orbR+10; r+=18) {
+    const fade = 1-r/(orbR+10);
+    ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2);
+    ctx.strokeStyle=`rgba(255,255,255,${0.025+fade*0.025})`; ctx.lineWidth=0.4+fade*0.3; ctx.stroke();
+  }
+
+  // ── Radial spokes (12 spokes, perspective-vanishing) ───────────────────────
+  for (let sp=0; sp<12; sp++) {
+    const sa = (sp/12)*Math.PI*2+t*0.004;
+    ctx.beginPath(); ctx.moveTo(cx,cy);
+    ctx.lineTo(cx+Math.cos(sa)*(cx-2), cy+Math.sin(sa)*(cx-2));
+    ctx.strokeStyle=`rgba(255,255,255,0.018)`; ctx.lineWidth=0.4; ctx.stroke();
+  }
+
+  // ── MASTERO mode volumetric glow ───────────────────────────────────────────
   if (masteroMode) {
     const mode = MASTERO_MODES.find(m=>m.id===masteroMode);
     if (mode) {
       const mCol = mode.color;
-      const mg = ctx.createRadialGradient(cx,cy,0,cx,cy,orbR*1.2);
-      mg.addColorStop(0,`${mCol}00`); mg.addColorStop(0.7,`${mCol}08`); mg.addColorStop(1,`${mCol}00`);
-      ctx.beginPath(); ctx.arc(cx,cy,orbR*1.2,0,Math.PI*2); ctx.fillStyle=mg; ctx.fill();
+      // Parse hex to r,g,b
+      const mr=parseInt(mCol.slice(1,3),16), mg=parseInt(mCol.slice(3,5),16), mb=parseInt(mCol.slice(5,7),16);
+      // Outer volumetric
+      const mgGrad = ctx.createRadialGradient(cx,cy,0,cx,cy,orbR*1.45);
+      mgGrad.addColorStop(0,`rgba(${mr},${mg},${mb},0)`);
+      mgGrad.addColorStop(0.5,`rgba(${mr},${mg},${mb},0.06)`);
+      mgGrad.addColorStop(0.85,`rgba(${mr},${mg},${mb},0.10)`);
+      mgGrad.addColorStop(1,`rgba(${mr},${mg},${mb},0)`);
+      ctx.beginPath(); ctx.arc(cx,cy,orbR*1.45,0,Math.PI*2); ctx.fillStyle=mgGrad; ctx.fill();
+      // Animated scan ring
+      const scanA = (t*0.8)%(Math.PI*2)-Math.PI;
+      ctx.save();
+      ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,orbR*1.3,scanA,scanA+0.55); ctx.closePath();
+      const scanGrad = ctx.createRadialGradient(cx,cy,0,cx,cy,orbR*1.3);
+      scanGrad.addColorStop(0,`rgba(${mr},${mg},${mb},0.18)`);
+      scanGrad.addColorStop(0.6,`rgba(${mr},${mg},${mb},0.08)`);
+      scanGrad.addColorStop(1,`rgba(${mr},${mg},${mb},0)`);
+      ctx.fillStyle=scanGrad; ctx.fill();
+      ctx.restore();
     }
   }
 
-  // Radar sweep
+  // ── Radar sweep (wider trail, 3D-depth tinted) ─────────────────────────────
   const sweepAngle = -Math.PI/2+(t*1.2)%(Math.PI*2);
-  for (let i=0; i<40; i++) {
-    const a = sweepAngle-(i/40)*Math.PI*0.5;
-    const al = (1-i/40)*0.15;
-    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,orbR+4,a,a+0.08); ctx.closePath();
-    ctx.fillStyle = `rgba(${health>0.75?"34,197,94":health>0.45?"245,158,11":"226,18,39"},${al})`; ctx.fill();
+  for (let i=0; i<60; i++) {
+    const a = sweepAngle-(i/60)*Math.PI*0.65;
+    const al = (1-i/60)*0.18*(1-i/60);
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,orbR+8,a,a+0.06); ctx.closePath();
+    ctx.fillStyle=`rgba(${hRGB},${al})`; ctx.fill();
+  }
+  // Sweep tip bright spike
+  ctx.beginPath(); ctx.moveTo(cx,cy);
+  ctx.arc(cx,cy,orbR+8,sweepAngle-0.015,sweepAngle+0.015); ctx.closePath();
+  ctx.fillStyle=`rgba(${hRGB},0.75)`; ctx.fill();
+
+  // ── Health arc ring (outer, double-layer) ──────────────────────────────────
+  // Shadow glow ring
+  ctx.beginPath(); ctx.arc(cx,cy,orbR+6,-Math.PI/2,-Math.PI/2+health*Math.PI*2);
+  ctx.strokeStyle=healthCol; ctx.lineWidth=6;
+  ctx.shadowColor=healthCol; ctx.shadowBlur=18+pulse*10; ctx.stroke(); ctx.shadowBlur=0;
+  // Crisp ring on top
+  ctx.beginPath(); ctx.arc(cx,cy,orbR+6,-Math.PI/2,-Math.PI/2+health*Math.PI*2);
+  ctx.strokeStyle=healthCol; ctx.lineWidth=2.5; ctx.stroke();
+  // Track ring
+  ctx.beginPath(); ctx.arc(cx,cy,orbR+6,0,Math.PI*2);
+  ctx.strokeStyle=`rgba(${hRGB},0.08)`; ctx.lineWidth=1.5; ctx.stroke();
+
+  // ── Neural web — all-to-all connections between nodes ──────────────────────
+  for (let i=0; i<systems.length; i++) {
+    for (let j=i+1; j<systems.length; j++) {
+      const si=systems[i], sj=systems[j];
+      const nx1=cx+Math.cos(si.angle)*orbR, ny1=cy+Math.sin(si.angle)*orbR;
+      const nx2=cx+Math.cos(sj.angle)*orbR, ny2=cy+Math.sin(sj.angle)*orbR;
+      const combined=(si.getValue()+sj.getValue())*0.5;
+      const webA = 0.03+combined*0.04;
+      // Curved arc
+      const mcx=(nx1+nx2)/2+Math.sin(t*0.06+i+j)*5;
+      const mcy=(ny1+ny2)/2+Math.cos(t*0.07+i*j)*5;
+      ctx.beginPath(); ctx.moveTo(nx1,ny1); ctx.quadraticCurveTo(mcx,mcy,nx2,ny2);
+      ctx.strokeStyle=`rgba(${hRGB},${webA})`; ctx.lineWidth=0.5; ctx.stroke();
+      // Signal pulse along arc
+      const pp=(t*0.4+(i*3+j)*0.7)%1;
+      const pqx=nx1*(1-pp)**2+mcx*2*pp*(1-pp)+nx2*pp**2;
+      const pqy=ny1*(1-pp)**2+mcy*2*pp*(1-pp)+ny2*pp**2;
+      ctx.beginPath(); ctx.arc(pqx,pqy,1.5,0,Math.PI*2);
+      ctx.fillStyle=`rgba(${hRGB},${webA*4})`; ctx.fill();
+    }
   }
 
-  // Health ring
-  ctx.beginPath(); ctx.arc(cx,cy,orbR+4,-Math.PI/2,-Math.PI/2+health*Math.PI*2);
-  ctx.strokeStyle=healthCol; ctx.lineWidth=3;
-  ctx.shadowColor=healthCol; ctx.shadowBlur=10+pulse*5; ctx.stroke(); ctx.shadowBlur=0;
-
-  // System nodes
+  // ── System nodes (full 3D treatment) ───────────────────────────────────────
   systems.forEach(sys => {
     const nx = cx+Math.cos(sys.angle)*orbR;
     const ny = cy+Math.sin(sys.angle)*orbR;
     const isHov = hovered===sys.id;
     const val = sys.getValue();
-    const nr = isHov?18:14;
+    const nr = isHov?20:15;
+    const sRGB = sys.color.startsWith("#")
+      ? `${parseInt(sys.color.slice(1,3),16)},${parseInt(sys.color.slice(3,5),16)},${parseInt(sys.color.slice(5,7),16)}`
+      : "255,255,255";
 
-    // Connection line
-    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(nx,ny);
+    // Connection beam from center
     const lineGrad = ctx.createLinearGradient(cx,cy,nx,ny);
-    lineGrad.addColorStop(0,"rgba(255,255,255,0.02)"); lineGrad.addColorStop(1,sys.color+"44");
-    ctx.strokeStyle=lineGrad; ctx.lineWidth=isHov?1.5:1; ctx.stroke();
+    lineGrad.addColorStop(0,"rgba(255,255,255,0.01)");
+    lineGrad.addColorStop(0.5,`rgba(${sRGB},0.08)`);
+    lineGrad.addColorStop(1,`rgba(${sRGB},0.30)`);
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(nx,ny);
+    ctx.strokeStyle=lineGrad; ctx.lineWidth=isHov?2:1; ctx.stroke();
 
-    // Node glow
-    if (isHov||val>0.8) {
-      const ng = ctx.createRadialGradient(nx,ny,0,nx,ny,nr*1.8);
-      ng.addColorStop(0,sys.color+"60"); ng.addColorStop(1,sys.color+"00");
-      ctx.beginPath(); ctx.arc(nx,ny,nr*1.8,0,Math.PI*2); ctx.fillStyle=ng; ctx.fill();
-    }
+    // Signal pulse along line
+    const lp=(t*0.55+sys.angle)%1;
+    const lpx=cx+(nx-cx)*lp, lpy=cy+(ny-cy)*lp;
+    const lpGrad=ctx.createRadialGradient(lpx,lpy,0,lpx,lpy,3);
+    lpGrad.addColorStop(0,`rgba(${sRGB},0.9)`); lpGrad.addColorStop(1,`rgba(${sRGB},0)`);
+    ctx.beginPath(); ctx.arc(lpx,lpy,3,0,Math.PI*2); ctx.fillStyle=lpGrad; ctx.fill();
 
-    // Progress arc
+    // Outer volumetric halo
+    const haloR = nr*(isHov?2.8:1.9);
+    const halo=ctx.createRadialGradient(nx,ny,0,nx,ny,haloR);
+    halo.addColorStop(0,`rgba(${sRGB},${isHov?0.22:0.08})`);
+    halo.addColorStop(0.4,`rgba(${sRGB},${isHov?0.08:0.03})`);
+    halo.addColorStop(1,`rgba(${sRGB},0)`);
+    ctx.beginPath(); ctx.arc(nx,ny,haloR,0,Math.PI*2); ctx.fillStyle=halo; ctx.fill();
+
+    // Progress arc (multi-layer)
     ctx.beginPath(); ctx.arc(nx,ny,nr,-Math.PI/2,-Math.PI/2+val*Math.PI*2);
-    ctx.strokeStyle=sys.color; ctx.lineWidth=isHov?3:2;
-    ctx.shadowColor=sys.color; ctx.shadowBlur=isHov?15:8; ctx.stroke(); ctx.shadowBlur=0;
+    ctx.strokeStyle=sys.color; ctx.lineWidth=isHov?4:2.5;
+    ctx.shadowColor=sys.color; ctx.shadowBlur=isHov?22:12; ctx.stroke(); ctx.shadowBlur=0;
+    // Track (dim full arc)
+    ctx.beginPath(); ctx.arc(nx,ny,nr,0,Math.PI*2);
+    ctx.strokeStyle=`rgba(${sRGB},0.12)`; ctx.lineWidth=1; ctx.stroke();
 
-    // Node body
-    const nGrad = ctx.createRadialGradient(nx,ny,0,nx,ny,nr);
-    nGrad.addColorStop(0,"rgba(20,20,30,0.95)"); nGrad.addColorStop(1,"rgba(5,5,15,0.85)");
-    ctx.beginPath(); ctx.arc(nx,ny,nr-1,0,Math.PI*2); ctx.fillStyle=nGrad; ctx.fill();
+    // Node body — deep glass sphere (3 gradient passes)
+    const nb1=ctx.createRadialGradient(nx-nr*0.28,ny-nr*0.32,0,nx,ny,nr-1);
+    nb1.addColorStop(0,`rgba(40,50,80,0.98)`); nb1.addColorStop(0.6,`rgba(12,16,30,0.97)`); nb1.addColorStop(1,`rgba(4,5,14,0.95)`);
+    ctx.beginPath(); ctx.arc(nx,ny,nr-1,0,Math.PI*2); ctx.fillStyle=nb1; ctx.fill();
 
-    // Node border
-    ctx.beginPath(); ctx.arc(nx,ny,nr-1,0,Math.PI*2);
-    ctx.strokeStyle=sys.color+"44"; ctx.lineWidth=1; ctx.stroke();
+    // Specular highlight
+    const spec=ctx.createRadialGradient(nx-nr*0.30,ny-nr*0.34,0,nx-nr*0.08,ny-nr*0.08,nr*0.7);
+    spec.addColorStop(0,"rgba(255,255,255,0.18)"); spec.addColorStop(0.5,"rgba(255,255,255,0.04)"); spec.addColorStop(1,"rgba(255,255,255,0)");
+    ctx.beginPath(); ctx.arc(nx,ny,nr-1,0,Math.PI*2); ctx.fillStyle=spec; ctx.fill();
+
+    // Color tint subsurface
+    const tint=ctx.createRadialGradient(nx,ny+nr*0.3,0,nx,ny,nr);
+    tint.addColorStop(0,`rgba(${sRGB},0.10)`); tint.addColorStop(1,`rgba(${sRGB},0)`);
+    ctx.beginPath(); ctx.arc(nx,ny,nr-1,0,Math.PI*2); ctx.fillStyle=tint; ctx.fill();
 
     // Label
-    ctx.fillStyle=isHov?sys.color:"rgba(255,255,255,0.7)";
-    ctx.font=`${isHov?700:600} ${isHov?8.5:7.5}px monospace`;
+    ctx.fillStyle=isHov?sys.color:"rgba(255,255,255,0.8)";
+    ctx.font=`${isHov?800:700} ${isHov?8.8:7.8}px monospace`;
     ctx.textAlign="center"; ctx.textBaseline="middle";
+    ctx.shadowColor=sys.color; ctx.shadowBlur=isHov?10:0;
     ctx.fillText(sys.shortLabel,nx,ny);
+    ctx.shadowBlur=0;
 
-    // Value indicator
     if (isHov) {
-      ctx.fillStyle=sys.color+"cc"; ctx.font="600 7px monospace";
-      ctx.fillText(`${Math.round(val*100)}%`,nx,ny+nr+8);
+      ctx.fillStyle=sys.color+"dd"; ctx.font="600 7px monospace";
+      ctx.fillText(`${Math.round(val*100)}%`,nx,ny+nr+10);
     }
   });
 
-  // Center orb
-  const cOrbGrad = ctx.createRadialGradient(cx,cy-6,0,cx,cy,45);
-  cOrbGrad.addColorStop(0,"rgba(30,40,70,0.98)"); cOrbGrad.addColorStop(0.7,"rgba(10,15,30,0.97)"); cOrbGrad.addColorStop(1,"rgba(4,6,14,0.95)");
-  ctx.beginPath(); ctx.arc(cx,cy,42,0,Math.PI*2); ctx.fillStyle=cOrbGrad; ctx.fill();
-
-  const orbBorder = ctx.createLinearGradient(cx-42,cy-42,cx+42,cy+42);
-  orbBorder.addColorStop(0,healthCol+"88"); orbBorder.addColorStop(0.5,healthCol+"22"); orbBorder.addColorStop(1,healthCol+"88");
-  ctx.beginPath(); ctx.arc(cx,cy,42,0,Math.PI*2);
-  ctx.strokeStyle=orbBorder; ctx.lineWidth=1.5; ctx.stroke();
+  // ── Center orb — 8 render passes ───────────────────────────────────────────
+  const cR = 44;
+  // Pass 1: outer atmospheric glow
+  const atmGrad=ctx.createRadialGradient(cx,cy,cR*0.7,cx,cy,cR*2.0);
+  atmGrad.addColorStop(0,`rgba(${hRGB},0.08)`);
+  atmGrad.addColorStop(0.5,`rgba(${hRGB},0.03)`);
+  atmGrad.addColorStop(1,`rgba(${hRGB},0)`);
+  ctx.beginPath(); ctx.arc(cx,cy,cR*2.0,0,Math.PI*2); ctx.fillStyle=atmGrad; ctx.fill();
+  // Pass 2: deep space body
+  const cBody=ctx.createRadialGradient(cx-cR*0.22,cy-cR*0.26,0,cx,cy,cR);
+  cBody.addColorStop(0,"rgba(35,45,80,0.99)");
+  cBody.addColorStop(0.4,"rgba(18,24,50,0.98)");
+  cBody.addColorStop(0.75,"rgba(8,10,22,0.97)");
+  cBody.addColorStop(1,"rgba(3,4,10,0.96)");
+  ctx.beginPath(); ctx.arc(cx,cy,cR,0,Math.PI*2); ctx.fillStyle=cBody; ctx.fill();
+  // Pass 3: health subsurface scatter
+  const hSS=ctx.createRadialGradient(cx,cy+cR*0.35,0,cx,cy,cR);
+  hSS.addColorStop(0,`rgba(${hRGB},0.14)`); hSS.addColorStop(0.6,`rgba(${hRGB},0.04)`); hSS.addColorStop(1,`rgba(${hRGB},0)`);
+  ctx.beginPath(); ctx.arc(cx,cy,cR,0,Math.PI*2); ctx.fillStyle=hSS; ctx.fill();
+  // Pass 4: MASTERO color injection
+  if (masteroMode) {
+    const mColor = MASTERO_MODES.find(m=>m.id===masteroMode)?.color||healthCol;
+    const mc=parseInt(mColor.slice(1,3),16), mgc=parseInt(mColor.slice(3,5),16), mbc=parseInt(mColor.slice(5,7),16);
+    const mSS=ctx.createRadialGradient(cx,cy,0,cx,cy,cR);
+    mSS.addColorStop(0,`rgba(${mc},${mgc},${mbc},0.18)`);
+    mSS.addColorStop(0.5,`rgba(${mc},${mgc},${mbc},0.06)`);
+    mSS.addColorStop(1,`rgba(${mc},${mgc},${mbc},0)`);
+    ctx.beginPath(); ctx.arc(cx,cy,cR,0,Math.PI*2); ctx.fillStyle=mSS; ctx.fill();
+  }
+  // Pass 5: surface scan line (animated)
+  ctx.save(); ctx.beginPath(); ctx.arc(cx,cy,cR,0,Math.PI*2); ctx.clip();
+  const scanY = cy-cR+((t*30)%(cR*2));
+  ctx.beginPath(); ctx.moveTo(cx-cR,scanY); ctx.lineTo(cx+cR,scanY);
+  ctx.strokeStyle=`rgba(${hRGB},0.06)`; ctx.lineWidth=1; ctx.stroke();
+  // Latitude bands
+  for (let lb=0; lb<5; lb++) {
+    const ly = cy-cR+((lb+0.5)/5)*cR*2;
+    ctx.beginPath(); ctx.ellipse(cx,ly,cR*0.95,cR*0.16,0,0,Math.PI*2);
+    ctx.strokeStyle=`rgba(${hRGB},${0.04+lb*0.01})`; ctx.lineWidth=0.5; ctx.stroke();
+  }
+  ctx.restore();
+  // Pass 6: specular highlight
+  const cSpec=ctx.createRadialGradient(cx-cR*0.32,cy-cR*0.38,0,cx-cR*0.08,cy-cR*0.08,cR*0.85);
+  cSpec.addColorStop(0,"rgba(255,255,255,0.22)"); cSpec.addColorStop(0.3,"rgba(255,255,255,0.06)"); cSpec.addColorStop(1,"rgba(255,255,255,0)");
+  ctx.beginPath(); ctx.arc(cx,cy,cR,0,Math.PI*2); ctx.fillStyle=cSpec; ctx.fill();
+  // Pass 7: rim light
+  const rimGrad=ctx.createRadialGradient(cx+cR*0.55,cy+cR*0.40,0,cx+cR*0.32,cy+cR*0.22,cR*0.88);
+  rimGrad.addColorStop(0,`rgba(${hRGB},0.30)`); rimGrad.addColorStop(1,`rgba(${hRGB},0)`);
+  ctx.beginPath(); ctx.arc(cx,cy,cR,0,Math.PI*2); ctx.fillStyle=rimGrad; ctx.fill();
+  // Pass 8: border ring (gradient)
+  const orbBorder=ctx.createLinearGradient(cx-cR,cy-cR,cx+cR,cy+cR);
+  orbBorder.addColorStop(0,healthCol+"aa"); orbBorder.addColorStop(0.5,healthCol+"33"); orbBorder.addColorStop(1,healthCol+"aa");
+  ctx.beginPath(); ctx.arc(cx,cy,cR,0,Math.PI*2);
+  ctx.strokeStyle=orbBorder; ctx.lineWidth=1.8;
+  ctx.shadowColor=healthCol; ctx.shadowBlur=8+pulse*4; ctx.stroke(); ctx.shadowBlur=0;
 
   // Center text
   if (masteroMode) {
     const mode = MASTERO_MODES.find(m=>m.id===masteroMode);
     ctx.fillStyle=mode?.color||healthCol; ctx.font="bold 9px monospace";
     ctx.textAlign="center"; ctx.textBaseline="middle";
+    ctx.shadowColor=mode?.color||healthCol; ctx.shadowBlur=8;
     ctx.fillText("MASTERO",cx,cy-7);
+    ctx.shadowBlur=0;
     ctx.fillStyle="rgba(255,255,255,0.8)"; ctx.font="700 8px monospace";
     ctx.fillText((mode?.labelAr||"").slice(0,6),cx,cy+5);
   } else {
     ctx.fillStyle=healthCol; ctx.font="bold 11px monospace";
     ctx.textAlign="center"; ctx.textBaseline="middle";
+    ctx.shadowColor=healthCol; ctx.shadowBlur=10+pulse*5;
     ctx.fillText(`${Math.round(health*100)}%`,cx,cy-5);
+    ctx.shadowBlur=0;
     ctx.fillStyle="rgba(255,255,255,0.4)"; ctx.font="600 7px monospace";
     ctx.fillText("SYSTEM",cx,cy+7);
   }

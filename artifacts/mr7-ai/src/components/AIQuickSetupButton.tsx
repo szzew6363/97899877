@@ -563,6 +563,54 @@ function QuantumAtom3D({ phase, open, hover }: { phase: Phase; open: boolean; ho
         ctx.strokeStyle = `rgba(${hsl(hue + 180)},0.14)`; ctx.lineWidth = 0.45; ctx.stroke();
         ctx.restore();
 
+        // ── Quarks orbiting inside nucleus ──────────────────────────────────
+        const QUARKS = [
+          { hOff: 0,   speed: 0.10, r: cR * 0.55, qOff: 0.00 },
+          { hOff: 120, speed: 0.08, r: cR * 0.45, qOff: 2.09 },
+          { hOff: 240, speed: 0.12, r: cR * 0.40, qOff: 4.19 },
+        ];
+        ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, cR, 0, Math.PI * 2); ctx.clip();
+        QUARKS.forEach(q => {
+          const qa = t * 0.09 * q.speed * 10 + q.qOff;
+          const qx = cx + Math.cos(qa) * q.r;
+          const qy = cy + Math.sin(qa * 0.7) * q.r * 0.6;
+          const qColor = hsl(hue + q.hOff, 1, 0.8);
+          // Gluon trail
+          const qPrev: [number, number][] = [];
+          for (let qti = 0; qti < 5; qti++) {
+            const prevA = qa - qti * 0.15;
+            qPrev.push([cx + Math.cos(prevA) * q.r, cy + Math.sin(prevA * 0.7) * q.r * 0.6]);
+          }
+          qPrev.forEach(([ptx, pty], qi) => {
+            const qta = (1 - qi / 5) * 0.35;
+            ctx.beginPath(); ctx.arc(ptx, pty, 0.4, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(${qColor},${qta})`; ctx.fill();
+          });
+          // Quark glow
+          const qg = ctx.createRadialGradient(qx, qy, 0, qx, qy, 2.5);
+          qg.addColorStop(0, `rgba(${qColor},0.95)`);
+          qg.addColorStop(1, `rgba(${qColor},0)`);
+          ctx.beginPath(); ctx.arc(qx, qy, 2.5, 0, Math.PI * 2);
+          ctx.fillStyle = qg; ctx.fill();
+          ctx.beginPath(); ctx.arc(qx, qy, 0.8, 0, Math.PI * 2);
+          ctx.fillStyle = "rgba(255,255,255,0.98)"; ctx.fill();
+        });
+        // Gluon connections (color strings) between quarks
+        const qPositions = QUARKS.map(q => {
+          const qa = t * 0.09 * q.speed * 10 + q.qOff;
+          return [cx + Math.cos(qa) * q.r, cy + Math.sin(qa * 0.7) * q.r * 0.6];
+        });
+        for (let qi = 0; qi < 3; qi++) {
+          for (let qj = qi + 1; qj < 3; qj++) {
+            ctx.beginPath();
+            ctx.moveTo(qPositions[qi][0], qPositions[qi][1]);
+            ctx.lineTo(qPositions[qj][0], qPositions[qj][1]);
+            ctx.strokeStyle = `rgba(${hsl(hue + qi * 60)},${0.2 + Math.sin(t * 0.15 + qi) * 0.08})`;
+            ctx.lineWidth = 0.5; ctx.stroke();
+          }
+        }
+        ctx.restore();
+
         // Crystalline facets — 6 subtle highlight lines
         ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, cR, 0, Math.PI * 2); ctx.clip();
         for (let f = 0; f < 6; f++) {
