@@ -12,8 +12,12 @@ interface Particle {
   life: number; maxLife: number; type: "dot" | "cross" | "ring";
 }
 
-const COLORS = ["#e21227", "#00e5ff", "#a78bfa", "#22c55e", "#f59e0b"];
+const COLORS = ["#e21227", "#00e5ff", "#a78bfa", "#22c55e", "#f59e0b", "#ec4899", "#f97316", "#38bdf8"];
 function randColor() { return COLORS[Math.floor(Math.random() * COLORS.length)]; }
+function hexToRgb(hex: string): [number,number,number] {
+  const h = hex.replace("#","");
+  return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+}
 
 export function AmbientParticleField({
   density = 0.35,
@@ -75,21 +79,50 @@ export function AmbientParticleField({
 
     function drawParticle(p: Particle) {
       const phase = p.life / p.maxLife;
-      const fade = phase < 0.1 ? phase / 0.1 : (phase > 0.85 ? 1 - (phase - 0.85) / 0.15 : 1);
-      p.opacity = fade * 0.32;
+      const fade = phase < 0.12 ? phase / 0.12 : (phase > 0.82 ? 1 - (phase - 0.82) / 0.18 : 1);
+      p.opacity = fade * 0.38;
       ctx.globalAlpha = p.opacity;
-      ctx.strokeStyle = p.color; ctx.fillStyle = p.color;
-      ctx.shadowColor = p.color; ctx.shadowBlur = 3;
+
+      const [cr, cg, cb] = hexToRgb(p.color);
+      ctx.strokeStyle = `rgb(${cr},${cg},${cb})`;
+      ctx.fillStyle   = `rgb(${cr},${cg},${cb})`;
+      ctx.shadowColor = p.color;
+      ctx.shadowBlur  = 5 * fade;
 
       if (p.type === "dot") {
-        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+        // Dot with glow halo
+        const grd = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 4);
+        grd.addColorStop(0,   `rgba(${cr},${cg},${cb},${fade * 0.9})`);
+        grd.addColorStop(0.45,`rgba(${cr},${cg},${cb},${fade * 0.15})`);
+        grd.addColorStop(1,   "rgba(0,0,0,0)");
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 4, 0, Math.PI * 2);
+        ctx.fillStyle = grd; ctx.fill();
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,255,255,${fade * 0.80})`; ctx.fill();
       } else if (p.type === "cross") {
-        const s = p.r * 2; ctx.lineWidth = 0.8;
+        const s = p.r * 2.4; ctx.lineWidth = 0.9;
+        ctx.strokeStyle = `rgba(${cr},${cg},${cb},${fade * 0.8})`;
         ctx.beginPath(); ctx.moveTo(p.x - s, p.y); ctx.lineTo(p.x + s, p.y);
         ctx.moveTo(p.x, p.y - s); ctx.lineTo(p.x, p.y + s); ctx.stroke();
+        // Diagonal faint lines for asterisk effect
+        const d = s * 0.65;
+        ctx.strokeStyle = `rgba(${cr},${cg},${cb},${fade * 0.35})`;
+        ctx.beginPath();
+        ctx.moveTo(p.x - d, p.y - d); ctx.lineTo(p.x + d, p.y + d);
+        ctx.moveTo(p.x + d, p.y - d); ctx.lineTo(p.x - d, p.y + d);
+        ctx.stroke();
+        ctx.beginPath(); ctx.arc(p.x, p.y, 1.2, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,255,255,${fade * 0.7})`; ctx.fill();
       } else {
-        ctx.lineWidth = 0.6;
-        ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 1.8, 0, Math.PI * 2); ctx.stroke();
+        // Ring with double-stroke and inner pulse
+        ctx.lineWidth = 0.7;
+        ctx.strokeStyle = `rgba(${cr},${cg},${cb},${fade * 0.55})`;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 2.2, 0, Math.PI * 2); ctx.stroke();
+        ctx.lineWidth = 0.35;
+        ctx.strokeStyle = `rgba(${cr},${cg},${cb},${fade * 0.22})`;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 3.2, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(p.x, p.y, 0.9, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${cr},${cg},${cb},${fade * 0.6})`; ctx.fill();
       }
       ctx.shadowBlur = 0; ctx.globalAlpha = 1;
     }

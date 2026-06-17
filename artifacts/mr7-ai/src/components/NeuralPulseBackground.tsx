@@ -26,14 +26,17 @@ interface DataPacket {
 }
 
 const NODE_COLORS = [
-  "rgba(226,18,39,0.55)",
-  "rgba(255,255,255,0.18)",
-  "rgba(226,18,39,0.35)",
-  "rgba(255,120,60,0.28)",
-  "rgba(180,60,60,0.4)",
+  "rgba(226,18,39,0.65)",
+  "rgba(255,255,255,0.22)",
+  "rgba(226,18,39,0.42)",
+  "rgba(255,120,60,0.35)",
+  "rgba(180,60,60,0.48)",
+  "rgba(0,229,255,0.30)",
+  "rgba(167,139,250,0.32)",
+  "rgba(34,197,94,0.28)",
 ];
 
-const HEX_LABELS = ["0xDEAD", "CVE", "SHELL", "ROOT", "FUZZ", "OSINT", "NEXUS", "NET", "MEM", "SSH", "XSS", "RCE", "ARM64", "ELF"];
+const HEX_LABELS = ["0xDEAD", "CVE", "SHELL", "ROOT", "FUZZ", "OSINT", "NEXUS", "NET", "MEM", "SSH", "XSS", "RCE", "ARM64", "ELF", "APT", "C2", "DLL", "PE32"];
 
 export function NeuralPulseBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -57,7 +60,7 @@ export function NeuralPulseBackground() {
 
     function initNodes() {
       const w = canvas!.width; const h = canvas!.height;
-      const count = Math.min(24, Math.floor((w * h) / 28000));
+      const count = Math.min(36, Math.floor((w * h) / 20000));
       nodesRef.current = Array.from({ length: count }, (_, i) => ({
         x: Math.random() * w,
         y: Math.random() * h,

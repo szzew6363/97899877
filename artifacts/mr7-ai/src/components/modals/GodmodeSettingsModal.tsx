@@ -7,97 +7,196 @@ function GodmodeNeural3D({ champCount, color, glow }: { champCount: number; colo
   const rafRef = useRef(0);
   const tRef = useRef(0);
   const fireRef = useRef<number[]>([]);
+  const fireSet = useRef<Set<number>>(new Set());
 
   useEffect(() => {
     const cv = cvRef.current; if (!cv) return;
     const ctx = cv.getContext("2d")!;
-    const W = cv.width, H = cv.height;
+    const W = 560, H = 120;
+    const DPR = Math.min(window.devicePixelRatio * 1.5, 3);
+    cv.width = W * DPR; cv.height = H * DPR;
+    cv.style.width = W + "px"; cv.style.height = H + "px";
+    ctx.scale(DPR, DPR);
     const cx = W / 2, cy = H / 2;
-    const n = Math.min(champCount, 24);
-    const R = Math.min(50, (Math.min(W, H) / 2) - 14);
+    const n = Math.min(champCount, 32);
+    const RA = Math.min(46, (H / 2) - 10);
+    const RB = W * 0.42;
+
     const hexToRgb = (h: string) => {
       const r = parseInt(h.slice(1,3),16), g = parseInt(h.slice(3,5),16), b = parseInt(h.slice(5,7),16);
       return `${r},${g},${b}`;
     };
     const rgb = hexToRgb(color);
 
-    // fire random nodes periodically
+    // Precompute node positions — elliptical ring
+    const nodePos = Array.from({ length: n }, (_, i) => {
+      const a = (i / n) * Math.PI * 2 - Math.PI / 2;
+      return { x: cx + Math.cos(a) * RB, y: cy + Math.sin(a) * RA, a };
+    });
+
+    // Plasma signal packets — travel along connections
+    type Packet = { from: number; to: number; p: number; speed: number };
+    const packets: Packet[] = [];
+    for (let pi = 0; pi < 8; pi++) {
+      const from = Math.floor(Math.random() * n);
+      const to   = Math.floor(Math.random() * n);
+      packets.push({ from, to, p: Math.random(), speed: 0.008 + Math.random() * 0.012 });
+    }
+
+    // Fire random nodes periodically
     const fireTimer = setInterval(() => {
-      if (n > 0) fireRef.current = [Math.floor(Math.random() * n)];
-    }, 600);
+      if (n <= 0) return;
+      const count = 1 + Math.floor(Math.random() * 3);
+      fireSet.current = new Set(Array.from({ length: count }, () => Math.floor(Math.random() * n)));
+      fireRef.current = Array.from(fireSet.current);
+      setTimeout(() => { fireSet.current.clear(); fireRef.current = []; }, 350);
+    }, 500);
 
     function draw(t: number) {
       ctx.clearRect(0, 0, W, H);
-      // background
-      const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, R + 15);
-      bg.addColorStop(0, `rgba(${rgb},0.04)`);
+
+      // ── Deep ambient background ─────────────────────────────────────────
+      const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, RB + 20);
+      bg.addColorStop(0, `rgba(${rgb},0.06)`);
+      bg.addColorStop(0.5, `rgba(${rgb},0.02)`);
       bg.addColorStop(1, "rgba(0,0,0,0)");
       ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
 
-      const nodes = Array.from({ length: n }, (_, i) => ({
-        x: cx + Math.cos((i / n) * Math.PI * 2 - Math.PI / 2) * R,
-        y: cy + Math.sin((i / n) * Math.PI * 2 - Math.PI / 2) * R * 0.55,
-        a: (i / n) * Math.PI * 2,
-      }));
-
-      // draw outer ring
-      ctx.beginPath();
-      ctx.ellipse(cx, cy, R, R * 0.55, 0, 0, Math.PI * 2);
-      ctx.strokeStyle = `rgba(${rgb},0.12)`; ctx.lineWidth = 0.5; ctx.stroke();
-
-      // connections
-      nodes.forEach((n1, i) => {
-        const n2 = nodes[(i + 1) % nodes.length];
-        const n3 = nodes[(i + Math.floor(nodes.length / 2)) % nodes.length];
-        [n2, n3].forEach(target => {
-          const pulse = Math.sin(t * 2 + i * 0.5) * 0.5 + 0.5;
-          ctx.beginPath(); ctx.moveTo(n1.x, n1.y); ctx.lineTo(target.x, target.y);
-          ctx.strokeStyle = `rgba(${rgb},${0.03 + pulse * 0.05})`; ctx.lineWidth = 0.5; ctx.stroke();
-        });
-      });
-
-      // flowing particles on ring
-      for (let p = 0; p < 6; p++) {
-        const a = ((t * 0.5 + p / 6) % 1) * Math.PI * 2 - Math.PI / 2;
-        const px = cx + Math.cos(a) * R;
-        const py = cy + Math.sin(a) * R * 0.55;
-        const pulse = 0.4 + Math.sin(t * 4 + p) * 0.4;
-        ctx.beginPath(); ctx.arc(px, py, 1.2, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(${rgb},${pulse})`; ctx.fill();
+      // ── Outer ellipse rings (3 layered) ─────────────────────────────────
+      for (let ri = 0; ri < 3; ri++) {
+        const rScale = 1 - ri * 0.04;
+        const rAlpha = 0.10 - ri * 0.025;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, RB * rScale, RA * rScale, 0, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(${rgb},${rAlpha + Math.sin(t * 0.8 + ri) * 0.02})`;
+        ctx.lineWidth = 0.6 - ri * 0.15; ctx.stroke();
       }
 
-      // firing effect
-      nodes.forEach((node, i) => {
-        const isFiring = fireRef.current.includes(i);
-        const baseR = 3.5;
-        const radius = baseR + (isFiring ? Math.sin(t * 12) * 2 : Math.sin(t * 2 + i) * 0.5);
-        const alpha = isFiring ? 1.0 : 0.55 + Math.sin(t * 1.8 + i * 0.7) * 0.25;
-        // glow ring
-        if (isFiring) {
-          ctx.beginPath(); ctx.arc(node.x, node.y, radius + 5, 0, Math.PI * 2);
-          ctx.strokeStyle = `rgba(${rgb},0.3)`; ctx.lineWidth = 1; ctx.stroke();
-          ctx.beginPath(); ctx.arc(node.x, node.y, radius + 10, 0, Math.PI * 2);
-          ctx.strokeStyle = `rgba(${rgb},0.1)`; ctx.lineWidth = 1; ctx.stroke();
-        }
-        ctx.beginPath(); ctx.arc(node.x, node.y, radius, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(${rgb},${alpha})`; ctx.fill();
-        // node number
-        if (n <= 12) {
-          ctx.font = `bold 5px monospace`;
-          ctx.fillStyle = `rgba(${rgb},0.6)`;
-          ctx.textAlign = "center"; ctx.textBaseline = "middle";
-          ctx.fillText(String(i + 1), node.x, node.y - radius - 3);
-        }
+      // ── Quantum entanglement beams (skip connections across ring) ────────
+      for (let i = 0; i < n; i += 3) {
+        const skip = Math.floor(n / 4) + (i % 3);
+        const j = (i + skip) % n;
+        const nx1 = nodePos[i].x, ny1 = nodePos[i].y;
+        const nx2 = nodePos[j].x, ny2 = nodePos[j].y;
+        const entAlpha = 0.025 + Math.sin(t * 0.6 + i * 0.3) * 0.010;
+        const mx = (nx1 + nx2) / 2 + Math.sin(t * 0.2 + i) * 6;
+        const my = (ny1 + ny2) / 2 + Math.cos(t * 0.25 + i) * 4;
+        ctx.beginPath();
+        ctx.moveTo(nx1, ny1);
+        ctx.quadraticCurveTo(mx, my, nx2, ny2);
+        ctx.strokeStyle = `rgba(${rgb},${entAlpha})`; ctx.lineWidth = 0.4; ctx.stroke();
+      }
+
+      // ── Adjacent connections ─────────────────────────────────────────────
+      for (let i = 0; i < n; i++) {
+        const j = (i + 1) % n;
+        const pulse = Math.sin(t * 1.6 + i * 0.4) * 0.5 + 0.5;
+        ctx.beginPath();
+        ctx.moveTo(nodePos[i].x, nodePos[i].y);
+        ctx.lineTo(nodePos[j].x, nodePos[j].y);
+        ctx.strokeStyle = `rgba(${rgb},${0.04 + pulse * 0.04})`; ctx.lineWidth = 0.5; ctx.stroke();
+      }
+
+      // ── Plasma signal packets traveling along paths ──────────────────────
+      packets.forEach(pk => {
+        pk.p += pk.speed;
+        if (pk.p >= 1) { pk.p = 0; pk.from = pk.to; pk.to = Math.floor(Math.random() * n); }
+        const sx = nodePos[pk.from].x, sy = nodePos[pk.from].y;
+        const ex = nodePos[pk.to].x,   ey = nodePos[pk.to].y;
+        const mx2 = cx + (Math.random() - 0.5) * 20;
+        const my2 = cy + (Math.random() - 0.5) * 12;
+        const px2 = sx + (ex - sx) * pk.p + (mx2 - sx) * pk.p * (1 - pk.p) * 2;
+        const py2 = sy + (ey - sy) * pk.p + (my2 - sy) * pk.p * (1 - pk.p) * 2;
+        const alpha = Math.sin(pk.p * Math.PI) * 0.8;
+        const pgr = ctx.createRadialGradient(px2, py2, 0, px2, py2, 5);
+        pgr.addColorStop(0, `rgba(255,255,255,${alpha})`);
+        pgr.addColorStop(0.4, `rgba(${rgb},${alpha * 0.6})`);
+        pgr.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.beginPath(); ctx.arc(px2, py2, 5, 0, Math.PI * 2);
+        ctx.fillStyle = pgr; ctx.fill();
+        ctx.beginPath(); ctx.arc(px2, py2, 1.2, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,255,255,${alpha})`; ctx.fill();
       });
 
-      // center score display
-      ctx.font = "bold 8px monospace";
+      // ── Flowing ring particles (8 of them) ──────────────────────────────
+      for (let p = 0; p < 8; p++) {
+        const a = ((t * 0.38 + p / 8) % 1) * Math.PI * 2 - Math.PI / 2;
+        const px2 = cx + Math.cos(a) * RB;
+        const py2 = cy + Math.sin(a) * RA;
+        const pulse = 0.45 + Math.sin(t * 3.5 + p) * 0.35;
+        const pgr2 = ctx.createRadialGradient(px2, py2, 0, px2, py2, 4);
+        pgr2.addColorStop(0, `rgba(${rgb},${pulse})`);
+        pgr2.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.beginPath(); ctx.arc(px2, py2, 4, 0, Math.PI * 2);
+        ctx.fillStyle = pgr2; ctx.fill();
+        ctx.beginPath(); ctx.arc(px2, py2, 1.4, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,255,255,${pulse * 0.8})`; ctx.fill();
+      }
+
+      // ── Champion nodes ───────────────────────────────────────────────────
+      nodePos.forEach((nd, i) => {
+        const isFiring = fireSet.current.has(i);
+        const breathe = Math.sin(t * 1.6 + i * 0.55) * 0.5 + 0.5;
+        const baseR = 2.8 + breathe * 0.6;
+        const radius = isFiring ? baseR + Math.sin(t * 14) * 2.5 : baseR;
+        const alpha = isFiring ? 1.0 : 0.45 + breathe * 0.35;
+
+        if (isFiring) {
+          // Firing burst rings
+          for (let br = 0; br < 3; br++) {
+            const bp = ((t * 2.8 + br * 0.25) % 1);
+            const bR = radius + bp * 14;
+            ctx.beginPath(); ctx.arc(nd.x, nd.y, bR, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(${rgb},${(1 - bp) * 0.5})`; ctx.lineWidth = 1.0; ctx.stroke();
+          }
+        }
+        // Node glow halo
+        const ngr = ctx.createRadialGradient(nd.x, nd.y, 0, nd.x, nd.y, radius * 4);
+        ngr.addColorStop(0, `rgba(${rgb},${alpha * 0.8})`);
+        ngr.addColorStop(0.5, `rgba(${rgb},${alpha * 0.12})`);
+        ngr.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.beginPath(); ctx.arc(nd.x, nd.y, radius * 4, 0, Math.PI * 2);
+        ctx.fillStyle = ngr; ctx.fill();
+        // Node body
+        ctx.beginPath(); ctx.arc(nd.x, nd.y, radius, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${rgb},${alpha})`; ctx.fill();
+        // White core
+        ctx.beginPath(); ctx.arc(nd.x, nd.y, radius * 0.45, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,255,255,${alpha * 0.85})`; ctx.fill();
+      });
+
+      // ── Central power vortex ─────────────────────────────────────────────
+      for (let vi = 0; vi < 4; vi++) {
+        const vR = 8 + vi * 6 + Math.sin(t * 1.2 + vi) * 3;
+        const vA = 0.08 - vi * 0.016 + Math.sin(t * 0.9 + vi) * 0.02;
+        ctx.beginPath(); ctx.arc(cx, cy, vR, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(${rgb},${vA})`; ctx.lineWidth = 0.7; ctx.stroke();
+      }
+      // Vortex spiral arms
+      for (let arm = 0; arm < 3; arm++) {
+        ctx.beginPath();
+        for (let s = 0; s < 30; s++) {
+          const sa = (s / 30) * Math.PI * 1.5 + arm * (Math.PI * 2 / 3) + t * 0.4;
+          const sr = 4 + s * 0.7;
+          const sx2 = cx + Math.cos(sa) * sr;
+          const sy2 = cy + Math.sin(sa) * sr * 0.6;
+          s === 0 ? ctx.moveTo(sx2, sy2) : ctx.lineTo(sx2, sy2);
+        }
+        ctx.strokeStyle = `rgba(${rgb},${0.12 + arm * 0.02})`; ctx.lineWidth = 0.5; ctx.stroke();
+      }
+      // Core composite dot
+      const corGr = ctx.createRadialGradient(cx, cy, 0, cx, cy, 10);
+      corGr.addColorStop(0, `rgba(255,255,255,0.90)`);
+      corGr.addColorStop(0.3, `rgba(${rgb},0.65)`);
+      corGr.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.beginPath(); ctx.arc(cx, cy, 10, 0, Math.PI * 2);
+      ctx.fillStyle = corGr; ctx.fill();
+
+      // Champion count label
+      ctx.font = "bold 9px monospace";
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.fillStyle = `rgba(${rgb},0.15)`;
-      ctx.fillText("COMPOSITE", cx, cy - 5);
-      ctx.font = "bold 10px monospace";
-      ctx.fillStyle = `rgba(${rgb},0.35)`;
-      ctx.fillText("100pt", cx, cy + 6);
+      ctx.fillStyle = `rgba(${rgb},0.70)`;
+      ctx.fillText(`${champCount}`, cx, cy - 1);
     }
 
     function loop() {
@@ -109,9 +208,10 @@ function GodmodeNeural3D({ champCount, color, glow }: { champCount: number; colo
     return () => { cancelAnimationFrame(rafRef.current); clearInterval(fireTimer); };
   }, [champCount, color]);
 
+  void glow;
   return (
-    <canvas ref={cvRef} width={280} height={90}
-      style={{ width: 280, height: 90, display: "block", imageRendering: "auto" }} />
+    <canvas ref={cvRef}
+      style={{ width: "100%", height: 80, display: "block", imageRendering: "auto" }} />
   );
 }
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Dialog, DialogContentTop, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
@@ -11,6 +11,117 @@ import {
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { useToast } from "@/hooks/use-toast";
+
+// ── Quantum DNA Header Visualization ──────────────────────────────────────────
+function QuantumDNA3D() {
+  const cvRef = useRef<HTMLCanvasElement>(null);
+  const rafRef = useRef(0);
+  const tRef = useRef(0);
+
+  useEffect(() => {
+    const cv = cvRef.current; if (!cv) return;
+    const ctx = cv.getContext("2d")!;
+    const W = 560, H = 52;
+    const DPR = Math.min(window.devicePixelRatio * 1.5, 3);
+    cv.width = W * DPR; cv.height = H * DPR;
+    cv.style.width = W + "px"; cv.style.height = H + "px";
+    ctx.scale(DPR, DPR);
+    const cy = H / 2;
+
+    function hsl(h: number, s = 1, l = 0.58) {
+      const hh = ((h % 360) + 360) % 360;
+      const k = (n: number) => (n + hh / 30) % 12;
+      const a = s * Math.min(l, 1 - l);
+      const f = (n: number) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+      return `${Math.round(f(0)*255)},${Math.round(f(8)*255)},${Math.round(f(4)*255)}`;
+    }
+
+    const N_BASES = 30;
+    const PITCH = W / N_BASES;
+    const DNA_R = H * 0.35;
+    const DNA_FREQ = Math.PI * 2 / (N_BASES * PITCH);
+
+    function draw() {
+      rafRef.current = requestAnimationFrame(draw);
+      tRef.current += 0.4;
+      const t = tRef.current;
+      ctx.clearRect(0, 0, W, H);
+
+      const hue = (t * 0.6) % 360;
+
+      // ── Strand A (forward) and Strand B (backward) ─────────────────────
+      for (let strand = 0; strand < 2; strand++) {
+        const phaseOffset = strand === 0 ? 0 : Math.PI;
+        ctx.beginPath();
+        for (let i = 0; i <= W; i += 2) {
+          const y = cy + Math.sin(i * DNA_FREQ + t * 0.045 + phaseOffset) * DNA_R;
+          i === 0 ? ctx.moveTo(i, y) : ctx.lineTo(i, y);
+        }
+        const strandHue = hue + strand * 180;
+        ctx.strokeStyle = `rgba(${hsl(strandHue, 1, 0.62)},0.55)`;
+        ctx.lineWidth = 1.2; ctx.stroke();
+      }
+
+      // ── Base pair rungs ────────────────────────────────────────────────
+      for (let b = 0; b < N_BASES; b++) {
+        const x = (b + 0.5) * PITCH;
+        const yA = cy + Math.sin(x * DNA_FREQ + t * 0.045) * DNA_R;
+        const yB = cy + Math.sin(x * DNA_FREQ + t * 0.045 + Math.PI) * DNA_R;
+        const baseHue = hue + b * (360 / N_BASES);
+        const alpha = 0.25 + Math.abs(Math.sin(x * DNA_FREQ + t * 0.045)) * 0.35;
+        // Rung
+        ctx.beginPath();
+        ctx.moveTo(x, yA); ctx.lineTo(x, yB);
+        ctx.strokeStyle = `rgba(${hsl(baseHue)},${alpha})`; ctx.lineWidth = 0.8; ctx.stroke();
+        // Base dot A
+        const gA = ctx.createRadialGradient(x, yA, 0, x, yA, 3.5);
+        gA.addColorStop(0, `rgba(255,255,255,${alpha * 1.4})`);
+        gA.addColorStop(0.5, `rgba(${hsl(baseHue)},${alpha * 0.8})`);
+        gA.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.beginPath(); ctx.arc(x, yA, 3.5, 0, Math.PI * 2);
+        ctx.fillStyle = gA; ctx.fill();
+        // Base dot B
+        const gB = ctx.createRadialGradient(x, yB, 0, x, yB, 3.5);
+        gB.addColorStop(0, `rgba(255,255,255,${alpha * 1.2})`);
+        gB.addColorStop(0.5, `rgba(${hsl(baseHue + 180)},${alpha * 0.8})`);
+        gB.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.beginPath(); ctx.arc(x, yB, 3.5, 0, Math.PI * 2);
+        ctx.fillStyle = gB; ctx.fill();
+      }
+
+      // ── Quantum data packets travelling along helix ────────────────────
+      for (let qi = 0; qi < 4; qi++) {
+        const qPhase = ((t * 0.032 + qi * 0.25) % 1) * W;
+        const qY = cy + Math.sin(qPhase * DNA_FREQ + t * 0.045) * DNA_R;
+        const qAlpha = Math.sin(((t * 0.032 + qi * 0.25) % 1) * Math.PI) * 0.85;
+        const qGr = ctx.createRadialGradient(qPhase, qY, 0, qPhase, qY, 7);
+        qGr.addColorStop(0, `rgba(255,255,255,${qAlpha})`);
+        qGr.addColorStop(0.4, `rgba(${hsl(hue + qi * 60)},${qAlpha * 0.6})`);
+        qGr.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.beginPath(); ctx.arc(qPhase, qY, 7, 0, Math.PI * 2);
+        ctx.fillStyle = qGr; ctx.fill();
+        ctx.beginPath(); ctx.arc(qPhase, qY, 1.8, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,255,255,${qAlpha})`; ctx.fill();
+      }
+
+      // ── Ambient vignette ───────────────────────────────────────────────
+      const vigL = ctx.createLinearGradient(0, 0, W, 0);
+      vigL.addColorStop(0,    "rgba(8,8,8,0.55)");
+      vigL.addColorStop(0.08, "rgba(8,8,8,0)");
+      vigL.addColorStop(0.92, "rgba(8,8,8,0)");
+      vigL.addColorStop(1,    "rgba(8,8,8,0.55)");
+      ctx.fillStyle = vigL; ctx.fillRect(0, 0, W, H);
+    }
+
+    draw();
+    return () => cancelAnimationFrame(rafRef.current);
+  }, []);
+
+  return (
+    <canvas ref={cvRef}
+      style={{ width: "100%", height: 52, display: "block", imageRendering: "auto", borderRadius: "0 0 8px 8px" }} />
+  );
+}
 
 export type PersonaPreset = {
   id: string;
@@ -2298,7 +2409,11 @@ export function PersonaEditorModal({ open, onOpenChange }: PersonaEditorModalPro
 
   const innerContent = (
     <>
-      <div className="px-5 pt-4 pb-3 border-b border-border flex-shrink-0">
+      {/* Quantum DNA visualization header */}
+      <div className="flex-shrink-0 overflow-hidden" style={{ background: "rgba(8,8,8,0.6)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+        <QuantumDNA3D />
+      </div>
+      <div className="px-5 pt-3 pb-3 border-b border-border flex-shrink-0">
         <div className="flex items-center gap-2 text-base font-semibold">
           <Brain className="w-5 h-5 text-primary" />
           {lang === "ar" ? "محرر شخصية الذكاء الاصطناعي" : "AI Persona Editor"}

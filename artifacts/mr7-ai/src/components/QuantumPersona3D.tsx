@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { useStore } from "@/lib/store";
 
-// ── QUANTUM PERSONA 3D — Maximum Quality Neural Brain Orb v2 ──────────────────
-// 52-node fibonacci sphere + DNA helix spine + 5 orbital rings
-// Cascading brainwave neural firing + chromatic aberration + depth sorting
+// ── QUANTUM PERSONA 3D — Maximum Quality Neural Brain Orb v3 ──────────────────
+// 88-node fibonacci sphere + DNA helix spine + 8 orbital rings
+// Neural cortex regions + quantum entanglement beams + synaptic storms
+// Consciousness wave propagation + chromatic aberration + depth sorting
 // DPR×2 (max 4) for ultra-sharp rendering
 
 function QuantumBrain3D({ open, hover, activeColor }: { open: boolean; hover: boolean; activeColor: string }) {
@@ -15,18 +16,27 @@ function QuantumBrain3D({ open, hover, activeColor }: { open: boolean; hover: bo
   const hoverRef  = useRef(hover);
   const colorRef  = useRef(activeColor);
   const burstRef  = useRef(0);
+  const stormRef  = useRef(0);
+  const waveRef   = useRef<{ r: number; a: number; phase: number }[]>([]);
 
-  useEffect(() => { openRef.current  = open;       }, [open]);
-  useEffect(() => { hoverRef.current = hover;      if (hover) burstRef.current = tRef.current; }, [hover]);
+  useEffect(() => { openRef.current  = open;        }, [open]);
   useEffect(() => { colorRef.current = activeColor; }, [activeColor]);
+  useEffect(() => {
+    hoverRef.current = hover;
+    if (hover) {
+      burstRef.current = tRef.current;
+      stormRef.current = tRef.current;
+      waveRef.current.push({ r: 0, a: 1, phase: tRef.current });
+    }
+  }, [hover]);
 
   useEffect(() => {
     const cvEl = canvasRef.current;
     if (!cvEl) return;
     const cv: HTMLCanvasElement = cvEl;
     const ctx = cv.getContext("2d", { alpha: true })!;
-    ctx.imageSmoothingEnabled   = true;
-    ctx.imageSmoothingQuality   = "high";
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
 
     const SIZE = 46;
     const DPR  = Math.min(window.devicePixelRatio * 2, 4);
@@ -58,20 +68,29 @@ function QuantumBrain3D({ open, hover, activeColor }: { open: boolean; hover: bo
       const f=(n: number)=>l-aa*Math.max(-1,Math.min(k(n)-3,Math.min(9-k(n),1)));
       return `${Math.round(f(0)*255)},${Math.round(f(8)*255)},${Math.round(f(4)*255)}`;
     }
-
-    // ── Parse accent color into RGB ───────────────────────────────────────────
     function parseColor(hex: string) {
       const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
       return `${r},${g},${b}`;
     }
 
-    // ── 52 Fibonacci sphere neural nodes ─────────────────────────────────────
+    // ── Neural cortex regions ─────────────────────────────────────────────────
+    // 4 lobes: frontal (red), parietal (violet), temporal (cyan), occipital (green)
+    function getCortexColor(phi: number, theta: number): string {
+      const nt = ((theta % (Math.PI*2)) + Math.PI*2) % (Math.PI*2);
+      if (phi < Math.PI * 0.40) return "226,18,39";        // frontal — crimson
+      if (phi > Math.PI * 0.70) return "34,197,94";        // occipital — green
+      if (nt < Math.PI) return "167,139,250";              // parietal — violet
+      return "0,229,255";                                   // temporal — cyan
+    }
+
+    // ── 88 Fibonacci sphere neural nodes ──────────────────────────────────────
     type NNode = {
       x0: number; y0: number; z0: number;
+      phi: number; theta: number;
       r: number; hOff: number; connections: number[];
-      firePhase: number; fireSpd: number;
+      firePhase: number; fireSpd: number; cortex: string;
     };
-    const NODE_COUNT = 52;
+    const NODE_COUNT = 88;
     const nodes: NNode[] = Array.from({ length: NODE_COUNT }, (_, i) => {
       const phi   = Math.acos(1 - 2*(i+0.5)/NODE_COUNT);
       const theta = Math.PI * (1 + Math.sqrt(5)) * i;
@@ -79,37 +98,55 @@ function QuantumBrain3D({ open, hover, activeColor }: { open: boolean; hover: bo
         x0: Math.sin(phi)*Math.cos(theta),
         y0: Math.cos(phi),
         z0: Math.sin(phi)*Math.sin(theta),
-        r:  0.50 + (i % 5) * 0.12,
+        phi, theta,
+        r:  0.48 + (i % 5) * 0.10,
         hOff: (i / NODE_COUNT) * 360,
         connections: [],
         firePhase: Math.random() * Math.PI * 2,
         fireSpd:   0.8 + Math.random() * 1.8,
+        cortex: getCortexColor(phi, theta),
       };
     });
 
-    // Connect nearby nodes (max 5 connections each, threshold 0.85)
+    // Connect nearby nodes (threshold 0.78, max 5 connections each)
     for (let i = 0; i < NODE_COUNT; i++) {
       for (let j = i+1; j < NODE_COUNT; j++) {
         if (nodes[i].connections.length >= 5) break;
         const dx=nodes[i].x0-nodes[j].x0, dy=nodes[i].y0-nodes[j].y0, dz=nodes[i].z0-nodes[j].z0;
-        if (Math.sqrt(dx*dx+dy*dy+dz*dz) < 0.85 && nodes[j].connections.length < 5) {
+        if (Math.sqrt(dx*dx+dy*dy+dz*dz) < 0.78 && nodes[j].connections.length < 5) {
           nodes[i].connections.push(j);
           nodes[j].connections.push(i);
         }
       }
     }
 
-    // ── DNA double helix (12 base pairs) ─────────────────────────────────────
-    const DNA_PAIRS = 12;
+    // ── Quantum entanglement pairs (antipodal nodes) ──────────────────────────
+    const ENTANGLE_PAIRS: [number, number][] = [];
+    for (let i = 0; i < 8; i++) {
+      const ni = Math.floor(Math.random() * NODE_COUNT);
+      let bestJ = 0, bestDot = 2;
+      for (let j = 0; j < NODE_COUNT; j++) {
+        if (j === ni) continue;
+        const dot = nodes[ni].x0*nodes[j].x0 + nodes[ni].y0*nodes[j].y0 + nodes[ni].z0*nodes[j].z0;
+        if (dot < bestDot) { bestDot = dot; bestJ = j; }
+      }
+      ENTANGLE_PAIRS.push([ni, bestJ]);
+    }
 
-    // ── 5 orbital rings ───────────────────────────────────────────────────────
-    type OrbRing = { r: number; tX: number; tY: number; tZ: number; speed: number; hOff: number; nodeCount: number };
+    // ── DNA double helix (14 base pairs) ─────────────────────────────────────
+    const DNA_PAIRS = 14;
+
+    // ── 8 orbital rings ───────────────────────────────────────────────────────
+    type OrbRing = { r: number; tX: number; tY: number; tZ: number; speed: number; hOff: number; nodeCount: number; glowMult: number };
     const ORB_RINGS: OrbRing[] = [
-      { r: 14.0, tX:  0.28, tY:  0.12, tZ: 0.05, speed:  0.025, hOff:   0, nodeCount: 5 },
-      { r: 17.5, tX: -0.48, tY:  0.42, tZ: 0.15, speed: -0.018, hOff:  72, nodeCount: 6 },
-      { r: 20.5, tX:  0.68, tY: -0.52, tZ: 0.30, speed:  0.012, hOff: 144, nodeCount: 7 },
-      { r: 22.5, tX: -0.20, tY:  0.65, tZ: 0.50, speed: -0.022, hOff: 216, nodeCount: 4 },
-      { r: 24.5, tX:  0.55, tY: -0.25, tZ: 0.70, speed:  0.008, hOff: 288, nodeCount: 8 },
+      { r: 13.5, tX:  0.28, tY:  0.12, tZ: 0.05, speed:  0.028, hOff:   0, nodeCount: 5, glowMult: 1.4 },
+      { r: 16.5, tX: -0.48, tY:  0.42, tZ: 0.15, speed: -0.021, hOff:  45, nodeCount: 6, glowMult: 1.2 },
+      { r: 19.5, tX:  0.68, tY: -0.52, tZ: 0.30, speed:  0.015, hOff:  90, nodeCount: 7, glowMult: 1.0 },
+      { r: 21.5, tX: -0.20, tY:  0.65, tZ: 0.50, speed: -0.019, hOff: 135, nodeCount: 4, glowMult: 1.1 },
+      { r: 23.5, tX:  0.55, tY: -0.25, tZ: 0.70, speed:  0.011, hOff: 180, nodeCount: 8, glowMult: 0.9 },
+      { r: 25.0, tX: -0.38, tY:  0.58, tZ: 0.20, speed: -0.009, hOff: 225, nodeCount: 5, glowMult: 0.8 },
+      { r: 26.5, tX:  0.72, tY: -0.40, tZ: 0.45, speed:  0.007, hOff: 270, nodeCount: 3, glowMult: 0.7 },
+      { r: 28.0, tX: -0.30, tY:  0.20, tZ: 0.80, speed: -0.005, hOff: 315, nodeCount: 4, glowMult: 0.6 },
     ];
 
     type OrbP = { ring: number; angle: number; trail: { x: number; y: number }[] };
@@ -133,37 +170,42 @@ function QuantumBrain3D({ open, hover, activeColor }: { open: boolean; hover: bo
     // ── Signal pulses ─────────────────────────────────────────────────────────
     type Signal = { ni: number; nj: number; t: number; spd: number; hOff: number };
     const signals: Signal[] = [];
-    function spawnSignals() {
+    function spawnSignals(isStorm: boolean) {
+      const spawnRate = isStorm ? 0.12 : 0.022;
       nodes.forEach((n, ni) => {
-        if (n.connections.length > 0 && Math.random() < 0.025) {
+        if (n.connections.length > 0 && Math.random() < spawnRate) {
           const nj = n.connections[Math.floor(Math.random() * n.connections.length)];
-          signals.push({ ni, nj, t: 0, spd: 0.008 + Math.random() * 0.022, hOff: n.hOff });
+          signals.push({ ni, nj, t: 0, spd: 0.010 + Math.random() * 0.025, hOff: n.hOff });
         }
       });
-      while (signals.length > 30) signals.shift();
+      while (signals.length > 55) signals.shift();
     }
 
     // ── Background stars ──────────────────────────────────────────────────────
-    const STARS = Array.from({ length: 55 }, () => ({
+    const STARS = Array.from({ length: 70 }, () => ({
       x: Math.random()*SIZE, y: Math.random()*SIZE,
       r: 0.15 + Math.random()*0.55, a: 0.08+Math.random()*0.6, va: 0.008+Math.random()*0.03,
     }));
+
+    // ── Consciousness wave rings ───────────────────────────────────────────────
+    const waves = waveRef.current;
 
     // ── Main draw loop ────────────────────────────────────────────────────────
     function draw() {
       rafRef.current = requestAnimationFrame(draw);
       const isH = hoverRef.current;
       const isO = openRef.current;
-      tRef.current += isH ? 0.030 : 0.018;
+      tRef.current += isH ? 0.032 : 0.018;
       const t = tRef.current;
 
       ctx.clearRect(0, 0, SIZE, SIZE);
 
-      const hue  = (t * (isH ? 25 : 12)) % 360;
-      const acRGB = parseColor(colorRef.current);
-      const gRX = Math.sin(t*0.22)*0.32 + 0.10;
-      const gRY = t * (isH ? 0.40 : 0.22);
-      const gRZ = Math.sin(t*0.29)*0.18;
+      const hue     = (t * (isH ? 26 : 12)) % 360;
+      const acRGB   = parseColor(colorRef.current);
+      const isStorm = isH && (t - stormRef.current) < 1.8;
+      const gRX     = Math.sin(t*0.22)*0.32 + 0.10;
+      const gRY     = t * (isH ? 0.42 : 0.22);
+      const gRZ     = Math.sin(t*0.29)*0.18;
 
       // ── Stars ───────────────────────────────────────────────────────────────
       STARS.forEach(s => {
@@ -172,292 +214,272 @@ function QuantumBrain3D({ open, hover, activeColor }: { open: boolean; hover: bo
         ctx.fillStyle = `rgba(255,255,255,${a})`; ctx.fill();
       });
 
-      // ── Outer corona aura ──────────────────────────────────────────────────
-      const coronaR = R_BRAIN + (isH ? 18 : 13.5);
+      // ── Outer corona aura ───────────────────────────────────────────────────
+      const coronaR = R_BRAIN + (isH ? 19 : 14);
       const corona  = ctx.createRadialGradient(cx, cy, R_BRAIN*0.65, cx, cy, coronaR);
-      corona.addColorStop(0,   `rgba(${acRGB},${isO ? 0.26 : isH ? 0.20 : 0.12})`);
-      corona.addColorStop(0.3, `rgba(${hsl(hue+60)},${isO ? 0.13 : 0.07})`);
+      corona.addColorStop(0,   `rgba(${acRGB},${isO ? 0.28 : isH ? 0.22 : 0.13})`);
+      corona.addColorStop(0.3, `rgba(${hsl(hue+60)},${isO ? 0.14 : 0.07})`);
       corona.addColorStop(0.6, `rgba(${hsl(hue+120)},0.03)`);
       corona.addColorStop(1,   "rgba(0,0,0,0)");
       ctx.beginPath(); ctx.arc(cx, cy, coronaR, 0, Math.PI*2);
       ctx.fillStyle = corona; ctx.fill();
 
-      // ── 4 pulsing aura rings ───────────────────────────────────────────────
-      for (let pr = 0; pr < 4; pr++) {
-        const pulse = (Math.sin(t*(1.8+pr*0.45) + pr*1.1) + 1) / 2;
-        const rr    = R_BRAIN + 1.5 + pr*2.8 + pulse*3.5;
-        ctx.beginPath(); ctx.arc(cx, cy, rr, 0, Math.PI*2);
-        ctx.strokeStyle = `rgba(${hsl(hue+pr*90)},${(0.20-pr*0.04)*(1-pulse*0.35)})`;
-        ctx.lineWidth   = 0.7 - pr*0.15; ctx.stroke();
-      }
-
-      // ── Hover energy burst ─────────────────────────────────────────────────
-      if (isH && (t - burstRef.current) < 2.8) {
-        for (let bi = 0; bi < 16; bi++) {
-          const bp   = ((t*0.65 + bi*12) % 72) / 72;
-          const bRad = R_BRAIN + 1 + bp * 16;
-          ctx.beginPath(); ctx.arc(cx, cy, bRad, 0, Math.PI*2);
-          ctx.strokeStyle = `rgba(${hsl(hue+bi*22.5)},${(1-bp)*0.35})`;
-          ctx.lineWidth   = 1.6*(1-bp); ctx.stroke();
+      // ── Storm chromatic aberration ──────────────────────────────────────────
+      if (isStorm) {
+        const stormAge = t - stormRef.current;
+        const intensity = Math.max(0, 1 - stormAge / 1.8);
+        for (let ca = 0; ca < 3; ca++) {
+          const off = (ca - 1) * intensity * 1.2;
+          const caColor = ca === 0 ? "255,0,80" : ca === 1 ? "0,255,136" : "0,136,255";
+          ctx.beginPath(); ctx.arc(cx + off, cy, coronaR * 0.88, 0, Math.PI*2);
+          ctx.strokeStyle = `rgba(${caColor},${0.08 * intensity})`; ctx.lineWidth = 1.5; ctx.stroke();
         }
       }
 
-      // ── Chromatic aberration glow (hover) ──────────────────────────────────
-      if (isH) {
-        const chromR = R_BRAIN * 1.25;
-        [[-1.2, 0, hue], [0, -1.2, hue+120], [1.2, 0, hue+240]].forEach(([ox, oy, h]) => {
-          const cg = ctx.createRadialGradient(cx+(ox as number), cy+(oy as number), 0, cx+(ox as number), cy+(oy as number), chromR);
-          cg.addColorStop(0, `rgba(${hsl(h as number)},0.20)`);
-          cg.addColorStop(1, "rgba(0,0,0,0)");
-          ctx.beginPath(); ctx.arc(cx+(ox as number), cy+(oy as number), chromR, 0, Math.PI*2);
-          ctx.fillStyle = cg; ctx.fill();
-        });
+      // ── 5 pulsing aura rings ────────────────────────────────────────────────
+      for (let pr = 0; pr < 5; pr++) {
+        const pulse = (Math.sin(t*(1.8+pr*0.4) + pr*1.1) + 1) / 2;
+        const rr    = R_BRAIN + 1.5 + pr*2.6 + pulse*3.2;
+        ctx.beginPath(); ctx.arc(cx, cy, rr, 0, Math.PI*2);
+        ctx.strokeStyle = `rgba(${hsl(hue+pr*72)},${(0.22-pr*0.04)*(1-pulse*0.35)*(isStorm?1.6:1)})`;
+        ctx.lineWidth   = 0.7 - pr*0.12; ctx.stroke();
       }
 
-      // ── Project 52 brain nodes ─────────────────────────────────────────────
-      const projected: { px: number; py: number; sc: number; zd: number; ni: number }[] = [];
-      nodes.forEach((n, ni) => {
-        let [x,y,z] = rotX(n.x0*R_BRAIN, n.y0*R_BRAIN, n.z0*R_BRAIN, gRX);
+      // ── Consciousness wave rings ────────────────────────────────────────────
+      for (let wi = waves.length - 1; wi >= 0; wi--) {
+        const w = waves[wi];
+        w.r += 0.55;
+        const age = t - w.phase;
+        w.a = Math.max(0, 1 - age * 0.6);
+        if (w.a <= 0) { waves.splice(wi, 1); continue; }
+        ctx.beginPath(); ctx.arc(cx, cy, R_BRAIN + w.r, 0, Math.PI*2);
+        ctx.strokeStyle = `rgba(${acRGB},${w.a * 0.4})`; ctx.lineWidth = 1.2; ctx.stroke();
+      }
+
+      // ── Hover energy burst ──────────────────────────────────────────────────
+      if (isH && (t - burstRef.current) < 3.0) {
+        for (let bi = 0; bi < 18; bi++) {
+          const bp   = ((t*0.65 + bi*11.5) % 72) / 72;
+          const bRad = R_BRAIN + 1 + bp * 18;
+          ctx.beginPath(); ctx.arc(cx, cy, bRad, 0, Math.PI*2);
+          ctx.strokeStyle = `rgba(${hsl(hue+bi*20)},${(1-bp)*0.32})`;
+          ctx.lineWidth   = 0.5; ctx.stroke();
+        }
+      }
+
+      // ── DNA double helix (along Y axis) ────────────────────────────────────
+      const dnaH = R_BRAIN * 1.9;
+      for (let p = 0; p < DNA_PAIRS; p++) {
+        const yFrac  = (p / (DNA_PAIRS - 1)) - 0.5;
+        const yRaw   = yFrac * dnaH * 2;
+        const phase  = (p / DNA_PAIRS) * Math.PI * 2;
+        const twist  = t * 0.55 + phase;
+        const dnaR   = 3.5 + Math.sin(phase) * 0.8;
+
+        for (let strand = 0; strand < 2; strand++) {
+          const a = twist + strand * Math.PI;
+          let [x, y, z] = [dnaR * Math.cos(a), yRaw, dnaR * Math.sin(a)];
+          [x,y,z] = rotX(x,y,z, gRX);
+          [x,y,z] = rotY(x,y,z, gRY);
+          [x,y,z] = rotZ(x,y,z, gRZ);
+          const { px, py, sc } = proj(x*R_BRAIN/14, y*R_BRAIN/14, z*R_BRAIN/14);
+          const alpha = 0.5 + (z+50)/160;
+          const baseHue = strand === 0 ? hue : hue + 180;
+          ctx.beginPath(); ctx.arc(px, py, sc * 1.1, 0, Math.PI*2);
+          ctx.fillStyle = `rgba(${hsl(baseHue)},${alpha * (isH ? 0.85 : 0.55)})`; ctx.fill();
+
+          // Base pair connector
+          if (p < DNA_PAIRS - 1) {
+            const a2 = twist + Math.PI * 2 / DNA_PAIRS + strand * Math.PI;
+            let [x2,y2,z2] = [dnaR * Math.cos(a2), yRaw + dnaH*2/(DNA_PAIRS-1), dnaR * Math.sin(a2)];
+            [x2,y2,z2] = rotX(x2,y2,z2, gRX);
+            [x2,y2,z2] = rotY(x2,y2,z2, gRY);
+            [x2,y2,z2] = rotZ(x2,y2,z2, gRZ);
+            const p2 = proj(x2*R_BRAIN/14, y2*R_BRAIN/14, z2*R_BRAIN/14);
+            ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(p2.px, p2.py);
+            ctx.strokeStyle = `rgba(${hsl(baseHue+30)},${alpha * 0.20})`; ctx.lineWidth = 0.5; ctx.stroke();
+          }
+        }
+
+        // Cross base-pair link
+        const a1 = twist, a2 = twist + Math.PI;
+        let [bx1,by1,bz1] = [dnaR*Math.cos(a1), yRaw, dnaR*Math.sin(a1)];
+        let [bx2,by2,bz2] = [dnaR*Math.cos(a2), yRaw, dnaR*Math.sin(a2)];
+        [bx1,by1,bz1] = rotX(bx1,by1,bz1,gRX); [bx1,by1,bz1] = rotY(bx1,by1,bz1,gRY); [bx1,by1,bz1] = rotZ(bx1,by1,bz1,gRZ);
+        [bx2,by2,bz2] = rotX(bx2,by2,bz2,gRX); [bx2,by2,bz2] = rotY(bx2,by2,bz2,gRY); [bx2,by2,bz2] = rotZ(bx2,by2,bz2,gRZ);
+        const bp1 = proj(bx1*R_BRAIN/14, by1*R_BRAIN/14, bz1*R_BRAIN/14);
+        const bp2 = proj(bx2*R_BRAIN/14, by2*R_BRAIN/14, bz2*R_BRAIN/14);
+        ctx.beginPath(); ctx.moveTo(bp1.px, bp1.py); ctx.lineTo(bp2.px, bp2.py);
+        const pairHue = (p / DNA_PAIRS) * 360;
+        ctx.strokeStyle = `rgba(${hsl(pairHue)},0.18)`; ctx.lineWidth = 0.5; ctx.stroke();
+      }
+
+      // ── 8 orbital rings + particles ────────────────────────────────────────
+      const sortedOrb: Array<{ px: number; py: number; sc: number; zd: number; ri: number; ai: number; col: string }> = [];
+      orbParticles.forEach((op, _pi) => {
+        const ring = ORB_RINGS[op.ring];
+        op.angle += ring.speed * (isH ? 1.5 : 1.0);
+        const { px, py, sc, zd } = xfOrb(ring.r, op.angle, ring, gRX, gRY, gRZ);
+
+        op.trail.unshift({ x: px, y: py });
+        if (op.trail.length > 9) op.trail.pop();
+
+        sortedOrb.push({ px, py, sc, zd, ri: op.ring, ai: _pi, col: hsl(hue + ring.hOff) });
+      });
+
+      // Draw orbital ring paths
+      ORB_RINGS.forEach((ring, ri) => {
+        const pts: Array<[number, number]> = [];
+        const STEPS = 48;
+        for (let s = 0; s < STEPS; s++) {
+          const a = (s / STEPS) * Math.PI * 2;
+          const { px, py, zd } = xfOrb(ring.r, a, ring, gRX, gRY, gRZ);
+          pts.push([px, py]);
+        }
+        ctx.beginPath();
+        pts.forEach(([px, py], i) => i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py));
+        ctx.closePath();
+        const alpha = 0.06 + ri * 0.012;
+        ctx.strokeStyle = `rgba(${hsl(hue + ring.hOff)},${alpha * ring.glowMult})`; ctx.lineWidth = 0.6; ctx.stroke();
+      });
+
+      // Draw particles (depth-sorted)
+      sortedOrb.sort((a, b) => a.zd - b.zd).forEach(({ px, py, sc, ri, col }) => {
+        const op = orbParticles[ri];
+        // Trail
+        op.trail.forEach((tp, i) => {
+          if (i === 0) return;
+          ctx.beginPath(); ctx.arc(tp.x, tp.y, sc * 1.0 * (1 - i/op.trail.length), 0, Math.PI*2);
+          ctx.fillStyle = `rgba(${col},${(0.25 - i*0.028)*ORB_RINGS[ri].glowMult})`; ctx.fill();
+        });
+        const pr = sc * 2.4 * ORB_RINGS[ri].glowMult;
+        ctx.beginPath(); ctx.arc(px, py, pr, 0, Math.PI*2);
+        ctx.fillStyle = `rgba(${col},0.92)`; ctx.fill();
+        // Glow
+        const og = ctx.createRadialGradient(px, py, 0, px, py, pr * 3);
+        og.addColorStop(0, `rgba(${col},0.35)`); og.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.beginPath(); ctx.arc(px, py, pr * 3, 0, Math.PI*2);
+        ctx.fillStyle = og; ctx.fill();
+      });
+
+      // ── Brain sphere — depth-sorted node rendering ──────────────────────────
+      spawnSignals(isStorm);
+
+      type DrawNode = { x: number; y: number; z: number; sc: number; ni: number };
+      const drawNodes: DrawNode[] = nodes.map((n, ni) => {
+        let [x,y,z] = [n.x0*R_BRAIN, n.y0*R_BRAIN, n.z0*R_BRAIN];
+        [x,y,z] = rotX(x,y,z, gRX);
         [x,y,z] = rotY(x,y,z, gRY);
         [x,y,z] = rotZ(x,y,z, gRZ);
-        const { px, py, sc } = proj(x,y,z);
-        projected.push({ px, py, sc, zd: z, ni });
+        const { px, py, sc } = proj(x, y, z);
+        return { x: px, y: py, z, sc, ni };
       });
-      const sortedNodes = [...projected].sort((a,b) => a.zd - b.zd);
 
-      // ── DNA double helix spine ─────────────────────────────────────────────
-      {
-        const dnaStep = (Math.PI*2) / DNA_PAIRS;
-        for (let pass = 0; pass < 2; pass++) {
-          const phaseOff = pass * Math.PI;
-          const pts: { x: number; y: number; z: number }[] = [];
-          for (let dp = 0; dp <= DNA_PAIRS * 3; dp++) {
-            const dAngle = (dp / (DNA_PAIRS*3)) * Math.PI * 4 + t*0.25 + phaseOff;
-            const dY = ((dp / (DNA_PAIRS*3)) - 0.5) * R_BRAIN * 2.2;
-            let [x,y,z] = rotX(Math.cos(dAngle)*R_BRAIN*0.42, dY, Math.sin(dAngle)*R_BRAIN*0.42, gRX);
-            [x,y,z] = rotY(x,y,z, gRY); [x,y,z] = rotZ(x,y,z, gRZ);
-            const { px, py, sc } = proj(x,y,z);
-            pts.push({ x: px, y: py, z });
-            if (dp > 0) {
-              const prev = pts[dp-1];
-              const dnaA = (0.08 + sc*0.10) * (pass === 0 ? 1 : 0.7);
-              ctx.beginPath(); ctx.moveTo(prev.x, prev.y); ctx.lineTo(px, py);
-              ctx.strokeStyle = `rgba(${hsl(hue + pass*180 + (dp/DNA_PAIRS/3)*120)},${dnaA})`;
-              ctx.lineWidth = 0.35; ctx.stroke();
-            }
-          }
-          // Base-pair rungs
-          for (let bp = 0; bp < DNA_PAIRS; bp++) {
-            const bpAngle0 = (bp / DNA_PAIRS) * Math.PI * 4 + t*0.25;
-            const bpY = ((bp / DNA_PAIRS) - 0.5) * R_BRAIN * 2.2;
-            let [x0,y0,z0] = rotX(Math.cos(bpAngle0)*R_BRAIN*0.42, bpY, Math.sin(bpAngle0)*R_BRAIN*0.42, gRX);
-            [x0,y0,z0] = rotY(x0,y0,z0,gRY); [x0,y0,z0] = rotZ(x0,y0,z0,gRZ);
-            const p0 = proj(x0,y0,z0);
-            let [x1,y1,z1] = rotX(Math.cos(bpAngle0+Math.PI)*R_BRAIN*0.42, bpY, Math.sin(bpAngle0+Math.PI)*R_BRAIN*0.42, gRX);
-            [x1,y1,z1] = rotY(x1,y1,z1,gRY); [x1,y1,z1] = rotZ(x1,y1,z1,gRZ);
-            const p1 = proj(x1,y1,z1);
-            const rungA = (0.06 + p0.sc*0.08) * dnaStep;
-            void rungA;
-            ctx.beginPath(); ctx.moveTo(p0.px, p0.py); ctx.lineTo(p1.px, p1.py);
-            ctx.strokeStyle = `rgba(${hsl(hue+bp*30)},0.08)`;
-            ctx.lineWidth = 0.28; ctx.stroke();
-          }
-        }
-      }
-
-      // ── Neural connections ─────────────────────────────────────────────────
-      sortedNodes.forEach(({ px, py, sc, zd, ni }) => {
-        const n = nodes[ni];
-        n.connections.forEach(j => {
-          const pj = projected[j];
-          const alpha = (0.10 + sc*0.12) * (0.4 + zd*0.035) * (isH ? 1.5 : 1.0);
-          if (alpha <= 0.01) return;
-          const linGrad = ctx.createLinearGradient(px, py, pj.px, pj.py);
-          linGrad.addColorStop(0, `rgba(${hsl(hue+n.hOff)},${Math.min(alpha, 0.42)})`);
-          linGrad.addColorStop(1, `rgba(${hsl(hue+nodes[j].hOff)},${Math.min(alpha*0.55, 0.24)})`);
-          ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(pj.px, pj.py);
-          ctx.strokeStyle = linGrad;
-          ctx.lineWidth = 0.28 + sc*0.20; ctx.stroke();
+      // Draw edges (connections)
+      drawNodes.forEach(dn => {
+        const n = nodes[dn.ni];
+        n.connections.forEach(ji => {
+          const dj = drawNodes[ji];
+          const depthAlpha = (dn.z + dj.z > 0) ? 0.04 : 0.025;
+          const pulse = Math.sin(t * n.fireSpd + n.firePhase) * 0.5 + 0.5;
+          ctx.beginPath(); ctx.moveTo(dn.x, dn.y); ctx.lineTo(dj.x, dj.y);
+          ctx.strokeStyle = `rgba(${n.cortex},${depthAlpha + pulse * 0.05})`; ctx.lineWidth = 0.45; ctx.stroke();
         });
       });
 
-      // ── Signal pulses ──────────────────────────────────────────────────────
-      spawnSignals();
-      signals.forEach(sig => {
-        sig.t += sig.spd;
-        if (sig.t > 1) { sig.t = 0; return; }
-        const pI = projected[sig.ni], pJ = projected[sig.nj];
-        const sx  = pI.px + (pJ.px - pI.px) * sig.t;
-        const sy  = pI.py + (pJ.py - pI.py) * sig.t;
-        const sA  = 0.92 * Math.sin(sig.t * Math.PI);
-        // Inner core
-        ctx.beginPath(); ctx.arc(sx, sy, 1.1 + sig.t*0.6, 0, Math.PI*2);
-        ctx.fillStyle = `rgba(${hsl(hue+sig.hOff, 1, 0.90)},${sA})`; ctx.fill();
-        // Outer glow
-        const grd = ctx.createRadialGradient(sx, sy, 0, sx, sy, 3.5);
-        grd.addColorStop(0, `rgba(${hsl(hue+sig.hOff)},${sA*0.45})`);
-        grd.addColorStop(1, `rgba(${hsl(hue+sig.hOff)},0)`);
-        ctx.beginPath(); ctx.arc(sx, sy, 3.5, 0, Math.PI*2);
+      // ── Quantum entanglement beams ──────────────────────────────────────────
+      ENTANGLE_PAIRS.forEach(([ni, nj], ei) => {
+        const a = drawNodes[ni], b = drawNodes[nj];
+        const entPhase = Math.sin(t * 1.2 + ei * 0.8) * 0.5 + 0.5;
+        if (entPhase > 0.2) {
+          const grad = ctx.createLinearGradient(a.x, a.y, b.x, b.y);
+          grad.addColorStop(0,   `rgba(${hsl(hue+ei*45)},0.0)`);
+          grad.addColorStop(0.3, `rgba(${hsl(hue+ei*45)},${entPhase * 0.22})`);
+          grad.addColorStop(0.5, `rgba(255,255,255,${entPhase * 0.12})`);
+          grad.addColorStop(0.7, `rgba(${hsl(hue+ei*45+90)},${entPhase * 0.22})`);
+          grad.addColorStop(1,   `rgba(${hsl(hue+ei*45+90)},0.0)`);
+          ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
+          ctx.strokeStyle = grad; ctx.lineWidth = 0.6 + entPhase * 0.5; ctx.stroke();
+        }
+      });
+
+      // ── Signal pulses ───────────────────────────────────────────────────────
+      signals.forEach((sig, si) => {
+        sig.t += sig.spd * (isStorm ? 2.2 : 1.0);
+        if (sig.t >= 1.0) { signals.splice(si, 1); return; }
+        const a = drawNodes[sig.ni], b = drawNodes[sig.nj];
+        const px = a.x + (b.x - a.x) * sig.t;
+        const py = a.y + (b.y - a.y) * sig.t;
+        const grd = ctx.createRadialGradient(px, py, 0, px, py, 3.5);
+        grd.addColorStop(0, `rgba(255,255,255,0.95)`);
+        grd.addColorStop(0.3, `rgba(${hsl(sig.hOff)},0.7)`);
+        grd.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.beginPath(); ctx.arc(px, py, 3.5, 0, Math.PI*2);
         ctx.fillStyle = grd; ctx.fill();
       });
 
-      // ── Neural nodes (depth-sorted, back to front) ─────────────────────────
-      sortedNodes.forEach(({ px, py, sc, zd, ni }) => {
-        const n     = nodes[ni];
-        // Brainwave firing pulse
-        const fire  = Math.pow(Math.max(0, Math.sin(t*n.fireSpd + n.firePhase)), 3);
-        const nr    = (n.r * sc + fire * 0.5) * (isH ? 1.15 : 1.0);
-        const alpha = 0.45 + (zd/R_BRAIN)*0.42 + fire*0.15;
-        const col   = hsl(hue + n.hOff);
+      // Draw nodes (depth-sorted front-to-back)
+      drawNodes.sort((a, b) => a.z - b.z).forEach(dn => {
+        const n = nodes[dn.ni];
+        const fire = Math.sin(t * n.fireSpd + n.firePhase) * 0.5 + 0.5;
+        const alpha = 0.45 + fire * 0.45 + (isStorm ? fire * 0.4 : 0);
+        const nr    = (n.r + (isStorm ? fire * 0.6 : 0)) * dn.sc * 6.5;
 
-        // Firing flash halo
-        if (fire > 0.5 || isH) {
-          const ng = ctx.createRadialGradient(px, py, 0, px, py, nr*(3.5+fire*1.5));
-          ng.addColorStop(0, `rgba(${col},${(alpha*0.6+fire*0.4)*(isH?1.2:1)})`);
-          ng.addColorStop(0.4, `rgba(${col},${alpha*0.15})`);
-          ng.addColorStop(1,   `rgba(${col},0)`);
-          ctx.beginPath(); ctx.arc(px, py, nr*(3.5+fire*1.5), 0, Math.PI*2);
-          ctx.fillStyle = ng; ctx.fill();
-        }
+        // Glow halo
+        const ng = ctx.createRadialGradient(dn.x, dn.y, 0, dn.x, dn.y, nr * 2.8);
+        ng.addColorStop(0, `rgba(${n.cortex},${alpha * 0.4})`);
+        ng.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.beginPath(); ctx.arc(dn.x, dn.y, nr * 2.8, 0, Math.PI*2);
+        ctx.fillStyle = ng; ctx.fill();
 
-        // Node body — 3-pass glass sphere
-        const body = ctx.createRadialGradient(px-nr*0.28, py-nr*0.34, 0, px, py, nr);
-        body.addColorStop(0,   `rgba(${hsl(hue+n.hOff, 0.7, 0.88)},${alpha})`);
-        body.addColorStop(0.45,`rgba(${col},${alpha*0.85})`);
-        body.addColorStop(0.80,`rgba(${hsl(hue+n.hOff,1,0.40)},${alpha*0.70})`);
-        body.addColorStop(1,   `rgba(${hsl(hue+n.hOff,1,0.22)},${alpha*0.48})`);
-        ctx.beginPath(); ctx.arc(px, py, nr, 0, Math.PI*2);
-        ctx.fillStyle = body; ctx.fill();
-
-        // Specular highlight
-        const spec = ctx.createRadialGradient(px-nr*0.30, py-nr*0.36, 0, px, py, nr*0.75);
-        spec.addColorStop(0, `rgba(255,255,255,${alpha*0.75})`);
-        spec.addColorStop(1, "rgba(255,255,255,0)");
-        ctx.beginPath(); ctx.arc(px, py, nr, 0, Math.PI*2);
-        ctx.fillStyle = spec; ctx.fill();
-
-        // Firing spark micro-dot
-        if (fire > 0.7) {
-          ctx.beginPath(); ctx.arc(px, py, 0.55, 0, Math.PI*2);
-          ctx.fillStyle = "rgba(255,255,255,0.98)"; ctx.fill();
-        }
+        // Node dot
+        ctx.beginPath(); ctx.arc(dn.x, dn.y, Math.max(0.4, nr), 0, Math.PI*2);
+        ctx.fillStyle = `rgba(${n.cortex},${alpha})`; ctx.fill();
       });
 
-      // ── 5 Orbital rings ────────────────────────────────────────────────────
-      ORB_RINGS.forEach((ring, ri) => {
-        // Ring orbit path (true 3D, 96 segments)
-        ctx.beginPath();
-        let first = true;
-        for (let i = 0; i <= 96; i++) {
-          const a = (i/96)*Math.PI*2;
-          const { px, py } = xfOrb(ring.r, a, ring, gRX, gRY, gRZ);
-          if (first) { ctx.moveTo(px, py); first = false; }
-          else          ctx.lineTo(px, py);
+      // ── Brain sphere outline ────────────────────────────────────────────────
+      const sphereGrad = ctx.createRadialGradient(cx - R_BRAIN*0.3, cy - R_BRAIN*0.3, 0, cx, cy, R_BRAIN * 1.15);
+      sphereGrad.addColorStop(0,   `rgba(${acRGB},${isO ? 0.22 : isH ? 0.16 : 0.08})`);
+      sphereGrad.addColorStop(0.55, `rgba(${hsl(hue+120)},0.04)`);
+      sphereGrad.addColorStop(1,   "rgba(0,0,0,0)");
+      ctx.beginPath(); ctx.arc(cx, cy, R_BRAIN * 1.15, 0, Math.PI*2);
+      ctx.fillStyle = sphereGrad; ctx.fill();
+
+      // Outer ring
+      ctx.beginPath(); ctx.arc(cx, cy, R_BRAIN * 1.15, 0, Math.PI*2);
+      ctx.strokeStyle = `rgba(${acRGB},${isH ? 0.40 : 0.18})`; ctx.lineWidth = 0.7; ctx.stroke();
+
+      // ── Center core ────────────────────────────────────────────────────────
+      const coreR = 2.8 + (isStorm ? 1.2 : 0);
+      const core  = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreR);
+      core.addColorStop(0, `rgba(255,255,255,${isH ? 0.95 : 0.70})`);
+      core.addColorStop(0.4, `rgba(${acRGB},0.80)`);
+      core.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.beginPath(); ctx.arc(cx, cy, coreR, 0, Math.PI*2);
+      ctx.fillStyle = core; ctx.fill();
+
+      // Storm burst flare
+      if (isStorm) {
+        const age = t - stormRef.current;
+        const flare = Math.max(0, 1 - age / 1.8);
+        for (let f = 0; f < 12; f++) {
+          const fa = (f / 12) * Math.PI * 2;
+          const fl = (R_BRAIN * 0.6 + Math.random() * R_BRAIN * 0.8) * flare;
+          ctx.beginPath(); ctx.moveTo(cx, cy);
+          ctx.lineTo(cx + Math.cos(fa)*fl, cy + Math.sin(fa)*fl);
+          ctx.strokeStyle = `rgba(${acRGB},${flare * 0.22})`; ctx.lineWidth = 0.8; ctx.stroke();
         }
-        ctx.closePath();
-        ctx.setLineDash([1.2, 3.2]);
-        ctx.strokeStyle = `rgba(${hsl(hue+ring.hOff)},${0.10 + ri*0.018})`;
-        ctx.lineWidth = 0.35; ctx.stroke();
-        ctx.setLineDash([]);
-
-        // Orbital electrons
-        orbParticles.filter(p => p.ring === ri).forEach(p => {
-          p.angle += ring.speed * (isH ? 1.4 : 1.0);
-          const { px, py, sc } = xfOrb(ring.r, p.angle, ring, gRX, gRY, gRZ);
-          // Trail
-          p.trail.push({ x: px, y: py });
-          if (p.trail.length > 10) p.trail.shift();
-          p.trail.forEach((pt, ti) => {
-            if (ti === 0) return;
-            const ta = (ti/p.trail.length)*0.45;
-            const tr = sc * 0.8 * (ti/p.trail.length);
-            ctx.beginPath(); ctx.arc(pt.x, pt.y, tr, 0, Math.PI*2);
-            ctx.fillStyle = `rgba(${hsl(hue+ring.hOff)},${ta})`; ctx.fill();
-          });
-          // Electron core
-          const eR = 1.3 * sc;
-          const eGrad = ctx.createRadialGradient(px, py, 0, px, py, eR*3.5);
-          eGrad.addColorStop(0, `rgba(${hsl(hue+ring.hOff, 1, 0.92)},0.92)`);
-          eGrad.addColorStop(1, `rgba(${hsl(hue+ring.hOff)},0)`);
-          ctx.beginPath(); ctx.arc(px, py, eR*3.5, 0, Math.PI*2);
-          ctx.fillStyle = eGrad; ctx.fill();
-          ctx.beginPath(); ctx.arc(px, py, eR*0.45, 0, Math.PI*2);
-          ctx.fillStyle = "rgba(255,255,255,0.97)"; ctx.fill();
-        });
-      });
-
-      // ── Brain core sphere — 6 render passes ───────────────────────────────
-      // P1: Shadow base
-      ctx.beginPath(); ctx.arc(cx, cy, R_BRAIN, 0, Math.PI*2);
-      ctx.fillStyle = "rgba(2,2,10,0.92)"; ctx.fill();
-
-      // P2: Main diffuse (cycling hue)
-      const diff = ctx.createRadialGradient(cx-R_BRAIN*0.32, cy-R_BRAIN*0.36, 0, cx, cy, R_BRAIN*1.22);
-      diff.addColorStop(0,    `rgba(${hsl(hue, 0.7, 0.88)},0.95)`);
-      diff.addColorStop(0.25, `rgba(${hsl(hue+45, 1, 0.65)},0.82)`);
-      diff.addColorStop(0.58, `rgba(${hsl(hue+90, 1, 0.42)},0.72)`);
-      diff.addColorStop(0.85, `rgba(${hsl(hue+150, 1, 0.22)},0.60)`);
-      diff.addColorStop(1,    `rgba(${hsl(hue+210, 1, 0.10)},0.40)`);
-      ctx.beginPath(); ctx.arc(cx, cy, R_BRAIN, 0, Math.PI*2);
-      ctx.fillStyle = diff; ctx.fill();
-
-      // P3: Accent color subsurface scatter
-      const acTint = ctx.createRadialGradient(cx, cy+R_BRAIN*0.42, 0, cx, cy, R_BRAIN);
-      acTint.addColorStop(0,   `rgba(${acRGB},0.22)`);
-      acTint.addColorStop(0.5, `rgba(${acRGB},0.06)`);
-      acTint.addColorStop(1,   `rgba(${acRGB},0)`);
-      ctx.beginPath(); ctx.arc(cx, cy, R_BRAIN, 0, Math.PI*2);
-      ctx.fillStyle = acTint; ctx.fill();
-
-      // P4: Surface scan line
-      ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, R_BRAIN, 0, Math.PI*2); ctx.clip();
-      const scanY = cy - R_BRAIN + ((t*22) % (R_BRAIN*2));
-      ctx.beginPath(); ctx.moveTo(cx-R_BRAIN, scanY); ctx.lineTo(cx+R_BRAIN, scanY);
-      ctx.strokeStyle = `rgba(${hsl(hue)},0.14)`; ctx.lineWidth = 0.4; ctx.stroke();
-      ctx.restore();
-
-      // P5: Specular highlight
-      const spec = ctx.createRadialGradient(cx-R_BRAIN*0.38, cy-R_BRAIN*0.44, 0, cx-R_BRAIN*0.10, cy-R_BRAIN*0.10, R_BRAIN*0.88);
-      spec.addColorStop(0,    "rgba(255,255,255,0.92)");
-      spec.addColorStop(0.18, "rgba(255,255,255,0.32)");
-      spec.addColorStop(0.52, "rgba(255,255,255,0.06)");
-      spec.addColorStop(1,    "rgba(255,255,255,0)");
-      ctx.beginPath(); ctx.arc(cx, cy, R_BRAIN, 0, Math.PI*2);
-      ctx.fillStyle = spec; ctx.fill();
-
-      // P6: Rim light
-      const rim = ctx.createRadialGradient(cx+R_BRAIN*0.60, cy+R_BRAIN*0.42, 0, cx+R_BRAIN*0.36, cy+R_BRAIN*0.24, R_BRAIN*0.85);
-      rim.addColorStop(0, `rgba(${acRGB},0.55)`);
-      rim.addColorStop(1, `rgba(${acRGB},0)`);
-      ctx.beginPath(); ctx.arc(cx, cy, R_BRAIN, 0, Math.PI*2);
-      ctx.fillStyle = rim; ctx.fill();
-
-      // Brain border + glow
-      const pulse = Math.sin(t*2.2)*0.5+0.5;
-      ctx.beginPath(); ctx.arc(cx, cy, R_BRAIN, 0, Math.PI*2);
-      ctx.strokeStyle = `rgba(${hsl(hue)},${isH ? 0.75 : 0.45})`;
-      ctx.lineWidth = isH ? 1.3 : 0.85;
-      ctx.shadowColor = `rgba(${hsl(hue)},${0.7+pulse*0.3})`; ctx.shadowBlur = isH ? 9 : 4;
-      ctx.stroke(); ctx.shadowBlur = 0;
-
-      // Center label
-      ctx.fillStyle = isH ? `rgba(${acRGB},0.92)` : "rgba(255,255,255,0.80)";
-      ctx.font = `bold ${isH ? 5.2 : 4.8}px monospace`;
-      ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.shadowColor = `rgba(${hsl(hue)},0.8)`; ctx.shadowBlur = isH ? 5 : 2;
-      ctx.fillText(isH ? "PERSONA" : "P·AI", cx, cy);
-      ctx.shadowBlur = 0;
+      }
     }
 
-    draw();
-    return () => { cancelAnimationFrame(rafRef.current); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    rafRef.current = requestAnimationFrame(draw);
+    return () => cancelAnimationFrame(rafRef.current);
   }, []);
 
   return (
     <canvas
       ref={canvasRef}
-      style={{ width: 46, height: 46, display: "block", cursor: "pointer" }}
+      style={{ width: 46, height: 46, display: "block", imageRendering: "auto", borderRadius: "50%" }}
     />
   );
 }
@@ -496,27 +518,33 @@ export function QuantumPersona3D({ onOpenPersonaManager }: QuantumPersona3DProps
       style={{
         width: 46, height: 46,
         boxShadow: hover || open
-          ? `0 0 22px ${activeColor}66, 0 0 44px ${activeColor}28, 0 0 8px ${activeColor}44`
-          : `0 0 10px ${activeColor}28`,
-        border: `1px solid ${hover || open ? activeColor+"77" : activeColor+"2a"}`,
+          ? `0 0 24px ${activeColor}70, 0 0 48px ${activeColor}30, 0 0 10px ${activeColor}50, inset 0 0 8px ${activeColor}15`
+          : `0 0 12px ${activeColor}30`,
+        border: `1px solid ${hover || open ? activeColor+"88" : activeColor+"30"}`,
         borderRadius: "50%",
-        background: "rgba(3,3,10,0.88)",
+        background: "rgba(3,3,10,0.90)",
         transition: "box-shadow 0.22s, border-color 0.22s",
       }}
-      whileHover={{ scale: 1.09, y: -1.5 }}
-      whileTap={{ scale: 0.90 }}
-      transition={{ type: "spring", stiffness: 520, damping: 26 }}
+      whileHover={{ scale: 1.10, y: -2 }}
+      whileTap={{ scale: 0.88 }}
+      transition={{ type: "spring", stiffness: 540, damping: 24 }}
       title={`مدير الشخصيات — ${activePersona}`}
       aria-label="مدير الشخصيات"
     >
       <QuantumBrain3D open={open} hover={hover} activeColor={activeColor} />
 
-      {/* Pulsing active indicator */}
+      {/* Active indicator — dual ring pulse */}
       <motion.div
         className="absolute bottom-0.5 right-0.5 w-2 h-2 rounded-full"
-        style={{ background: activeColor, boxShadow: `0 0 8px ${activeColor}` }}
-        animate={{ opacity: [1, 0.35, 1], scale: [1, 1.35, 1] }}
-        transition={{ duration: 1.9, repeat: Infinity }}
+        style={{ background: activeColor, boxShadow: `0 0 10px ${activeColor}` }}
+        animate={{ opacity: [1, 0.30, 1], scale: [1, 1.45, 1] }}
+        transition={{ duration: 1.8, repeat: Infinity }}
+      />
+      <motion.div
+        className="absolute bottom-0 right-0 w-3 h-3 rounded-full border"
+        style={{ borderColor: activeColor + "60" }}
+        animate={{ opacity: [0.6, 0, 0.6], scale: [1, 1.8, 1] }}
+        transition={{ duration: 1.8, repeat: Infinity, delay: 0.4 }}
       />
 
       {/* Hover tooltip */}
@@ -525,7 +553,7 @@ export function QuantumPersona3D({ onOpenPersonaManager }: QuantumPersona3DProps
         animate={{ opacity: hover ? 1 : 0, y: hover ? 0 : 5, scale: hover ? 1 : 0.88 }}
         transition={{ duration: 0.16 }}
         className="absolute -bottom-6 left-1/2 -translate-x-1/2 pointer-events-none whitespace-nowrap"
-        style={{ fontSize: 8, fontWeight: 900, color: activeColor, letterSpacing: "0.12em", textShadow: `0 0 10px ${activeColor}` }}
+        style={{ fontSize: 8, fontWeight: 900, color: activeColor, letterSpacing: "0.12em", textShadow: `0 0 12px ${activeColor}` }}
       >
         PERSONA
       </motion.div>

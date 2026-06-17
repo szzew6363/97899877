@@ -214,19 +214,27 @@ function QuantumAtom3D({ phase, open, hover }: { phase: Phase; open: boolean; ho
     const [cx, cy] = [SIZE / 2, SIZE / 2];
     const FOV = 190;
 
-    // 4 rings — rainbow spectrum, hOff staggers hue 90° per ring
+    // 12 rings — rainbow spectrum, hOff staggers hue 30° per ring — nuclear fusion atom
     type Ring = { r: number; tX: number; tY: number; speed: number; hOff: number; eCount: number };
     const RINGS: Ring[] = [
       { r:  6, tX:  0.22, tY:  0.10, speed:  0.030, hOff:   0, eCount: 8  },
-      { r:  9, tX:  0.40, tY:  0.20, speed:  0.020, hOff:  40, eCount: 10 },
-      { r: 12, tX: -0.55, tY:  0.50, speed: -0.014, hOff:  80, eCount: 12 },
-      { r: 15, tX:  0.75, tY: -0.58, speed:  0.009, hOff: 120, eCount: 14 },
-      { r: 18, tX: -0.38, tY:  0.32, speed: -0.007, hOff: 160, eCount: 11 },
-      { r: 21, tX:  0.52, tY: -0.45, speed:  0.005, hOff: 200, eCount: 9  },
-      { r: 24, tX: -0.28, tY:  0.62, speed: -0.004, hOff: 240, eCount: 8  },
-      { r: 27, tX:  0.68, tY:  0.18, speed:  0.003, hOff: 280, eCount: 7  },
-      { r: 30, tX: -0.52, tY: -0.35, speed: -0.002, hOff: 320, eCount: 5  },
+      { r:  9, tX:  0.40, tY:  0.20, speed:  0.020, hOff:  30, eCount: 10 },
+      { r: 12, tX: -0.55, tY:  0.50, speed: -0.014, hOff:  60, eCount: 12 },
+      { r: 15, tX:  0.75, tY: -0.58, speed:  0.009, hOff:  90, eCount: 14 },
+      { r: 18, tX: -0.38, tY:  0.32, speed: -0.007, hOff: 120, eCount: 11 },
+      { r: 21, tX:  0.52, tY: -0.45, speed:  0.005, hOff: 150, eCount: 9  },
+      { r: 24, tX: -0.28, tY:  0.62, speed: -0.004, hOff: 180, eCount: 8  },
+      { r: 27, tX:  0.68, tY:  0.18, speed:  0.003, hOff: 210, eCount: 7  },
+      { r: 30, tX: -0.52, tY: -0.35, speed: -0.002, hOff: 240, eCount: 5  },
+      { r: 33, tX:  0.30, tY:  0.70, speed:  0.0015,hOff: 270, eCount: 5  },
+      { r: 36, tX: -0.65, tY: -0.20, speed: -0.0012,hOff: 300, eCount: 4  },
+      { r: 39, tX:  0.45, tY:  0.55, speed:  0.0009,hOff: 330, eCount: 3  },
     ];
+
+    // Nuclear fusion events — periodic plasma bursts
+    type FusionEvent = { age: number; angle: number; maxAge: number; len: number };
+    const fusionEvents: FusionEvent[] = [];
+    let fusionTimer = 0;
 
     // Quantum foam — micro background dots
     type Foam = { x: number; y: number; r: number; a: number; va: number };
@@ -432,6 +440,76 @@ function QuantumAtom3D({ phase, open, hover }: { phase: Phase; open: boolean; ho
         wfG.addColorStop(1,   "rgba(0,0,0,0)");
         ctx.beginPath(); ctx.arc(cx, cy, 26, 0, Math.PI * 2);
         ctx.fillStyle = wfG; ctx.fill();
+      }
+
+      // ── Nuclear fusion events — spawn plasma jet on timer ─────────────
+      fusionTimer += isH ? 1.4 : 0.7;
+      if (fusionTimer > (isH ? 55 : 90) && fusionEvents.length < 8) {
+        fusionTimer = 0;
+        const fAngle = Math.random() * Math.PI * 2;
+        fusionEvents.push({ age: 0, angle: fAngle, maxAge: 35 + Math.random() * 25, len: 10 + Math.random() * 12 });
+      }
+      for (let fi = fusionEvents.length - 1; fi >= 0; fi--) {
+        const fe = fusionEvents[fi];
+        fe.age++;
+        if (fe.age >= fe.maxAge) { fusionEvents.splice(fi, 1); continue; }
+        const fp = fe.age / fe.maxAge;
+        const fAlpha = Math.sin(fp * Math.PI) * 0.75;
+        const fCurLen = fe.len * Math.sin(fp * Math.PI * 1.3);
+        const fWobble = Math.sin(fe.age * 0.28 + fi) * 1.8;
+        const fx2 = cx + Math.cos(fe.angle + fWobble * 0.08) * (6 + fCurLen);
+        const fy2 = cy + Math.sin(fe.angle + fWobble * 0.08) * (6 + fCurLen);
+        const fmx = cx + Math.cos(fe.angle) * (4 + fCurLen * 0.5) + fWobble;
+        const fmy = cy + Math.sin(fe.angle) * (4 + fCurLen * 0.5) + fWobble * 0.6;
+        const fusG = ctx.createLinearGradient(cx, cy, fx2, fy2);
+        fusG.addColorStop(0, `rgba(255,255,255,${fAlpha})`);
+        fusG.addColorStop(0.4, `rgba(${hsl(hue + fi * 45)},${fAlpha * 0.9})`);
+        fusG.addColorStop(1, `rgba(${hsl(hue + 180 + fi * 45)},0)`);
+        ctx.beginPath();
+        ctx.moveTo(cx + Math.cos(fe.angle) * 5.5, cy + Math.sin(fe.angle) * 5.5);
+        ctx.quadraticCurveTo(fmx, fmy, fx2, fy2);
+        ctx.strokeStyle = fusG;
+        ctx.lineWidth = (1.5 - fp * 0.8) * (1 + Math.sin(fe.age * 0.5) * 0.3);
+        ctx.stroke();
+        // Fusion crown at tip
+        const crowGr = ctx.createRadialGradient(fx2, fy2, 0, fx2, fy2, 4.5);
+        crowGr.addColorStop(0, `rgba(255,255,255,${fAlpha * 0.9})`);
+        crowGr.addColorStop(0.5, `rgba(${hsl(hue + fi * 45)},${fAlpha * 0.4})`);
+        crowGr.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.beginPath(); ctx.arc(fx2, fy2, 4.5, 0, Math.PI * 2);
+        ctx.fillStyle = crowGr; ctx.fill();
+      }
+
+      // ── String theory — vibrating 1D quantum strings between ring nodes ─
+      if (isH || ph === "scanning") {
+        const strAlpha = ph === "scanning" ? 0.10 : 0.05;
+        const strCount = ph === "scanning" ? 5 : 3;
+        for (let si = 0; si < strCount; si++) {
+          const sR1 = RINGS[si * 2 % RINGS.length];
+          const sR2 = RINGS[(si * 2 + 3) % RINGS.length];
+          const sa1 = t * sR1.speed * 10 + si * 1.2;
+          const sa2 = t * sR2.speed * 10 + si * 0.9 + 1.0;
+          const sp1 = xf(sR1.r * Math.cos(sa1), sR1.r * Math.sin(sa1), sR1, gRX, gRY, gRZ);
+          const sp2 = xf(sR2.r * Math.cos(sa2), sR2.r * Math.sin(sa2), sR2, gRX, gRY, gRZ);
+          const MODES = 3;
+          ctx.beginPath();
+          ctx.moveTo(sp1.px, sp1.py);
+          for (let sm = 1; sm <= 20; sm++) {
+            const sf = sm / 20;
+            const sox = sp1.px + (sp2.px - sp1.px) * sf;
+            const soy = sp1.py + (sp2.py - sp1.py) * sf;
+            let sVib = 0;
+            for (let mode = 1; mode <= MODES; mode++) {
+              sVib += Math.sin(Math.PI * mode * sf) * Math.sin(t * 0.12 * mode + si + mode) * (3.5 / mode);
+            }
+            const sPerp = { x: -(sp2.py - sp1.py), y: sp2.px - sp1.px };
+            const sLen = Math.sqrt(sPerp.x * sPerp.x + sPerp.y * sPerp.y) || 1;
+            ctx.lineTo(sox + sPerp.x / sLen * sVib, soy + sPerp.y / sLen * sVib);
+          }
+          ctx.lineTo(sp2.px, sp2.py);
+          ctx.strokeStyle = `rgba(${hsl(hue + si * 72)},${strAlpha})`;
+          ctx.lineWidth = 0.5; ctx.stroke();
+        }
       }
 
       // ── Dark energy tendrils from nucleus ──────────────────────────────

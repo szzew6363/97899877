@@ -90,19 +90,30 @@ function QuantumPlanet3D({ health, latency, open, hover }: { health: Health; lat
       return { px: cx + x * sc, py: cy + y * sc, sc };
     }
 
-    // 4 orbital rings — rainbow spectrum, hOff staggers hue 90° per ring
+    // 12 orbital rings — rainbow spectrum, gravitational star system
     type OrbRing = { r: number; tX: number; tY: number; speed: number; hOff: number; moonR: number };
     const ORB_RINGS: OrbRing[] = [
       { r: 14, tX:  0.42, tY:  0.20, speed:  0.026, hOff:   0, moonR: 1.5 },
-      { r: 17, tX: -0.58, tY:  0.50, speed: -0.017, hOff:  40, moonR: 1.2 },
-      { r: 20, tX:  0.78, tY: -0.60, speed:  0.012, hOff:  80, moonR: 1.0 },
-      { r: 23, tX: -0.30, tY:  0.35, speed: -0.009, hOff: 120, moonR: 0.85},
-      { r: 26, tX:  0.62, tY:  0.28, speed:  0.007, hOff: 160, moonR: 0.70},
-      { r: 29, tX: -0.45, tY: -0.42, speed: -0.005, hOff: 200, moonR: 0.58},
-      { r: 32, tX:  0.35, tY:  0.55, speed:  0.004, hOff: 240, moonR: 0.46},
-      { r: 35, tX: -0.60, tY:  0.25, speed: -0.003, hOff: 280, moonR: 0.35},
-      { r: 38, tX:  0.48, tY: -0.38, speed:  0.002, hOff: 320, moonR: 0.25},
+      { r: 17, tX: -0.58, tY:  0.50, speed: -0.017, hOff:  30, moonR: 1.2 },
+      { r: 20, tX:  0.78, tY: -0.60, speed:  0.012, hOff:  60, moonR: 1.0 },
+      { r: 23, tX: -0.30, tY:  0.35, speed: -0.009, hOff:  90, moonR: 0.85},
+      { r: 26, tX:  0.62, tY:  0.28, speed:  0.007, hOff: 120, moonR: 0.70},
+      { r: 29, tX: -0.45, tY: -0.42, speed: -0.005, hOff: 150, moonR: 0.58},
+      { r: 32, tX:  0.35, tY:  0.55, speed:  0.004, hOff: 180, moonR: 0.46},
+      { r: 35, tX: -0.60, tY:  0.25, speed: -0.003, hOff: 210, moonR: 0.35},
+      { r: 38, tX:  0.48, tY: -0.38, speed:  0.002, hOff: 240, moonR: 0.25},
+      { r: 41, tX: -0.22, tY:  0.60, speed: -0.0016,hOff: 270, moonR: 0.18},
+      { r: 44, tX:  0.55, tY: -0.28, speed:  0.0012,hOff: 300, moonR: 0.12},
+      { r: 47, tX: -0.40, tY:  0.42, speed: -0.0009,hOff: 330, moonR: 0.08},
     ];
+
+    // Comet system — periodic flyby events
+    type Comet = { age: number; maxAge: number; startAngle: number; startR: number; speed: number; hOff: number };
+    const comets: Comet[] = [];
+    let cometTimer = 0;
+
+    // Gravitational wave pulse system
+    const gravWaves: Array<{ age: number; maxAge: number }> = [];
 
     // Saturn-like flat planetary ring (scaled to SIZE 46)
     const RING_DISC = { rInner: 15, rOuter: 23, tX: 0.55, tY: 0.10 };
@@ -316,6 +327,69 @@ function QuantumPlanet3D({ health, latency, open, hover }: { health: Health; lat
         ctx.ellipse(cx, cy, wR * wScaleX, wR * 0.42, Math.PI * 0.10 + t * 0.018, 0, Math.PI * 2);
         ctx.strokeStyle = `rgba(${hsl(hue + 180 + wi * 40)},${wAlpha})`;
         ctx.lineWidth = 0.45; ctx.stroke();
+      }
+
+      // ── Gravitational wave pulses ─────────────────────────────────────
+      if ((Math.floor(t) % 180 === 0 && Math.floor(t) !== Math.floor(t - 1)) || (isH && Math.floor(t) % 60 === 0)) {
+        gravWaves.push({ age: 0, maxAge: 80 });
+      }
+      for (let gi = gravWaves.length - 1; gi >= 0; gi--) {
+        gravWaves[gi].age++;
+        if (gravWaves[gi].age >= gravWaves[gi].maxAge) { gravWaves.splice(gi, 1); continue; }
+        const gp = gravWaves[gi].age / gravWaves[gi].maxAge;
+        const gwR = R + gp * 30;
+        const gwA = Math.sin(gp * Math.PI) * 0.28;
+        ctx.beginPath(); ctx.arc(cx, cy, gwR, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(${hsl(hue + 180)},${gwA})`;
+        ctx.lineWidth = 0.8 * (1 - gp); ctx.stroke();
+        ctx.beginPath(); ctx.arc(cx, cy, gwR * 0.88, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(${hsl(hue + 240)},${gwA * 0.5})`;
+        ctx.lineWidth = 0.5 * (1 - gp); ctx.stroke();
+      }
+
+      // ── Comet flyby events ──────────────────────────────────────────────
+      cometTimer += isH ? 0.9 : 0.5;
+      if (cometTimer > 120 && comets.length < 4) {
+        cometTimer = 0;
+        comets.push({
+          age: 0, maxAge: 50 + Math.random() * 30,
+          startAngle: Math.random() * Math.PI * 2,
+          startR: 44 + Math.random() * 4,
+          speed: (0.06 + Math.random() * 0.04) * (Math.random() > 0.5 ? 1 : -1),
+          hOff: Math.floor(Math.random() * 360),
+        });
+      }
+      for (let ci = comets.length - 1; ci >= 0; ci--) {
+        const c = comets[ci];
+        c.age++;
+        if (c.age >= c.maxAge) { comets.splice(ci, 1); continue; }
+        const cp = c.age / c.maxAge;
+        const cAngle = c.startAngle + c.speed * c.age;
+        const cR = c.startR - cp * 20;
+        if (cR < R + 2) { comets.splice(ci, 1); continue; }
+        const cX = cx + Math.cos(cAngle) * cR;
+        const cY = cy + Math.sin(cAngle) * cR * 0.6;
+        const cAlpha = Math.sin(cp * Math.PI) * 0.7;
+        // Comet tail
+        const TAIL_LEN = 12;
+        for (let tk = 0; tk < TAIL_LEN; tk++) {
+          const prevA = cAngle - c.speed * tk * 1.2;
+          const prevR = c.startR - (cp - tk * 0.01) * 20;
+          const tX = cx + Math.cos(prevA) * Math.max(R + 1, prevR);
+          const tY = cy + Math.sin(prevA) * Math.max(R + 1, prevR) * 0.6;
+          const tA = cAlpha * (1 - tk / TAIL_LEN) * 0.55;
+          ctx.beginPath(); ctx.arc(tX, tY, 0.6 * (1 - tk / TAIL_LEN) + 0.3, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(${hsl(c.hOff)},${tA})`; ctx.fill();
+        }
+        // Comet head
+        const cGr = ctx.createRadialGradient(cX, cY, 0, cX, cY, 3.5);
+        cGr.addColorStop(0, `rgba(255,255,255,${cAlpha})`);
+        cGr.addColorStop(0.4, `rgba(${hsl(c.hOff)},${cAlpha * 0.6})`);
+        cGr.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.beginPath(); ctx.arc(cX, cY, 3.5, 0, Math.PI * 2);
+        ctx.fillStyle = cGr; ctx.fill();
+        ctx.beginPath(); ctx.arc(cX, cY, 0.7, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,255,255,${cAlpha})`; ctx.fill();
       }
 
       // ── Plasma micro-sparks ───────────────────────────────────────────────
