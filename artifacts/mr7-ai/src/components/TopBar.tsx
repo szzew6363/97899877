@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useContext, createContext } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
@@ -17,8 +17,11 @@ import {
   Hexagon, Shield, Columns3, Crosshair, BarChart2, ChevronLeft, ChevronRight,
   Target, GitBranch, Bug, Activity, DollarSign, GitMerge, ShieldAlert, ShieldCheck,
   BrainCircuit, Gauge, Globe, AlertTriangle, Network, Cpu, Lock,
-  Flame, Share2,
+  Flame, Share2, PanelLeftClose, PanelLeftOpen,
 } from "lucide-react";
+
+// ── Compact mode context ───────────────────────────────────────────────────────
+const CompactCtx = createContext(false);
 
 // ── TopBar props ──────────────────────────────────────────────────────────────
 interface TopBarProps {
@@ -263,13 +266,17 @@ function HUDBtn({
   title?: string;
   active?: boolean;
 }) {
+  const compact = useContext(CompactCtx);
   return (
     <motion.button
       onClick={onClick}
       title={tip ?? label}
       aria-label={label}
-      className="flex-shrink-0 flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg relative overflow-hidden whitespace-nowrap"
+      className="flex-shrink-0 flex items-center gap-1.5 py-1.5 rounded-lg relative overflow-hidden whitespace-nowrap"
       style={{
+        padding: compact ? "6px 8px" : undefined,
+        paddingLeft: compact ? undefined : "8px",
+        paddingRight: compact ? undefined : "10px",
         background: active ? `${color}22` : `${color}0e`,
         border: active ? `1px solid ${color}77` : `1px solid ${color}30`,
         color: color,
@@ -285,10 +292,12 @@ function HUDBtn({
       transition={{ type: "spring", stiffness: 500, damping: 28 }}
     >
       <Icon className="w-3.5 h-3.5 flex-shrink-0" />
-      <span className="hidden sm:block text-[10px] font-black tracking-wide uppercase">
-        {shortLabel ?? label}
-      </span>
-      {badge && (
+      {!compact && (
+        <span className="hidden sm:block text-[10px] font-black tracking-wide uppercase">
+          {shortLabel ?? label}
+        </span>
+      )}
+      {!compact && badge && (
         <span className="hidden sm:block text-[7px] font-black px-1 py-0.5 rounded"
           style={{ background: `${color}25`, color: color, border: `1px solid ${color}40` }}>
           {badge}
@@ -735,7 +744,17 @@ export function TopBar({
     toast({ description: t(next ? "power.activated" : "power.deactivated") });
   }
 
+  const [compact, setCompact] = useState(() => localStorage.getItem("mr7-topbar-compact") === "1");
+  function toggleCompact() {
+    setCompact(c => {
+      const next = !c;
+      localStorage.setItem("mr7-topbar-compact", next ? "1" : "0");
+      return next;
+    });
+  }
+
   return (
+    <CompactCtx.Provider value={compact}>
     <motion.header
       className="CHAT-GPT-topbar sticky top-0 z-30 flex flex-col"
       style={{
@@ -982,6 +1001,23 @@ export function TopBar({
             <HelpCircle className="w-4 h-4" />
           </motion.button>
 
+              {/* Compact toggle */}
+          <motion.button
+            onClick={toggleCompact}
+            className="flex-shrink-0 p-2 rounded-lg"
+            style={{
+              color: compact ? "#00e5ff" : "rgba(255,255,255,0.3)",
+              background: compact ? "rgba(0,229,255,0.08)" : "transparent",
+              border: `1px solid ${compact ? "rgba(0,229,255,0.3)" : "rgba(255,255,255,0.08)"}`,
+            }}
+            whileHover={{ scale: 1.06, background: "rgba(0,229,255,0.12)" }}
+            whileTap={{ scale: 0.94 }}
+            title={compact ? "وضع موسّع" : "وضع مضغوط"}
+            aria-label="تبديل الوضع المضغوط"
+          >
+            {compact ? <PanelLeftOpen className="w-3.5 h-3.5" /> : <PanelLeftClose className="w-3.5 h-3.5" />}
+          </motion.button>
+
           {/* Utility panels */}
           <NotificationsPanel />
           <ThemePopover />
@@ -1021,5 +1057,6 @@ export function TopBar({
         onOpenAttackGraph={onOpenAttackGraph ?? (() => {})}
       />
     </motion.header>
+    </CompactCtx.Provider>
   );
 }

@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X, Play, Square, Brain, Zap, ChevronDown, ChevronUp,
   Globe, Calculator, Code, Search, Network, FileSearch,
   Shield, Terminal, Wifi, Server, CheckCircle2, XCircle,
   RefreshCw, Clock, Layers, Cpu, Flame, Swords, Crown,
-  Crosshair, Eye, AlertCircle,
+  Crosshair, Eye, AlertCircle, Radio,
 } from "lucide-react";
 import { streamAgent, streamCouncil, type AgentEvent, type CouncilEvent } from "@/lib/chat-client";
 import { useStore } from "@/lib/store";
@@ -122,9 +122,169 @@ function NexusIcon({ className, style }: { className?: string; style?: React.CSS
   );
 }
 
+// ── CVE LIVE FEED component ───────────────────────────────────────────────────
+type CveSev = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+type CveEntry = {
+  id: string; cve: string; product: string; vendor: string;
+  severity: CveSev; score: number; desc: string; ts: number;
+};
+
+const CVE_POOL: Omit<CveEntry, "ts">[] = [
+  { id: "1", cve: "CVE-2025-21298", product: "Windows OLE", vendor: "Microsoft", severity: "CRITICAL", score: 9.8, desc: "Remote code execution via Object Linking and Embedding deserialization flaw" },
+  { id: "2", cve: "CVE-2025-0282", product: "Ivanti Connect Secure", vendor: "Ivanti", severity: "CRITICAL", score: 9.0, desc: "Stack overflow allows unauthenticated remote code execution" },
+  { id: "3", cve: "CVE-2025-24200", product: "iOS / iPadOS", vendor: "Apple", severity: "HIGH", score: 7.1, desc: "USB Restricted Mode bypass via physical access vector" },
+  { id: "4", cve: "CVE-2025-1974", product: "ingress-nginx", vendor: "Kubernetes", severity: "CRITICAL", score: 9.8, desc: "Admission controller RCE via crafted annotation injection" },
+  { id: "5", cve: "CVE-2025-23209", product: "Craft CMS", vendor: "Craft", severity: "CRITICAL", score: 9.0, desc: "Server-side template injection leading to remote code execution" },
+  { id: "6", cve: "CVE-2025-2294", product: "Kubio AI Page Builder", vendor: "WordPress", severity: "HIGH", score: 7.2, desc: "Path traversal via Local File Inclusion vulnerability" },
+  { id: "7", cve: "CVE-2025-20188", product: "IOS XE Software", vendor: "Cisco", severity: "CRITICAL", score: 10.0, desc: "Hardcoded JSON Web Token allows arbitrary file upload" },
+  { id: "8", cve: "CVE-2025-24054", product: "Windows NTLM", vendor: "Microsoft", severity: "HIGH", score: 6.5, desc: "Hash disclosure through spoofing minimal interaction" },
+  { id: "9", cve: "CVE-2025-31200", product: "CoreAudio", vendor: "Apple", severity: "HIGH", score: 7.5, desc: "Memory corruption via crafted media file parsing" },
+  { id: "10", cve: "CVE-2025-29824", product: "Windows CLFS Driver", vendor: "Microsoft", severity: "HIGH", score: 7.8, desc: "Use-after-free in Common Log File System driver" },
+  { id: "11", cve: "CVE-2025-30397", product: "Scripting Engine", vendor: "Microsoft", severity: "HIGH", score: 7.5, desc: "Memory corruption in browser scripting engine" },
+  { id: "12", cve: "CVE-2025-4664", product: "Chrome Loader", vendor: "Google", severity: "HIGH", score: 8.8, desc: "Insufficient policy enforcement allows cross-origin data leakage" },
+  { id: "13", cve: "CVE-2025-3248", product: "Langflow", vendor: "Langflow", severity: "CRITICAL", score: 9.8, desc: "Missing auth on /api/v1/validate/code allows arbitrary code exec" },
+  { id: "14", cve: "CVE-2025-34028", product: "Commvault Command Center", vendor: "Commvault", severity: "CRITICAL", score: 10.0, desc: "Path traversal leads to arbitrary code execution pre-auth" },
+];
+
+const SEV_COLOR: Record<CveSev, string> = {
+  CRITICAL: "#e21227", HIGH: "#f97316", MEDIUM: "#fbbf24", LOW: "#22c55e",
+};
+const SEV_BG: Record<CveSev, string> = {
+  CRITICAL: "rgba(226,18,39,0.15)", HIGH: "rgba(249,115,22,0.15)", MEDIUM: "rgba(251,191,36,0.12)", LOW: "rgba(34,197,94,0.10)",
+};
+
+function CveLiveFeed() {
+  const [entries, setEntries] = useState<CveEntry[]>([]);
+  const [filter, setFilter] = useState<"ALL" | CveSev>("ALL");
+  const [paused, setPaused] = useState(false);
+  const feedRef = useRef<HTMLDivElement>(null);
+  const idxRef  = useRef(0);
+
+  const addEntry = useCallback(() => {
+    if (paused) return;
+    const src = CVE_POOL[idxRef.current % CVE_POOL.length];
+    idxRef.current++;
+    setEntries(prev => {
+      const next = [{ ...src, id: String(Date.now()), ts: Date.now() }, ...prev].slice(0, 40);
+      return next;
+    });
+  }, [paused]);
+
+  useEffect(() => {
+    addEntry(); addEntry(); addEntry();
+    const t = setInterval(addEntry, 2800);
+    return () => clearInterval(t);
+  }, [addEntry]);
+
+  useEffect(() => {
+    feedRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  }, [entries.length]);
+
+  const filtered = filter === "ALL" ? entries : entries.filter(e => e.severity === filter);
+
+  return (
+    <div className="flex flex-col h-full" style={{ background: "#070707" }}>
+      {/* Controls */}
+      <div className="flex items-center gap-2 px-4 py-2 border-b" style={{ borderColor: "rgba(226,18,39,0.15)" }}>
+        <Radio className="w-3.5 h-3.5 animate-pulse" style={{ color: "#e21227" }} />
+        <span className="text-[9px] font-black tracking-widest uppercase" style={{ color: "#e21227" }}>CVE LIVE FEED</span>
+        <div className="w-1.5 h-1.5 rounded-full" style={{ background: "#22c55e", boxShadow: "0 0 5px #22c55e", animation: "pulse 1s infinite" }} />
+        <span className="text-[8px] font-mono" style={{ color: "#22c55e" }}>STREAMING</span>
+        <div className="flex-1" />
+        {/* Severity filter */}
+        <div className="flex gap-1">
+          {(["ALL", "CRITICAL", "HIGH", "MEDIUM", "LOW"] as const).map(s => (
+            <button key={s} onClick={() => setFilter(s)}
+              className="px-2 py-0.5 rounded text-[7px] font-black border transition-all"
+              style={filter === s
+                ? { background: s === "ALL" ? "rgba(255,255,255,0.1)" : SEV_BG[s as CveSev], borderColor: s === "ALL" ? "rgba(255,255,255,0.3)" : SEV_COLOR[s as CveSev], color: s === "ALL" ? "#fff" : SEV_COLOR[s as CveSev] }
+                : { background: "transparent", borderColor: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.3)" }
+              }
+            >{s}</button>
+          ))}
+        </div>
+        <button onClick={() => setPaused(p => !p)}
+          className="flex items-center gap-1 px-2 py-1 rounded text-[8px] font-bold border transition-all"
+          style={paused
+            ? { background: "rgba(251,191,36,0.12)", borderColor: "rgba(251,191,36,0.4)", color: "#fbbf24" }
+            : { background: "transparent", borderColor: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.3)" }
+          }
+        >{paused ? "▶ RESUME" : "⏸ PAUSE"}</button>
+      </div>
+
+      {/* Feed */}
+      <div ref={feedRef} className="flex-1 overflow-y-auto px-3 py-2 space-y-1.5"
+        style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(226,18,39,0.3) transparent" }}>
+        <AnimatePresence initial={false}>
+          {filtered.map(e => (
+            <motion.div key={e.id}
+              initial={{ opacity: 0, x: -12, height: 0 }}
+              animate={{ opacity: 1, x: 0, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.22 }}
+              className="rounded-xl overflow-hidden"
+              style={{ border: `1px solid ${SEV_COLOR[e.severity]}22`, background: SEV_BG[e.severity] }}
+            >
+              <div className="px-3 py-2">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[8px] font-black px-1.5 py-0.5 rounded"
+                    style={{ background: SEV_COLOR[e.severity] + "22", color: SEV_COLOR[e.severity], border: `1px solid ${SEV_COLOR[e.severity]}44` }}>
+                    {e.severity}
+                  </span>
+                  <span className="text-[10px] font-black font-mono" style={{ color: SEV_COLOR[e.severity] }}>{e.cve}</span>
+                  <span className="text-[9px] font-mono" style={{ color: "rgba(255,255,255,0.4)" }}>
+                    CVSS {e.score.toFixed(1)}
+                  </span>
+                  <div className="flex-1" />
+                  <span className="text-[8px] font-mono" style={{ color: "rgba(255,255,255,0.25)" }}>
+                    {new Date(e.ts).toLocaleTimeString()}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[9px] font-bold" style={{ color: "rgba(255,255,255,0.7)" }}>{e.vendor}</span>
+                  <span className="text-[8px]" style={{ color: "rgba(255,255,255,0.35)" }}>›</span>
+                  <span className="text-[9px]" style={{ color: "rgba(255,255,255,0.5)" }}>{e.product}</span>
+                </div>
+                <p className="text-[9px] leading-relaxed" style={{ color: "rgba(255,255,255,0.45)" }}>{e.desc}</p>
+                {/* CVSS bar */}
+                <div className="mt-1.5 h-0.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
+                  <motion.div className="h-full rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${(e.score / 10) * 100}%` }}
+                    transition={{ duration: 0.6, ease: "easeOut" }}
+                    style={{ background: SEV_COLOR[e.severity] }} />
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+        {filtered.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-12 gap-2">
+            <Shield className="w-8 h-8" style={{ color: "rgba(255,255,255,0.1)" }} />
+            <p className="text-[10px] font-mono" style={{ color: "rgba(255,255,255,0.2)" }}>لا توجد إدخالات لهذا المستوى</p>
+          </div>
+        )}
+      </div>
+
+      {/* Stats bar */}
+      <div className="flex items-center gap-4 px-4 py-1.5 border-t" style={{ borderColor: "rgba(255,255,255,0.04)", background: "rgba(0,0,0,0.4)" }}>
+        {(["CRITICAL","HIGH","MEDIUM","LOW"] as CveSev[]).map(s => (
+          <div key={s} className="flex items-center gap-1">
+            <div className="w-1.5 h-1.5 rounded-full" style={{ background: SEV_COLOR[s] }} />
+            <span className="text-[8px] font-mono" style={{ color: SEV_COLOR[s] }}>{entries.filter(e => e.severity === s).length}</span>
+            <span className="text-[7px] text-muted-foreground/30">{s.slice(0,4)}</span>
+          </div>
+        ))}
+        <span className="ml-auto text-[8px] font-mono" style={{ color: "rgba(255,255,255,0.2)" }}>{entries.length} total</span>
+      </div>
+    </div>
+  );
+}
+
 export function NexusModal({ open, onOpenChange }: NexusModalProps) {
   const { state } = useStore();
   const { lang } = useT();
+  const [nexusTab, setNexusTab] = useState<"agent" | "cve">("agent");
   const [tier, setTier] = useState<TierDef>(TIERS[0]);
   const [mode, setMode] = useState<AgentMode>("brain");
   const [task, setTask] = useState("");
@@ -322,8 +482,27 @@ export function NexusModal({ open, onOpenChange }: NexusModalProps) {
               </div>
 
               <div className="flex items-center gap-2">
+                {/* Main tab switcher */}
+                <div className="flex rounded-lg overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.08)" }}>
+                  {([
+                    { id: "agent", label: "AGENT", color: activeTier.color },
+                    { id: "cve",   label: "CVE LIVE", color: "#e21227" },
+                  ] as const).map(tb => (
+                    <button key={tb.id} onClick={() => setNexusTab(tb.id)}
+                      className="px-2.5 py-1 text-[8px] font-black tracking-widest transition-all"
+                      style={nexusTab === tb.id
+                        ? { background: tb.id === "cve" ? "rgba(226,18,39,0.18)" : activeTier.bg, color: tb.color, borderRight: "1px solid rgba(255,255,255,0.06)" }
+                        : { background: "transparent", color: "rgba(255,255,255,0.28)", borderRight: "1px solid rgba(255,255,255,0.06)" }
+                      }
+                    >
+                      {tb.id === "cve" && <span className="inline-block w-1.5 h-1.5 rounded-full bg-current mr-1 animate-pulse" />}
+                      {tb.label}
+                    </button>
+                  ))}
+                </div>
+
                 {/* Health toggle button */}
-                <button
+                {nexusTab === "agent" && <button
                   onClick={() => setHealthExpanded(h => !h)}
                   className="flex items-center gap-1.5 px-2 py-1 rounded-lg transition-all"
                   style={{
@@ -342,7 +521,7 @@ export function NexusModal({ open, onOpenChange }: NexusModalProps) {
                   {healthExpanded
                     ? <ChevronUp className="w-3 h-3 text-gray-600" />
                     : <ChevronDown className="w-3 h-3 text-gray-600" />}
-                </button>
+                </button>}
                 <button onClick={close} className="p-1.5 rounded-lg transition-colors" style={{ color: "#555", border: "1px solid rgba(255,255,255,0.07)" }}
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#fff"; (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.08)"; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "#555"; (e.currentTarget as HTMLElement).style.background = ""; }}>
@@ -402,6 +581,16 @@ export function NexusModal({ open, onOpenChange }: NexusModalProps) {
                 </div>
               </motion.div>
             )}
+
+            {/* ── CVE LIVE FEED TAB ── */}
+            {nexusTab === "cve" && (
+              <div className="flex-1 min-h-0 overflow-hidden">
+                <CveLiveFeed />
+              </div>
+            )}
+
+            {/* ── AGENT TAB BODY ── */}
+            {nexusTab === "agent" && <>
 
             {/* ── Tier Selector ── */}
             <div className="px-4 pt-3 pb-2">
@@ -717,6 +906,9 @@ export function NexusModal({ open, onOpenChange }: NexusModalProps) {
                 </div>
               </div>
             )}
+
+            </>} {/* end nexusTab === "agent" */}
+
           </motion.div>
         </motion.div>
       )}

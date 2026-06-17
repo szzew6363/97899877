@@ -72,7 +72,7 @@ type CustomPersona = {
   id: string; name: string; nameAr: string; desc: string;
   color: string; category: string; prompt: string; createdAt: number;
 };
-type Tab = "presets" | "mastero" | "custom" | "stats";
+type Tab = "presets" | "mastero" | "custom" | "stats" | "threatfeed";
 type EditorState = { open: boolean; editingId?: string; name: string; nameAr: string; desc: string; color: string; category: string; prompt: string };
 const EMPTY_EDITOR: EditorState = { open: false, name: "", nameAr: "", desc: "", color: "#e21227", category: "general", prompt: "" };
 
@@ -600,10 +600,11 @@ export function PersonaManagerModal({ open, onClose }: { open: boolean; onClose:
             {/* ── Tab bar ─────────────────────────────────────────────── */}
             <div className="flex items-center gap-0.5 px-4 pt-3 pb-0 border-b" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
               {([
-                { id: "presets",  label: "شخصيات محددة مسبقاً",   icon: Brain,  count: allPresets.length     },
-                { id: "mastero",  label: "MASTERO",                 icon: Crown,  count: MASTERO_PERSONAS.length },
-                { id: "custom",   label: "شخصياتي",                 icon: Star,   count: customPersonas.length },
-                { id: "stats",    label: "إحصائيات",                icon: BarChart2, count: null                },
+                { id: "presets",    label: "شخصيات محددة مسبقاً",   icon: Brain,         count: allPresets.length     },
+                { id: "mastero",    label: "MASTERO",                 icon: Crown,         count: MASTERO_PERSONAS.length },
+                { id: "custom",     label: "شخصياتي",                 icon: Star,          count: customPersonas.length },
+                { id: "stats",      label: "إحصائيات",                icon: BarChart2,     count: null                },
+                { id: "threatfeed", label: "تهديدات",                 icon: AlertTriangle, count: null                },
               ] as const).map(t => (
                 <button key={t.id} onClick={() => setTab(t.id)}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-t-xl text-[10px] font-bold border-b-2 transition-all"
@@ -1154,6 +1155,86 @@ export function PersonaManagerModal({ open, onClose }: { open: boolean; onClose:
                         <p className="text-[9px] text-muted-foreground/55">{tip}</p>
                       </div>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ── THREAT FEED TAB ──────────────────────────────────── */}
+              {tab === "threatfeed" && (
+                <div className="p-4 space-y-3 flex-1 overflow-y-auto">
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertTriangle className="w-4 h-4" style={{ color: "#e21227" }} />
+                    <span className="text-xs font-black tracking-widest uppercase" style={{ color: "#e21227" }}>تغذية التهديدات المباشرة</span>
+                    <div className="w-1.5 h-1.5 rounded-full animate-pulse ml-1" style={{ background: "#22c55e", boxShadow: "0 0 4px #22c55e" }} />
+                    <span className="text-[8px] font-mono ml-0.5" style={{ color: "#22c55e" }}>LIVE</span>
+                  </div>
+
+                  {/* Threat matrix */}
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    {[
+                      { label: "التهديدات الحرجة", count: 14, color: "#e21227", icon: "⬛" },
+                      { label: "تهديدات عالية",    count: 31, color: "#f97316", icon: "⬛" },
+                      { label: "تهديدات متوسطة",  count: 78, color: "#fbbf24", icon: "⬛" },
+                      { label: "تهديدات منخفضة",  count: 142, color: "#22c55e", icon: "⬛" },
+                    ].map(({ label, count, color }) => (
+                      <div key={label} className="rounded-xl p-3 border flex items-center gap-3"
+                        style={{ background: `${color}0a`, borderColor: `${color}25` }}>
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `${color}18` }}>
+                          <AlertTriangle className="w-4 h-4" style={{ color }} />
+                        </div>
+                        <div>
+                          <div className="text-lg font-black leading-none" style={{ color }}>{count}</div>
+                          <div className="text-[9px] text-muted-foreground/50 mt-0.5">{label}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Live feed list */}
+                  <div className="space-y-1.5">
+                    {[
+                      { time: "09:47", sev: "CRITICAL" as const, actor: "APT29 (Cozy Bear)", target: "وكالات حكومية أوروبية", method: "Spear Phishing + Zero-Day CVE-2025-0282" },
+                      { time: "09:31", sev: "HIGH" as const,     actor: "Lazarus Group",    target: "منصات DeFi آسيا",         method: "Supply Chain Attack — npm malicious pkg" },
+                      { time: "09:18", sev: "CRITICAL" as const, actor: "Sandworm",          target: "شبكات طاقة أوكرانيا",    method: "ICSSCADA Wiper + RDP brute-force" },
+                      { time: "09:05", sev: "HIGH" as const,     actor: "FIN7",              target: "سلاسل متاجر تجزئة USA",   method: "POS Malware via phishing doc macro" },
+                      { time: "08:54", sev: "CRITICAL" as const, actor: "Volt Typhoon",      target: "بنية تحتية أمريكية",    method: "Living-off-the-land + LOTL persistence" },
+                      { time: "08:39", sev: "HIGH" as const,     actor: "REvil Remnants",    target: "مستشفيات وصحة EU",       method: "Ransomware-as-a-Service double extortion" },
+                      { time: "08:22", sev: "HIGH" as const,     actor: "Scattered Spider", target: "شركات SaaS US",           method: "SIM Swapping + MFA fatigue attack" },
+                    ].map((t, i) => {
+                      const sevColor: Record<string, string> = { CRITICAL: "#e21227", HIGH: "#f97316", MEDIUM: "#fbbf24", LOW: "#22c55e" };
+                      const c = sevColor[t.sev];
+                      return (
+                        <motion.div key={i}
+                          initial={{ opacity: 0, x: -8 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: i * 0.04 }}
+                          className="rounded-xl border p-3"
+                          style={{ background: `${c}08`, borderColor: `${c}20` }}>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[8px] font-black px-1.5 py-0.5 rounded"
+                              style={{ background: `${c}20`, color: c, border: `1px solid ${c}40` }}>{t.sev}</span>
+                            <span className="text-[9px] font-black" style={{ color: c }}>{t.actor}</span>
+                            <span className="ml-auto text-[8px] font-mono" style={{ color: "rgba(255,255,255,0.25)" }}>{t.time}</span>
+                          </div>
+                          <div className="text-[9px]" style={{ color: "rgba(255,255,255,0.5)" }}>الهدف: <span style={{ color: "rgba(255,255,255,0.7)" }}>{t.target}</span></div>
+                          <div className="text-[8px] mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>{t.method}</div>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Recommended persona */}
+                  <div className="mt-4 p-3 rounded-xl border" style={{ borderColor: "rgba(167,139,250,0.2)", background: "rgba(167,139,250,0.05)" }}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Brain className="w-3.5 h-3.5" style={{ color: "#a78bfa" }} />
+                      <span className="text-[9px] font-black" style={{ color: "#a78bfa" }}>شخصية موصى بها لهذا التهديد</span>
+                    </div>
+                    <button onClick={() => { const p = allPresets.find(p => p.category === "threat-intel" || p.category === "offensive"); if (p) activate(p.id); setTab("presets"); }}
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[9px] font-bold border transition-all hover:bg-red-500/10"
+                      style={{ background: "rgba(226,18,39,0.08)", borderColor: "rgba(226,18,39,0.25)", color: "#e21227" }}>
+                      <Crosshair className="w-3 h-3" />
+                      استخدم شخصية تحليل التهديدات
+                    </button>
                   </div>
                 </div>
               )}

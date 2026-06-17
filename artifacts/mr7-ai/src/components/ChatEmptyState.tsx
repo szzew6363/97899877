@@ -1,8 +1,172 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Brain, Shield, Cpu, Network, Terminal, Zap, Code2, Eye, Target } from "lucide-react";
 import { MatrixRain } from "./MatrixRain";
 import { FuturisticBackground3D } from "./FuturisticBackground3D";
+
+// ── 3D Wireframe Threat Globe ─────────────────────────────────────────────────
+function ThreatGlobe3D() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const rafRef    = useRef(0);
+  const rotRef    = useRef(0);
+
+  type Arc = { lat1: number; lon1: number; lat2: number; lon2: number; t: number; speed: number; color: string };
+  const arcsRef = useRef<Arc[]>([]);
+
+  const spawnArc = useCallback(() => {
+    const COLORS = ["#e21227","#ff4455","#00e5ff","#a78bfa","#f97316","#00ff88"];
+    arcsRef.current.push({
+      lat1: (Math.random() - 0.5) * Math.PI * 0.8,
+      lon1: (Math.random() - 0.5) * Math.PI * 2,
+      lat2: (Math.random() - 0.5) * Math.PI * 0.8,
+      lon2: (Math.random() - 0.5) * Math.PI * 2,
+      t: 0, speed: 0.006 + Math.random() * 0.008,
+      color: COLORS[Math.floor(Math.random() * COLORS.length)],
+    });
+    if (arcsRef.current.length > 6) arcsRef.current.shift();
+  }, []);
+
+  useEffect(() => {
+    const cv = canvasRef.current;
+    if (!cv) return;
+    const ctx = cv.getContext("2d")!;
+    const S = 140;
+    const DPR = Math.min(window.devicePixelRatio || 1, 2);
+    cv.width = S * DPR; cv.height = S * DPR;
+    cv.style.width = S + "px"; cv.style.height = S + "px";
+    ctx.scale(DPR, DPR);
+    const cx = S / 2, cy = S / 2, R = S * 0.42;
+
+    const arcSpawn = setInterval(spawnArc, 900);
+    spawnArc(); spawnArc();
+
+    function project(lat: number, lon: number, rotY: number): [number, number, number] {
+      const x = Math.cos(lat) * Math.sin(lon + rotY);
+      const y = Math.sin(lat);
+      const z = Math.cos(lat) * Math.cos(lon + rotY);
+      return [cx + x * R, cy - y * R, z];
+    }
+
+    function lerpLatLon(lat1: number, lon1: number, lat2: number, lon2: number, t: number): [number, number] {
+      const v1x = Math.cos(lat1) * Math.sin(lon1), v1y = Math.sin(lat1), v1z = Math.cos(lat1) * Math.cos(lon1);
+      const v2x = Math.cos(lat2) * Math.sin(lon2), v2y = Math.sin(lat2), v2z = Math.cos(lat2) * Math.cos(lon2);
+      const dot = Math.max(-1, Math.min(1, v1x*v2x + v1y*v2y + v1z*v2z));
+      const omega = Math.acos(dot);
+      if (Math.abs(omega) < 0.001) return [lat1, lon1];
+      const s = Math.sin(omega);
+      const f1 = Math.sin((1 - t) * omega) / s;
+      const f2 = Math.sin(t * omega) / s;
+      const vx = f1*v1x + f2*v2x, vy = f1*v1y + f2*v2y, vz = f1*v1z + f2*v2z;
+      return [Math.asin(Math.max(-1, Math.min(1, vy))), Math.atan2(vx, vz)];
+    }
+
+    function draw() {
+      rafRef.current = requestAnimationFrame(draw);
+      rotRef.current += 0.004;
+      const rot = rotRef.current;
+      ctx.clearRect(0, 0, S, S);
+
+      /* Globe glow */
+      const grd = ctx.createRadialGradient(cx, cy, R * 0.3, cx, cy, R * 1.1);
+      grd.addColorStop(0, "rgba(226,18,39,0.04)");
+      grd.addColorStop(0.7, "rgba(226,18,39,0.025)");
+      grd.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(cx, cy, R * 1.1, 0, Math.PI * 2); ctx.fill();
+
+      /* Latitude rings */
+      for (let lat = -Math.PI / 2.5; lat <= Math.PI / 2.5 + 0.01; lat += Math.PI / 5) {
+        ctx.beginPath();
+        const rLat = Math.cos(lat) * R;
+        const yLat = cy - Math.sin(lat) * R;
+        for (let lon = 0; lon <= Math.PI * 2; lon += 0.08) {
+          const x3 = cx + Math.cos(lat) * Math.sin(lon + rot) * R;
+          const z3 = Math.cos(lat) * Math.cos(lon + rot);
+          if (z3 < -0.05) continue;
+          const alpha = 0.04 + z3 * 0.12;
+          ctx.beginPath();
+          ctx.arc(x3, yLat, 0.7, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(226,18,39,${alpha})`; ctx.fill();
+        }
+        void rLat;
+      }
+
+      /* Longitude meridians */
+      for (let lon = 0; lon < Math.PI * 2; lon += Math.PI / 4) {
+        for (let lat2 = -Math.PI / 2; lat2 <= Math.PI / 2; lat2 += 0.06) {
+          const z3 = Math.cos(lat2) * Math.cos(lon + rot);
+          if (z3 < 0) continue;
+          const alpha = 0.04 + z3 * 0.10;
+          const px = cx + Math.cos(lat2) * Math.sin(lon + rot) * R;
+          const py = cy - Math.sin(lat2) * R;
+          ctx.beginPath(); ctx.arc(px, py, 0.6, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(226,18,39,${alpha})`; ctx.fill();
+        }
+      }
+
+      /* Attack arcs */
+      arcsRef.current.forEach(arc => {
+        arc.t = Math.min(1, arc.t + arc.speed);
+        const steps = 24;
+        let prevPx = 0, prevPy = 0, prevZ = 0;
+        for (let i = 0; i <= Math.floor(arc.t * steps); i++) {
+          const ti = i / steps;
+          const [lat, lon] = lerpLatLon(arc.lat1, arc.lon1, arc.lat2, arc.lon2, ti);
+          const [px, py, pz] = project(lat, lon, rot);
+          if (pz < 0) { prevPx = px; prevPy = py; prevZ = pz; continue; }
+          if (i > 0 && prevZ >= 0) {
+            const alpha = (0.4 + pz * 0.5) * (arc.t >= 1 ? (1 - arc.t) * 4 : 1);
+            ctx.beginPath();
+            ctx.moveTo(prevPx, prevPy);
+            ctx.lineTo(px, py);
+            ctx.strokeStyle = arc.color + Math.round(Math.max(0, alpha) * 220).toString(16).padStart(2, "0");
+            ctx.lineWidth = 1.6;
+            ctx.stroke();
+            /* head glow */
+            if (i === Math.floor(arc.t * steps)) {
+              const grd2 = ctx.createRadialGradient(px, py, 0, px, py, 5);
+              grd2.addColorStop(0, arc.color + "cc");
+              grd2.addColorStop(1, arc.color + "00");
+              ctx.fillStyle = grd2;
+              ctx.beginPath(); ctx.arc(px, py, 5, 0, Math.PI * 2); ctx.fill();
+            }
+          }
+          prevPx = px; prevPy = py; prevZ = pz;
+        }
+        if (arc.t >= 1) arc.t = 1.5; // mark done
+      });
+      arcsRef.current = arcsRef.current.filter(a => a.t <= 1.4);
+
+      /* Equator glow ring */
+      const eGrd = ctx.createRadialGradient(cx, cy, R - 2, cx, cy, R + 4);
+      eGrd.addColorStop(0, "rgba(226,18,39,0.22)");
+      eGrd.addColorStop(1, "rgba(226,18,39,0)");
+      ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2);
+      ctx.strokeStyle = eGrd; ctx.lineWidth = 1.2; ctx.stroke();
+
+      /* Center core dot */
+      const cGrd = ctx.createRadialGradient(cx, cy, 0, cx, cy, 6);
+      cGrd.addColorStop(0, "rgba(226,18,39,0.8)");
+      cGrd.addColorStop(1, "rgba(226,18,39,0)");
+      ctx.fillStyle = cGrd; ctx.beginPath(); ctx.arc(cx, cy, 6, 0, Math.PI * 2); ctx.fill();
+    }
+
+    draw();
+    return () => { cancelAnimationFrame(rafRef.current); clearInterval(arcSpawn); };
+  }, [spawnArc]);
+
+  return (
+    <div style={{ position: "relative", display: "inline-block" }}>
+      <canvas ref={canvasRef} style={{ display: "block" }} />
+      {/* outer glow ring */}
+      <div style={{
+        position: "absolute", inset: -4,
+        borderRadius: "50%",
+        boxShadow: "0 0 32px rgba(226,18,39,0.18), 0 0 64px rgba(226,18,39,0.08)",
+        pointerEvents: "none",
+      }} />
+    </div>
+  );
+}
 
 const BOOT_LINES = [
   "Initializing KaliGPT neural engine...",
@@ -165,6 +329,18 @@ export function ChatEmptyState({ modelName, memoryCount = 0, onPrompt, emptyText
               <p style={{ fontSize: "11px", fontFamily: "monospace", color: "rgba(255,255,255,0.3)" }}>
                 {emptyText || "ما الهدف الذي نشتغل عليه اليوم؟"}
               </p>
+            </div>
+
+            {/* 3D Threat Globe */}
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: "16px" }}>
+              <div style={{ position: "relative" }}>
+                <ThreatGlobe3D />
+                <div style={{
+                  position: "absolute", bottom: -6, left: "50%", transform: "translateX(-50%)",
+                  fontFamily: "monospace", fontSize: "8px", fontWeight: 700,
+                  color: "rgba(226,18,39,0.55)", letterSpacing: "0.25em", whiteSpace: "nowrap",
+                }}>GLOBAL THREAT MAP</div>
+              </div>
             </div>
 
             {/* Status badges */}
