@@ -133,7 +133,55 @@ export function QuantumVoidBackground3D({ opacity = 0.60, accentColor = "#e21227
       }
     }
 
-    // ── 5. Data rain ─────────────────────────────────────────────────────────
+    // ── 5. Comets & shooting stars ────────────────────────────────────────────
+    type Comet = { x: number; y: number; vx: number; vy: number; len: number; alpha: number; hOff: number; active: boolean };
+    let comets: Comet[] = [];
+    function spawnComet() {
+      if (comets.filter(c => c.active).length < 4 && Math.random() < 0.008) {
+        const angle = Math.PI * (0.18 + Math.random() * 0.14);
+        const spd   = 2.8 + Math.random() * 4.5;
+        comets.push({
+          x: Math.random() * W, y: -8,
+          vx: Math.cos(angle) * spd, vy: Math.sin(angle) * spd,
+          len: 55 + Math.random() * 110,
+          alpha: 0.55 + Math.random() * 0.35,
+          hOff: Math.random() * 360,
+          active: true,
+        });
+      }
+    }
+    type ShootStar = { x: number; y: number; vx: number; vy: number; life: number; maxLife: number; hOff: number };
+    let shootStars: ShootStar[] = [];
+    function spawnShootStar() {
+      if (shootStars.length < 6 && Math.random() < 0.005) {
+        const a = Math.PI * (0.06 + Math.random() * 0.25);
+        const s = 6 + Math.random() * 14;
+        shootStars.push({
+          x: Math.random() * W * 0.8, y: Math.random() * H * 0.4,
+          vx: Math.cos(a) * s, vy: Math.sin(a) * s,
+          life: 0, maxLife: 28 + Math.random() * 22,
+          hOff: Math.random() * 360,
+        });
+      }
+    }
+
+    // ── 6. Galaxy core ────────────────────────────────────────────────────────
+    // Spiral galaxy arms centered at (W*0.72, H*0.20)
+    type GalaxyStar = { arm: number; dist: number; angle: number; r: number; a: number };
+    let galaxyStars: GalaxyStar[] = [];
+    function initGalaxy() {
+      galaxyStars = Array.from({ length: 180 }, (_, i) => {
+        const arm   = i % 3;
+        const dist  = 5 + Math.random() * (Math.min(W, H) * 0.11);
+        const baseA = (arm / 3) * Math.PI * 2;
+        const curl  = dist * 0.042;
+        return { arm, dist, angle: baseA + curl + (Math.random() - 0.5) * 0.7,
+                 r: 0.15 + Math.random() * 0.55, a: 0.1 + Math.random() * 0.55 };
+      });
+    }
+    initGalaxy();
+
+    // ── 7. Data rain ─────────────────────────────────────────────────────────
     const HEX_CHARS = "0123456789ABCDEF";
     const DATA_CHARS = "01" + HEX_CHARS + "XRCE SHELL FUZZ ROOT KALI CVE RCE BUF PRIV ";
     type DataCol = { x: number; chars: { c: string; y: number; a: number }[]; spd: number; hOff: number };
@@ -157,6 +205,7 @@ export function QuantumVoidBackground3D({ opacity = 0.60, accentColor = "#e21227
       initNebulae();
       initNodes();
       initDataCols();
+      initGalaxy();
     }
 
     resize();
@@ -362,6 +411,82 @@ export function QuantumVoidBackground3D({ opacity = 0.60, accentColor = "#e21227
         spec.addColorStop(1, "rgba(255,255,255,0)");
         ctx.beginPath(); ctx.arc(x, y, nr, 0, Math.PI*2);
         ctx.fillStyle = spec; ctx.fill();
+      });
+
+      // ── LAYER 5b: Galaxy core spiral ─────────────────────────────────────
+      {
+        const gcx = W * 0.72, gcy = H * 0.20;
+        const spinT = t * 0.022;
+        // Galaxy core glow
+        const coreG = ctx.createRadialGradient(gcx, gcy, 0, gcx, gcy, Math.min(W,H) * 0.06);
+        coreG.addColorStop(0,   `rgba(255,240,200,${0.20 * opacity})`);
+        coreG.addColorStop(0.25,`rgba(${hsl(hue + 30, 0.8, 0.55)},${0.10 * opacity})`);
+        coreG.addColorStop(0.6, `rgba(${hsl(hue + 60, 0.6, 0.38)},${0.04 * opacity})`);
+        coreG.addColorStop(1,   "rgba(0,0,0,0)");
+        ctx.beginPath(); ctx.arc(gcx, gcy, Math.min(W,H) * 0.06, 0, Math.PI * 2);
+        ctx.fillStyle = coreG; ctx.fill();
+        // Spiral arm stars
+        galaxyStars.forEach(gs => {
+          const a = gs.angle + spinT * (1 - gs.dist * 0.008);
+          const sx = gcx + Math.cos(a) * gs.dist;
+          const sy = gcy + Math.sin(a) * gs.dist * 0.58;
+          const sa = gs.a * opacity * 0.70;
+          ctx.beginPath(); ctx.arc(sx, sy, gs.r, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(${hsl(hue + gs.arm * 40)},${sa})`; ctx.fill();
+        });
+      }
+
+      // ── LAYER 5c: Comets & shooting stars ────────────────────────────────
+      spawnComet();
+      comets = comets.filter(c => c.active);
+      comets.forEach(c => {
+        c.x += c.vx; c.y += c.vy;
+        if (c.x > W + 80 || c.y > H + 80) { c.active = false; return; }
+        // Tail gradient
+        const tailLen = c.len;
+        const tailGrad = ctx.createLinearGradient(
+          c.x, c.y,
+          c.x - c.vx * tailLen / Math.hypot(c.vx, c.vy),
+          c.y - c.vy * tailLen / Math.hypot(c.vx, c.vy)
+        );
+        tailGrad.addColorStop(0,   `rgba(255,255,255,${c.alpha * opacity})`);
+        tailGrad.addColorStop(0.12,`rgba(${hsl(c.hOff, 0.9, 0.75)},${c.alpha * opacity * 0.8})`);
+        tailGrad.addColorStop(0.5, `rgba(${hsl(c.hOff + 40, 0.7, 0.55)},${c.alpha * opacity * 0.2})`);
+        tailGrad.addColorStop(1,   "rgba(0,0,0,0)");
+        ctx.beginPath();
+        ctx.moveTo(c.x, c.y);
+        ctx.lineTo(
+          c.x - (c.vx / Math.hypot(c.vx, c.vy)) * tailLen,
+          c.y - (c.vy / Math.hypot(c.vx, c.vy)) * tailLen
+        );
+        ctx.strokeStyle = tailGrad;
+        ctx.lineWidth = 1.5; ctx.stroke();
+        // Head glow
+        const hg = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, 4);
+        hg.addColorStop(0, `rgba(255,255,255,${c.alpha * opacity})`);
+        hg.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.beginPath(); ctx.arc(c.x, c.y, 4, 0, Math.PI * 2);
+        ctx.fillStyle = hg; ctx.fill();
+        ctx.beginPath(); ctx.arc(c.x, c.y, 1.0, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,255,255,${c.alpha * opacity})`; ctx.fill();
+      });
+      // Shooting stars
+      spawnShootStar();
+      shootStars = shootStars.filter(s => s.life < s.maxLife);
+      shootStars.forEach(s => {
+        s.x += s.vx; s.y += s.vy; s.life++;
+        const p = s.life / s.maxLife;
+        const a = Math.sin(p * Math.PI) * 0.85 * opacity;
+        const len = Math.hypot(s.vx, s.vy) * 4;
+        const sg = ctx.createLinearGradient(s.x, s.y, s.x - s.vx * 4, s.y - s.vy * 4);
+        sg.addColorStop(0, `rgba(${hsl(s.hOff)},${a})`);
+        sg.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.beginPath(); ctx.moveTo(s.x, s.y);
+        ctx.lineTo(s.x - (s.vx / Math.hypot(s.vx, s.vy)) * len,
+                   s.y - (s.vy / Math.hypot(s.vx, s.vy)) * len);
+        ctx.strokeStyle = sg; ctx.lineWidth = 0.8; ctx.stroke();
+        ctx.beginPath(); ctx.arc(s.x, s.y, 0.8, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,255,255,${a * 0.9})`; ctx.fill();
       });
 
       // ── LAYER 6: Data rain ────────────────────────────────────────────────

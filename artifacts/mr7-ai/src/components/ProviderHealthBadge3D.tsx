@@ -595,6 +595,44 @@ function QuantumPlanet3D({ health, latency, open, hover }: { health: Health; lat
         void lfAge;
       }
 
+      // ── Orbiting moon ────────────────────────────────────────────────────
+      {
+        const moonOrbitR = R + 10 + Math.sin(t * 0.8) * 0.8;
+        const moonAngle  = t * (isH ? 0.55 : 0.32);
+        const moonX      = cx + Math.cos(moonAngle) * moonOrbitR * 0.98;
+        const moonY      = cy + Math.sin(moonAngle) * moonOrbitR * 0.42;
+        const moonR      = 2.6 + Math.sin(t * 1.2) * 0.3;
+        const moonDepth  = Math.sin(moonAngle);
+        const moonAlpha  = 0.55 + moonDepth * 0.35;
+        // Moon shadow / surface
+        const moonG = ctx.createRadialGradient(moonX - moonR * 0.35, moonY - moonR * 0.38, 0, moonX, moonY, moonR);
+        moonG.addColorStop(0,   `rgba(255,255,255,${moonAlpha})`);
+        moonG.addColorStop(0.45,`rgba(${hsl(hue + 40, 0.5, 0.75)},${moonAlpha * 0.8})`);
+        moonG.addColorStop(0.80,`rgba(${hsl(hue + 80, 0.4, 0.40)},${moonAlpha * 0.5})`);
+        moonG.addColorStop(1,   `rgba(0,0,0,${moonAlpha * 0.3})`);
+        ctx.beginPath(); ctx.arc(moonX, moonY, moonR, 0, Math.PI * 2);
+        ctx.fillStyle = moonG; ctx.fill();
+        // Moon halo
+        const moonHalo = ctx.createRadialGradient(moonX, moonY, moonR * 0.7, moonX, moonY, moonR * 2.5);
+        moonHalo.addColorStop(0, `rgba(${hsl(hue + 60)},${0.12 * moonAlpha})`);
+        moonHalo.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.beginPath(); ctx.arc(moonX, moonY, moonR * 2.5, 0, Math.PI * 2);
+        ctx.fillStyle = moonHalo; ctx.fill();
+        // Moon trail
+        for (let mt = 1; mt <= 6; mt++) {
+          const prevA = moonAngle - mt * 0.08;
+          const ptx   = cx + Math.cos(prevA) * moonOrbitR * 0.98;
+          const pty   = cy + Math.sin(prevA) * moonOrbitR * 0.42;
+          ctx.beginPath(); ctx.arc(ptx, pty, moonR * (1 - mt / 9), 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(${hsl(hue + 40)},${(0.06 - mt * 0.008) * moonAlpha})`; ctx.fill();
+        }
+        // Orbit path
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, moonOrbitR * 0.98, moonOrbitR * 0.42, 0, 0, Math.PI * 2);
+        ctx.strokeStyle = "rgba(255,255,255,0.04)";
+        ctx.setLineDash([1.5, 4.5]); ctx.lineWidth = 0.45; ctx.stroke(); ctx.setLineDash([]);
+      }
+
       // ── Health blip (top-right, with pulse ring) ────────────────────────
       const blinkA =
         h === "healthy"  ? 0.85 + Math.sin(t * 2.0)  * 0.15 :

@@ -410,6 +410,30 @@ function QuantumAtom3D({ phase, open, hover }: { phase: Phase; open: boolean; ho
         ctx.setLineDash([]);
       });
 
+      // ── Higgs field — probability cloud around nucleus ─────────────────
+      {
+        const higgsPulse = 0.5 + Math.sin(t * 0.065) * 0.5;
+        const higgsRipples = isH ? 6 : 4;
+        for (let hi = 0; hi < higgsRipples; hi++) {
+          const hR  = 7 + hi * 3.8 + higgsPulse * 2.5 + Math.sin(t * 0.04 + hi * 0.8) * 1.5;
+          const hA  = (0.045 - hi * 0.006) * (1 - higgsPulse * 0.4);
+          if (hA <= 0) continue;
+          ctx.beginPath();
+          ctx.ellipse(cx, cy, hR, hR * (0.72 + Math.sin(t * 0.03 + hi) * 0.12),
+                      t * 0.01 + hi * 0.35, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(${hsl(hue + hi * 60)},${hA})`;
+          ctx.lineWidth = 0.5; ctx.stroke();
+        }
+        // Quantum wave function radial glow (blurred probability cloud)
+        const wfG = ctx.createRadialGradient(cx, cy, 4, cx, cy, 26);
+        wfG.addColorStop(0,   `rgba(${hsl(hue)},${0.10 * (1 + higgsPulse * 0.3)})`);
+        wfG.addColorStop(0.35,`rgba(${hsl(hue + 120)},0.04)`);
+        wfG.addColorStop(0.70,`rgba(${hsl(hue + 240)},0.02)`);
+        wfG.addColorStop(1,   "rgba(0,0,0,0)");
+        ctx.beginPath(); ctx.arc(cx, cy, 26, 0, Math.PI * 2);
+        ctx.fillStyle = wfG; ctx.fill();
+      }
+
       // ── Dark energy tendrils from nucleus ──────────────────────────────
       for (let di = 0; di < 10; di++) {
         const da = (di / 10) * Math.PI * 2 + t * 0.022;

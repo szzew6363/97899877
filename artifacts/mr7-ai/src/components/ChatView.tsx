@@ -43,6 +43,7 @@ import { QuantumVoidBackground3D } from "./QuantumVoidBackground3D";
 import { ChatEmptyState } from "./ChatEmptyState";
 import { TokenCounter3D } from "./TokenCounter3D";
 import { NeuralStreamHUD } from "./NeuralStreamHUD";
+import { NeuralActivityMonitor3D } from "./NeuralActivityMonitor3D";
 import { FloatingNetworkPanel } from "./FloatingNetworkPanel";
 import { AgentCommandsPanel } from "./AgentCommandBlock";
 import { parseOrchestratorCommands, executeOrchestratorCommand, type OrchestratorCmd } from "@/lib/agent-orchestrator";
@@ -1425,6 +1426,9 @@ export function ChatView({ onShare, onOpenOsintDash }: { onShare?: () => void; o
           </motion.button>
         )}
       </AnimatePresence>
+
+      {/* Neural Activity Monitor 3D — appears during AI streaming */}
+      <NeuralActivityMonitor3D streaming={streaming} tps={liveTps} tokenCount={liveTokens} />
 
       {/* Stop button while streaming — futuristic */}
       <AnimatePresence>
