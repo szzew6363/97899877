@@ -357,4 +357,135 @@ Output practical, immediately actionable guidance.` + getModePromptSuffix(mode) 
   res.end();
 });
 
+/* ─── Real Web Search (DuckDuckGo Instant + AI analysis) ─────── */
+router.get("/agent4/websearch", async (req: Request, res: Response) => {
+  const q = (req.query.q as string ?? "").trim();
+  if (!q) { res.json({ ok: false, results: [] }); return; }
+
+  try {
+    const ddgUrl = `https://api.duckduckgo.com/?q=${encodeURIComponent(q)}&format=json&no_html=1&skip_disambig=1&t=agent4`;
+    const ddgRes = await fetch(ddgUrl, { headers: { "User-Agent": "Agent4/1.0" }, signal: AbortSignal.timeout(8000) });
+    const ddg = await ddgRes.json() as {
+      AbstractText?: string; AbstractURL?: string; AbstractSource?: string;
+      RelatedTopics?: { Text?: string; FirstURL?: string; Topics?: { Text?: string; FirstURL?: string }[] }[];
+      Results?: { Text?: string; FirstURL?: string }[];
+      Answer?: string; Heading?: string;
+    };
+
+    type Res = { title: string; url: string; snippet: string; icon: string; category: string; relevance: number };
+    const results: Res[] = [];
+    const icons = ["🔍","🌐","📄","🔗","💡","📊","🛡️","⚡","📦","🔧"];
+    let idx = 0;
+
+    if (ddg.Answer) {
+      results.push({ title: ddg.Heading ?? "إجابة مباشرة", url: ddg.AbstractURL ?? "#", snippet: ddg.Answer, icon: "💡", category: "إجابة", relevance: 0.99 });
+    }
+    if (ddg.AbstractText) {
+      results.push({ title: ddg.Heading ?? q, url: ddg.AbstractURL ?? "#", snippet: ddg.AbstractText, icon: "📖", category: ddg.AbstractSource ?? "ويكيبيديا", relevance: 0.95 });
+    }
+    for (const r of ddg.Results ?? []) {
+      if (!r.Text) continue;
+      results.push({ title: r.Text.slice(0,80), url: r.FirstURL ?? "#", snippet: r.Text, icon: icons[idx % icons.length], category: "نتيجة", relevance: 0.9 - idx * 0.02 });
+      idx++;
+    }
+    for (const t of ddg.RelatedTopics ?? []) {
+      if ((t as { Topics?: unknown[] }).Topics) {
+        for (const sub of (t as { Topics: { Text?: string; FirstURL?: string }[] }).Topics ?? []) {
+          if (!sub.Text) continue;
+          results.push({ title: sub.Text.slice(0,80), url: sub.FirstURL ?? "#", snippet: sub.Text, icon: icons[idx % icons.length], category: "مرتبط", relevance: 0.75 - idx * 0.01 });
+          idx++;
+          if (results.length >= 12) break;
+        }
+      } else if (t.Text) {
+        results.push({ title: t.Text.slice(0,80), url: t.FirstURL ?? "#", snippet: t.Text, icon: icons[idx % icons.length], category: "مرتبط", relevance: 0.8 - idx * 0.01 });
+        idx++;
+      }
+      if (results.length >= 12) break;
+    }
+
+    // If no results, generate AI-simulated results
+    if (results.length === 0) {
+      results.push(
+        { title: `${q} — نظرة عامة`, url: "https://en.wikipedia.org/wiki/" + encodeURIComponent(q), snippet: "لم يُعثر على نتائج مباشرة. استخدم التحليل الذكي للحصول على معلومات.", icon: "🌐", category: "عام", relevance: 0.7 },
+        { title: `${q} — توثيق`, url: "https://developer.mozilla.org/search?q=" + encodeURIComponent(q), snippet: "ابحث في MDN للتوثيق التقني المفصّل.", icon: "📚", category: "توثيق", relevance: 0.65 },
+        { title: `${q} — GitHub`, url: "https://github.com/search?q=" + encodeURIComponent(q), snippet: "مستودعات مفتوحة المصدر ذات صلة.", icon: "🐙", category: "كود", relevance: 0.6 },
+      );
+    }
+
+    res.json({ ok: true, results });
+  } catch {
+    res.json({ ok: false, results: [
+      { title: q, url: "#", snippet: "فشل جلب نتائج الويب — تحقق من الاتصال.", icon: "⚠️", category: "خطأ", relevance: 0 }
+    ]});
+  }
+});
+
+/* ─── AI Slides Generator ─────────────────────────────────────── */
+router.post("/agent4/slides", async (req: Request, res: Response) => {
+  const { topic = "", mode = "max", language = "ar" } = req.body as { topic?: string; mode?: string; language?: string };
+  sseHeaders(res);
+
+  const sys = `You are an expert presentation designer. Generate a professional ${language === "ar" ? "Arabic" : "English"} slide deck.
+
+Output format — separate each slide with: === SLIDE N ===
+Each slide has:
+# Title
+Subtitle: (optional)
+Content: bullet points or paragraphs
+
+Generate 6-8 slides with varied layouts: title, overview, details, analysis, chart data, quote, conclusion.
+Be comprehensive, data-rich, and visually descriptive.`;
+
+  const prompt = `Create a professional presentation about: "${topic}"
+Include: executive summary, key metrics, analysis, recommendations, conclusion.
+Make it impressive and data-driven.`;
+
+  try {
+    for await (const chunk of streamCompletion([
+      { role: "system", content: sys },
+      { role: "user",   content: prompt },
+    ], { model: "gpt-4o", maxTokens: 2000, temperature: 0.7 })) {
+      if (chunk.content) sse(res, "chunk", { text: chunk.content });
+      if (chunk.done)    sse(res, "done",  { ok: true });
+    }
+  } catch (e) {
+    sse(res, "error", { message: e instanceof Error ? e.message : "Slides generation failed" });
+  }
+  res.end();
+});
+
+/* ─── Integrations Code Generator ────────────────────────────── */
+router.post("/agent4/integrate", async (req: Request, res: Response) => {
+  const { service = "", config = "", mode = "turbo", language = "ar" } = req.body as { service?: string; config?: string; mode?: string; language?: string };
+  sseHeaders(res);
+
+  const sys = `You are an expert integration engineer. Generate production-ready TypeScript/JavaScript code for integrating with external services.
+Always include: error handling, TypeScript types, environment variable usage, and real API examples.
+Code should be copy-paste ready.`;
+
+  const prompt = `Generate complete integration code for: ${service}
+Configuration: ${config}
+Include:
+1. Full setup code with TypeScript types
+2. Authentication setup
+3. 3+ practical usage examples
+4. Error handling
+5. Environment variables list (.env format)
+6. Brief explanation in ${language === "ar" ? "Arabic" : "English"}`;
+
+  try {
+    for await (const chunk of streamCompletion([
+      { role: "system", content: sys },
+      { role: "user",   content: prompt },
+    ], { model: "gpt-4o", maxTokens: 2000, temperature: 0.3 })) {
+      if (chunk.content) sse(res, "chunk", { text: chunk.content });
+      if (chunk.done)    sse(res, "done",  { ok: true });
+    }
+  } catch (e) {
+    sse(res, "error", { message: e instanceof Error ? e.message : "Integration code generation failed" });
+  }
+  res.end();
+});
+
 export default router;
+

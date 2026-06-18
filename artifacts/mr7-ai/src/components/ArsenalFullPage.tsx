@@ -161,6 +161,11 @@ import { OdysseusWorkspaceModal } from "./modals/OdysseusWorkspaceModal";
 import { FridayAIModal } from "./modals/FridayAIModal";
 import { JarvisHologramModal } from "./modals/JarvisHologramModal";
 import AgentFourModal from "./modals/AgentFourModal";
+import Agent4DesignCanvasModal from "./modals/Agent4DesignCanvasModal";
+import Agent4WebSearchModal from "./modals/Agent4WebSearchModal";
+import Agent4GitDashboardModal from "./modals/Agent4GitDashboardModal";
+import Agent4IntegrationsModal from "./modals/Agent4IntegrationsModal";
+import Agent4SlidesModal from "./modals/Agent4SlidesModal";
 
 interface Props {
   moduleId: ArsenalModuleId;
@@ -491,6 +496,11 @@ export function ArsenalFullPage({ moduleId, onBack }: Props) {
       case "fridayAI":               return <FridayAIModal open={open} onOpenChange={v => !v && onBack()} />;
       case "jarvisHologram":         return <JarvisHologramModal open={open} onOpenChange={v => !v && onBack()} />;
       case "agent4":                 return <AgentFourModal open={open} onOpenChange={v => !v && onBack()} />;
+      case "agent4DesignCanvas":     return <Agent4DesignCanvasModal open={open} onOpenChange={v => !v && onBack()} />;
+      case "agent4WebSearch":        return <Agent4WebSearchModal open={open} onOpenChange={v => !v && onBack()} />;
+      case "agent4Git":              return <Agent4GitDashboardModal open={open} onOpenChange={v => !v && onBack()} />;
+      case "agent4Integrations":     return <Agent4IntegrationsModal open={open} onOpenChange={v => !v && onBack()} />;
+      case "agent4Slides":           return <Agent4SlidesModal open={open} onOpenChange={v => !v && onBack()} />;
       default:                return null;
     }
   })();

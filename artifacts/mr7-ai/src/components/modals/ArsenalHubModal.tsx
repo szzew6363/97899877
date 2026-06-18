@@ -12,6 +12,7 @@ import {
   Settings, Eye, AlertTriangle, Microscope, Globe, TrendingUp, Crown, Map, Orbit,
   Radio, Lock as LockIcon,
   Target, EyeOff, Crosshair, Binary, Workflow,
+  MousePointer2, GitBranch, Presentation,
 } from "lucide-react";
 import { pipeline, type PipelineHistoryEntry, type ChainRule } from "@/lib/pipeline";
 
@@ -74,7 +75,9 @@ export type ArsenalModuleId =
   | "odysseusTaskCalendar" | "odysseusModelCookbook" | "odysseusEmailAI"
   // Batch 14 — Odysseus Full Workspace + F.R.I.D.A.Y. Tony Stark AI + J.A.R.V.I.S. Hologram
   | "odysseusWorkspace" | "fridayAI" | "jarvisHologram"
-  | "agent4";
+  | "agent4"
+  // Batch 15 — Agent 4 Power Tools
+  | "agent4DesignCanvas" | "agent4WebSearch" | "agent4Git" | "agent4Integrations" | "agent4Slides";
 
 export type ArsenalModule = {
   id: ArsenalModuleId;
@@ -1012,6 +1015,36 @@ export const ARSENAL_MODULES: ArsenalModule[] = [
     desc: "نظام الذكاء الاصطناعي المتقدم Agent 4 — بناء تطبيقات كاملة من وصف نصي (Frontend + Backend + Database + Auth)، وضع التخطيط الذكي متعدد المراحل، تنفيذ متوازي بخمسة وكلاء متخصصين، بحث ويب ذكي، تحليل وإصلاح الأخطاء تلقائياً، خطط نشر كاملة مع Docker وCI/CD، إدارة التعاون الجماعي. خمسة أوضاع تشغيل: Lite · Autonomous · Max · Power · Turbo (2.5×). واجهة ثلاثية الأبعاد بشبكة عصبية حية.",
     icon: Cpu, color: "#06b6d4", border: "rgba(6,182,212,0.4)", bg: "rgba(6,182,212,0.07)", glow: "rgba(6,182,212,0.35)",
     source: "Agent 4 System", tag: "AGENT4",
+  },
+  {
+    id: "agent4DesignCanvas", name: "DESIGN CANVAS", subtitle: "سحب وإفلات · توليد كود React · واجهة بصرية",
+    desc: "أداة تصميم واجهات المستخدم بالسحب والإفلات الحقيقي. مكتبة مكوّنات جاهزة (Button، Card، Input، Nav، Table وأكثر)، شبكة snap-to-grid دقيقة، لوحة خصائص تفاعلية، معاينة للكود في الوقت الحقيقي، توليد كود React + Tailwind نظيف بالذكاء الاصطناعي بنقرة واحدة. واجهة ثلاثية الأبعاد مع تأثيرات نجوم متحركة.",
+    icon: MousePointer2, color: "#a78bfa", border: "rgba(167,139,250,0.4)", bg: "rgba(167,139,250,0.07)", glow: "rgba(167,139,250,0.35)",
+    source: "Agent 4 · Design Canvas", tag: "3D DESIGN",
+  },
+  {
+    id: "agent4WebSearch", name: "WEB SEARCH", subtitle: "بحث حقيقي · DuckDuckGo · تحليل AI",
+    desc: "محرك بحث ويب حقيقي يجلب نتائج DuckDuckGo الفورية، يحللها بالذكاء الاصطناعي، ويعرضها بتصور رادار ثلاثي الأبعاد. أربعة أوضاع بحث: ذكي، تقني، أمني، بحثي. نتائج تفاعلية قابلة للتوسيع مع روابط مباشرة وتحليل سياقي شامل.",
+    icon: Globe, color: "#06b6d4", border: "rgba(6,182,212,0.4)", bg: "rgba(6,182,212,0.07)", glow: "rgba(6,182,212,0.35)",
+    source: "Agent 4 · Web Search", tag: "LIVE SEARCH",
+  },
+  {
+    id: "agent4Git", name: "GIT DASHBOARD", subtitle: "إدارة مرئية · Diff · Commit · Log",
+    desc: "لوحة تحكم Git مرئية ثلاثية الأبعاد. عرض حالة الملفات الملوّنة، شجرة الـ commits، عارض Diff مع تمييز الإضافات والحذف، تأشير الملفات للـ staging، إدخال رسالة commit، وتنفيذ العمليات مباشرةً. خلفية شبكة هولوغرافية متحركة.",
+    icon: GitBranch, color: "#10b981", border: "rgba(16,185,129,0.4)", bg: "rgba(16,185,129,0.07)", glow: "rgba(16,185,129,0.35)",
+    source: "Agent 4 · Git Dashboard", tag: "VERSION CONTROL",
+  },
+  {
+    id: "agent4Integrations", name: "INTEGRATIONS HUB", subtitle: "Slack · Notion · BigQuery · Linear · GitHub",
+    desc: "مركز التكاملات المتقدم — ربط مباشر مع 8 خدمات: Slack، Notion، BigQuery، Linear، GitHub، Discord، Airtable، Zapier. اختبار الاتصال، توليد كود TypeScript جاهز للإنتاج بالذكاء الاصطناعي، إدارة المفاتيح والإعدادات. خلفية بلازما ثلاثية الأبعاد.",
+    icon: Link2, color: "#8b5cf6", border: "rgba(139,92,246,0.4)", bg: "rgba(139,92,246,0.07)", glow: "rgba(139,92,246,0.35)",
+    source: "Agent 4 · Integrations", tag: "8 SERVICES",
+  },
+  {
+    id: "agent4Slides", name: "SLIDES CREATOR", subtitle: "عروض تقديمية AI · 3D · وضع العرض",
+    desc: "منشئ العروض التقديمية ثلاثي الأبعاد بالذكاء الاصطناعي. أدخل موضوع واحصل على 6-8 شرائح احترافية. 7 تخطيطات (عنوان، محتوى، عمودان، اقتباس، كود، رسم بياني، فارغ)، 5 ثيمات ملوّنة، وضع العرض الكامل بلوحة مفاتيح، تحرير مباشر لكل شريحة، تأثيرات 3D parallax.",
+    icon: Presentation, color: "#f59e0b", border: "rgba(245,158,11,0.4)", bg: "rgba(245,158,11,0.07)", glow: "rgba(245,158,11,0.35)",
+    source: "Agent 4 · Slides Creator", tag: "3D SLIDES",
   },
 ];
 
