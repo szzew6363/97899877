@@ -146,6 +146,8 @@ import { LargeScaleAnomalyModal } from "./modals/LargeScaleAnomalyModal";
 import { ARTPlatformModal } from "./modals/ARTPlatformModal";
 import { PentestLabProModal } from "./modals/PentestLabProModal";
 import { SOCCommandModal } from "./modals/SOCCommandModal";
+// Autonomous Decision Engine — Neural AI, Adaptive Learning, Self-Optimizing
+import { AutonomousDecisionEngineModal } from "./modals/AutonomousDecisionEngineModal";
 
 interface Props {
   moduleId: ArsenalModuleId;
@@ -463,6 +465,7 @@ export function ArsenalFullPage({ moduleId, onBack }: Props) {
       case "artpplatform":    return <ARTPlatformModal open={open} onOpenChange={v => !v && onBack()} />;
       case "pentestlabpro":   return <PentestLabProModal open={open} onOpenChange={v => !v && onBack()} />;
       case "soccommand":      return <SOCCommandModal open={open} onOpenChange={v => !v && onBack()} />;
+      case "autonomousdecisionengine": return <AutonomousDecisionEngineModal open={open} onOpenChange={v => !v && onBack()} />;
       default:                return null;
     }
   })();

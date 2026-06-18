@@ -193,6 +193,7 @@ const AttackGraph3DModal = lazy(() => import("./components/modals/AttackGraph3DM
 const ARTPlatformModal   = lazy(() => import("./components/modals/ARTPlatformModal").then(m=>({default:m.ARTPlatformModal})));
 const PentestLabProModal = lazy(() => import("./components/modals/PentestLabProModal").then(m=>({default:m.PentestLabProModal})));
 const SOCCommandModal    = lazy(() => import("./components/modals/SOCCommandModal").then(m=>({default:m.SOCCommandModal})));
+const AutonomousDecisionEngineModal = lazy(() => import("./components/modals/AutonomousDecisionEngineModal").then(m=>({default:m.AutonomousDecisionEngineModal})));
 
 // ── MODAL STATE REDUCER ───────────────────────────────────────────────────────
 const MODAL_IDS = [
@@ -223,6 +224,7 @@ const MODAL_IDS = [
   'cyberIntel',
   'threatMap','cveTracker','liveOps',
   'artpPlatform','pentestLabPro','socCommand',
+  'autonomousDecisionEngine',
 ] as const;
 
 type ModalId = typeof MODAL_IDS[number];
@@ -277,6 +279,7 @@ const ARSENAL_MAP: Partial<Record<string, ModalId>> = {
   "artpplatform": "artpPlatform",
   "pentestlabpro": "pentestLabPro",
   "soccommand": "socCommand",
+  "autonomousdecisionengine": "autonomousDecisionEngine",
 };
 
 const queryClient = new QueryClient();
@@ -586,6 +589,7 @@ function AppContent() {
           onOpenCognitiveWarfare={() => open('cognitiveWarfare')}
           onOpenAutonomousOffense={() => open('autonomousOffense')}
           onOpenAttackGraph={() => open('attackGraph')}
+          onOpenAutonomousDecisionEngine={() => open('autonomousDecisionEngine')}
         />
         <ChatView onOpenOsintDash={() => open('osintDash')} />
         {modals.compare && <CompareView onClose={() => close('compare')} />}
@@ -843,6 +847,9 @@ function AppContent() {
       <ARTPlatformModal   open={modals.artpPlatform}  onOpenChange={(v) => mDispatch({type:'SET',id:'artpPlatform',value:v})} />
       <PentestLabProModal open={modals.pentestLabPro} onOpenChange={(v) => mDispatch({type:'SET',id:'pentestLabPro',value:v})} />
       <SOCCommandModal    open={modals.socCommand}    onOpenChange={(v) => mDispatch({type:'SET',id:'socCommand',value:v})} />
+
+      {/* ── Autonomous Decision Engine — Neural AI · Adaptive Learning ── */}
+      <AutonomousDecisionEngineModal open={modals.autonomousDecisionEngine} onOpenChange={(v) => mDispatch({type:'SET',id:'autonomousDecisionEngine',value:v})} />
     </div>
   );
 }

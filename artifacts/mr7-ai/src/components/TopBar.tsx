@@ -64,6 +64,7 @@ interface TopBarProps {
   onOpenCognitiveWarfare?: () => void;
   onOpenAutonomousOffense?: () => void;
   onOpenAttackGraph?: () => void;
+  onOpenAutonomousDecisionEngine?: () => void;
   hudsVisible?: boolean;
 }
 
@@ -713,6 +714,7 @@ export function TopBar({
   onOpenNetworkTopo, onOpenCyberHub, onOpenWidgetsDock, onOpenCisaLive, onOpenCveTimeline,
   onOpenThreatMap, onOpenCveTracker, onOpenLiveOps,
   onOpenCyberHierarchy, onOpenCognitiveWarfare, onOpenAutonomousOffense, onOpenAttackGraph,
+  onOpenAutonomousDecisionEngine,
   hudsVisible,
 }: TopBarProps) {
   const { state, dispatch } = useStore();
@@ -852,7 +854,8 @@ export function TopBar({
           {onOpenCognitiveWarfare     && <HUDBtn icon={BrainCircuit}label="Cog. Warfare" color="#8b5cf6" onClick={onOpenCognitiveWarfare} />}
           {onOpenAutonomousOffense    && <HUDBtn icon={Flame}       label="Offense"      color="#f97316" onClick={onOpenAutonomousOffense} />}
           {onOpenAttackGraph          && <HUDBtn icon={Share2}      label="Atk. Graph"   color="#10b981" onClick={onOpenAttackGraph} />}
-          {(onOpenWarRoom || onOpenDeepSearch || onOpenChainInvestigation || onOpenRedTeam || onOpenCognitiveWarfare || onOpenAutonomousOffense || onOpenAttackGraph) && <VDivider />}
+          {onOpenAutonomousDecisionEngine && <HUDBtn icon={BrainCircuit} label="AI Engine" shortLabel="ADE" color="#8b5cf6" onClick={onOpenAutonomousDecisionEngine} badge="NEW" />}
+          {(onOpenWarRoom || onOpenDeepSearch || onOpenChainInvestigation || onOpenRedTeam || onOpenCognitiveWarfare || onOpenAutonomousOffense || onOpenAttackGraph || onOpenAutonomousDecisionEngine) && <VDivider />}
 
           {/* ── GROUP 3 — Analytics & Intelligence ─────────────────────── */}
           {onOpenNeuralMatrix && <HUDBtn icon={Crosshair}   label="Neural Matrix" color="#e21227"  onClick={onOpenNeuralMatrix} />}
