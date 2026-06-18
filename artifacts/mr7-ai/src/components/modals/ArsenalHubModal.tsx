@@ -71,7 +71,9 @@ export type ArsenalModuleId =
   | "artpplatform" | "pentestlabpro" | "soccommand"
   // Batch 13 — AI-Atlaas Directory + Odysseus Workspace Suite
   | "aiAtlas" | "odysseusDeepResearch" | "odysseusCompare" | "odysseusDocEditor"
-  | "odysseusTaskCalendar" | "odysseusModelCookbook" | "odysseusEmailAI";
+  | "odysseusTaskCalendar" | "odysseusModelCookbook" | "odysseusEmailAI"
+  // Batch 14 — Odysseus Full Workspace + F.R.I.D.A.Y. Tony Stark AI
+  | "odysseusWorkspace" | "fridayAI";
 
 export type ArsenalModule = {
   id: ArsenalModuleId;
@@ -983,6 +985,19 @@ export const ARSENAL_MODULES: ArsenalModule[] = [
     desc: "AI-powered email workspace from Odysseus: intelligent inbox triage (CRITICAL/ACTION/INFO/LATER/SPAM), one-click AI summaries of any email, automatic reply draft generation, bulk triage-all with AI categorization, priority sorting by urgency.",
     icon: Map, color: "#3b82f6", border: "rgba(59,130,246,0.35)", bg: "rgba(59,130,246,0.08)", glow: "rgba(59,130,246,0.25)",
     source: "Odysseus Workspace", tag: "EMAIL AI",
+  },
+  // ─── Batch 14 — Odysseus Full Workspace + F.R.I.D.A.Y. ───────────────────────
+  {
+    id: "odysseusWorkspace", name: "Odysseus Workspace", subtitle: "Unified AI Workspace · Chat · Email · Research · Notes · Tasks · Brain · Gallery",
+    desc: "The complete Odysseus self-hosted AI workspace in one unified modal. Sidebar navigation across 12 sections: Chat (AI conversations), Email AI (triage + auto-reply), Tools (all Odysseus capabilities), Calendar (smart scheduling), Compare (blind model testing), Cookbook (hardware LLM recommendations), Deep Research (8-phase pipeline), Gallery AI (image vision), Library (document storage), Brain (deep knowledge synthesis), Notes (smart note-taking), and Tasks (AI task planning).",
+    icon: Layers, color: "#00e5cc", border: "rgba(0,229,204,0.35)", bg: "rgba(0,229,204,0.07)", glow: "rgba(0,229,204,0.3)",
+    source: "Odysseus Workspace", tag: "WORKSPACE",
+  },
+  {
+    id: "fridayAI", name: "F.R.I.D.A.Y.", subtitle: "Tony Stark AI · World News · Finance · Web Intel · Arc Reactor HUD",
+    desc: "F.R.I.D.A.Y. — Fully Responsive Intelligent Digital Assistant for You. Tony Stark's AI with full Iron Man HUD design. Features: FRIDAY Chat (calm briefing-officer AI persona), World News Live Feed (BBC/Reuters/CNN/Al Jazeera briefings), Finance & Markets Intelligence (Bloomberg/CNBC/FT), Web Intelligence Scanner, Arc Reactor system display with real-time diagnostics. All tools pulled from the Friday MCP architecture.",
+    icon: Zap, color: "#c8860a", border: "rgba(200,134,10,0.4)", bg: "rgba(200,134,10,0.07)", glow: "rgba(200,134,10,0.3)",
+    source: "Friday Tony Stark", tag: "STARK AI",
   },
 ];
 

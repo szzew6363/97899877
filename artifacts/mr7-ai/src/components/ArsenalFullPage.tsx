@@ -156,6 +156,9 @@ import { OdysseusDocEditorModal } from "./modals/OdysseusDocEditorModal";
 import { OdysseusTaskCalendarModal } from "./modals/OdysseusTaskCalendarModal";
 import { OdysseusModelCookbookModal } from "./modals/OdysseusModelCookbookModal";
 import { OdysseusEmailAIModal } from "./modals/OdysseusEmailAIModal";
+// Batch 14 — Odysseus Full Workspace + F.R.I.D.A.Y.
+import { OdysseusWorkspaceModal } from "./modals/OdysseusWorkspaceModal";
+import { FridayAIModal } from "./modals/FridayAIModal";
 
 interface Props {
   moduleId: ArsenalModuleId;
@@ -482,6 +485,8 @@ export function ArsenalFullPage({ moduleId, onBack }: Props) {
       case "odysseusTaskCalendar":   return <OdysseusTaskCalendarModal open={open} onOpenChange={v => !v && onBack()} />;
       case "odysseusModelCookbook":  return <OdysseusModelCookbookModal open={open} onOpenChange={v => !v && onBack()} />;
       case "odysseusEmailAI":        return <OdysseusEmailAIModal open={open} onOpenChange={v => !v && onBack()} />;
+      case "odysseusWorkspace":      return <OdysseusWorkspaceModal open={open} onOpenChange={v => !v && onBack()} />;
+      case "fridayAI":               return <FridayAIModal open={open} onOpenChange={v => !v && onBack()} />;
       default:                return null;
     }
   })();
