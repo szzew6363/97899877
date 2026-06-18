@@ -402,8 +402,50 @@ body.tab-hidden canvas { animation-play-state: paused !important; }
   50% { box-shadow: 0 0 40px rgba(226,18,39,0.22), 0 0 0 1px rgba(226,18,39,0.28); }
 }
 @keyframes topbar-travel {
-  0% { left: -30%; }
-  100% { left: 130%; }
+  0%   { left: -30%; opacity: 0.8; }
+  50%  { opacity: 1; }
+  100% { left: 130%; opacity: 0.6; }
+}
+
+/* ── HUD button shimmer ── */
+@keyframes hud-shimmer {
+  0%   { transform: translateX(-120%) skewX(-12deg); }
+  100% { transform: translateX(320%)  skewX(-12deg); }
+}
+
+/* ── Floating window entry ── */
+@keyframes float-in {
+  from { opacity: 0; transform: scale(0.92) translateY(-10px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ── GPU-layered floating windows ── */
+.hud-float-window {
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  contain: layout style paint;
+}
+
+/* ── Fixed-position floating panels — always above everything ── */
+.ext-window-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1996;
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+.ext-window-panel {
+  position: fixed;
+  z-index: 1997;
+  will-change: transform, opacity;
+  transform: translateZ(0);
+}
+.ext-window-panel-high {
+  position: fixed;
+  z-index: 1999;
+  will-change: transform, opacity;
+  transform: translateZ(0);
 }
 @keyframes kev-ticker {
   0% { transform: translateX(0); }

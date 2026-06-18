@@ -316,12 +316,12 @@ export function ChatView({ onShare, onOpenOsintDash }: { onShare?: () => void; o
             localErr.message.includes("proxy") || localErr.message.includes("unreachable") ||
             localErr.message.includes("ECONNREFUSED") || localErr.message.includes("timeout")));
           if (isNetworkErr) {
-            dispatch({ type: "SET_SETTINGS", patch: { useLocalModel: false } });
             acc = "";
             toast({
+              title: lang === "ar" ? "النموذج المحلي غير متاح" : "Local model unreachable",
               description: lang === "ar"
-                ? `النموذج المحلي (${localModel}) غير متاح — تم التبديل تلقائياً لنماذج CHAT-GPT.ai`
-                : `Local model (${localModel}) unreachable — switched to CHAT-GPT.ai automatically`,
+                ? `(${localModel}) غير متاح — تم التبديل لـ CHAT-GPT.ai لهذه الرسالة فقط. النموذج المحلي لا يزال مفعّلاً.`
+                : `(${localModel}) unreachable — using CHAT-GPT.ai for this message. Local model stays enabled.`,
             });
             await streamChat(cloudChatReq, onChunk, abortRef.current.signal);
           } else {

@@ -72,7 +72,7 @@ interface TopBarProps {
   onToggleSidebar?: () => void;
 }
 
-// ── 3D animated HUD background ────────────────────────────────────────────────
+// ── Ultra 3D animated HUD background ──────────────────────────────────────────
 function TopBarHUDCanvas({ powerOn }: { powerOn: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef    = useRef(0);
@@ -83,168 +83,246 @@ function TopBarHUDCanvas({ powerOn }: { powerOn: boolean }) {
   useEffect(() => {
     const cvEl = canvasRef.current;
     if (!cvEl) return;
-    // Use non-null typed alias so TypeScript doesn't lose narrowing inside closures
     const cv: HTMLCanvasElement = cvEl;
-    const ctx = cv.getContext("2d", { alpha: true })!;
+    const ctx = cv.getContext("2d", { alpha: true, desynchronized: true })!;
 
+    let W = 0, H = 0, DPR = 1;
     function resize() {
-      cv.width  = cv.offsetWidth  * Math.min(window.devicePixelRatio, 2);
-      cv.height = cv.offsetHeight * Math.min(window.devicePixelRatio, 2);
+      DPR = Math.min(window.devicePixelRatio, 2);
+      W = cv.width  = cv.offsetWidth  * DPR;
+      H = cv.height = cv.offsetHeight * DPR;
     }
     resize();
     const ro = new ResizeObserver(resize);
     ro.observe(cv);
 
-    // Floating particles
-    type Pt = { x: number; y: number; vx: number; vy: number; r: number; a: number; hue: number };
-    const pts: Pt[] = Array.from({ length: 46 }, (_, i) => ({
-      x: Math.random(), y: Math.random(),
-      vx: (Math.random() - 0.5) * 0.0007,
-      vy: (Math.random() - 0.5) * 0.0005,
-      r: 0.5 + Math.random() * 1.4,
-      a: 0.06 + Math.random() * 0.28,
-      hue: i < 30 ? 350 : i < 40 ? 180 : 270,
+    // ── Neural network nodes ────────────────────────────────────────────────
+    type Node = { x: number; y: number; vx: number; vy: number; r: number; phase: number; type: number };
+    const nodes: Node[] = Array.from({ length: 32 }, (_, i) => ({
+      x: Math.random() * 1.0, y: Math.random() * 1.0,
+      vx: (Math.random() - 0.5) * 0.0006,
+      vy: (Math.random() - 0.5) * 0.0004,
+      r: 1.2 + Math.random() * 2.2,
+      phase: Math.random() * Math.PI * 2,
+      type: i % 3, // 0=crimson, 1=cyan, 2=violet
     }));
 
-    // Data stream nodes — vertical drifting bits
-    type Bit = { x: number; y: number; speed: number; alpha: number; val: string };
-    const bits: Bit[] = Array.from({ length: 28 }, () => ({
-      x: Math.random(),
-      y: Math.random(),
-      speed: 0.0008 + Math.random() * 0.0016,
-      alpha: 0.04 + Math.random() * 0.12,
-      val: Math.random() > 0.5 ? "1" : "0",
-    }));
+    // ── Binary columns (Matrix-style) ────────────────────────────────────────
+    type Col = { x: number; chars: { y: number; v: string; a: number }[]; speed: number };
+    const cols: Col[] = Array.from({ length: 22 }, () => {
+      const x = Math.random();
+      const len = 4 + Math.floor(Math.random() * 7);
+      return {
+        x,
+        chars: Array.from({ length: len }, (_, j) => ({
+          y: Math.random() - j * 0.06,
+          v: Math.random() > 0.5 ? "1" : "0",
+          a: j === 0 ? 0.18 : 0.05 - j * 0.005,
+        })),
+        speed: 0.0006 + Math.random() * 0.001,
+      };
+    });
 
-    // Wave pulses
-    type Wave = { cx: number; r: number; maxR: number; alpha: number };
+    // ── Wave pulses ────────────────────────────────────────────────────────
+    type Wave = { cx: number; r: number; a: number; color: number };
     const waves: Wave[] = [];
-    let waveTimer = 0;
+    let waveTick = 0;
+
+    // ── Horizontal data streaks ────────────────────────────────────────────
+    type Streak = { x: number; w: number; y: number; a: number; speed: number; color: number };
+    const streaks: Streak[] = Array.from({ length: 6 }, (_, i) => ({
+      x: Math.random() * 1.5 - 0.25,
+      w: 0.08 + Math.random() * 0.16,
+      y: 0.2 + Math.random() * 0.6,
+      a: 0.08 + Math.random() * 0.14,
+      speed: (0.0008 + Math.random() * 0.0012) * (Math.random() > 0.5 ? 1 : -1),
+      color: i % 3,
+    }));
+
+    const COLORS = [
+      [226, 18, 39],   // crimson
+      [0, 229, 255],   // cyan
+      [139, 92, 246],  // violet
+    ];
 
     function draw() {
       rafRef.current = requestAnimationFrame(draw);
-      tRef.current += 0.009;
+      if (W === 0 || H === 0) return;
+      tRef.current += 0.01;
       const t = tRef.current;
-      const W = cv.width, H = cv.height;
       const pw = powerRef.current;
-      const DPR = Math.min(window.devicePixelRatio, 2);
+      const pulse = (Math.sin(t * 2.2) + 1) * 0.5;
+
       ctx.clearRect(0, 0, W, H);
 
-      // ── Diagonal cyber grid ────────────────────────────────────────────────
-      const gridA = pw ? 0.055 : 0.033;
-      ctx.save(); ctx.setLineDash([4 * DPR, 8 * DPR]);
-      for (let x = -H; x < W + H; x += 48 * DPR) {
-        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + H, H);
-        ctx.strokeStyle = `rgba(226,18,39,${gridA})`; ctx.lineWidth = 0.6; ctx.stroke();
+      // ── Deep perspective 3D grid (converging lines to center-bottom VP) ─────
+      const vpX = W * 0.5, vpY = H * 2.2;
+      const gridA = pw ? 0.07 : 0.038;
+      ctx.save();
+      ctx.setLineDash([3 * DPR, 10 * DPR]);
+      ctx.lineWidth = 0.5;
+      for (let i = -6; i <= 14; i++) {
+        const x0 = W * (i / 8);
+        ctx.beginPath(); ctx.moveTo(x0, 0); ctx.lineTo(vpX, vpY);
+        const fade = 1 - Math.abs(i - 4) / 12;
+        ctx.strokeStyle = `rgba(226,18,39,${gridA * fade})`; ctx.stroke();
       }
       ctx.setLineDash([]);
-      for (let x = 0; x < W; x += 56 * DPR) {
-        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H);
-        ctx.strokeStyle = `rgba(226,18,39,${gridA * 0.7})`; ctx.lineWidth = 0.4; ctx.stroke();
+      // Horizontal bands across the perspective grid
+      for (let yf = 0; yf < 1; yf += 0.18) {
+        const y = yf * H;
+        const xL = vpX + (0 - vpX) * (y / vpY);
+        const xR = vpX + (W - vpX) * (y / vpY);
+        const bandPulse = (Math.sin(t * 0.5 + yf * 8) + 1) * 0.5;
+        ctx.beginPath(); ctx.moveTo(xL, y); ctx.lineTo(xR, y);
+        ctx.strokeStyle = `rgba(226,18,39,${(pw ? 0.045 : 0.022) + bandPulse * 0.012})`;
+        ctx.lineWidth = 0.4; ctx.stroke();
       }
       ctx.restore();
 
-      // ── Horizontal data bands ──────────────────────────────────────────────
-      for (let y = 0; y < H; y += 14 * DPR) {
-        const band = (Math.sin(t * 0.4 + y * 0.08) + 1) / 2;
-        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y);
-        ctx.strokeStyle = `rgba(226,18,39,${pw ? 0.035 + band * 0.018 : 0.018})`; ctx.lineWidth = 0.4; ctx.stroke();
+      // ── Diagonal secondary grid ─────────────────────────────────────────────
+      ctx.save();
+      ctx.setLineDash([2 * DPR, 14 * DPR]);
+      ctx.lineWidth = 0.35;
+      for (let x = -H; x < W + H; x += 56 * DPR) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + H * 0.8, H);
+        ctx.strokeStyle = `rgba(0,229,255,${pw ? 0.028 : 0.014})`; ctx.stroke();
       }
+      ctx.setLineDash([]);
+      ctx.restore();
 
-      // ── Dual scan beams ────────────────────────────────────────────────────
-      const scanY = ((t * 0.38) % 1) * H;
-      const sg = ctx.createLinearGradient(0, scanY - 12, 0, scanY + 12);
-      sg.addColorStop(0, "rgba(226,18,39,0)");
-      sg.addColorStop(0.4, `rgba(226,18,39,${pw ? 0.14 : 0.065})`);
-      sg.addColorStop(0.6, `rgba(255,60,60,${pw ? 0.09 : 0.04})`);
-      sg.addColorStop(1, "rgba(226,18,39,0)");
-      ctx.fillStyle = sg; ctx.fillRect(0, scanY - 12, W, 24);
-
-      const scanY2 = ((t * 0.22 + 0.5) % 1) * H;
-      const sg2 = ctx.createLinearGradient(0, scanY2 - 8, 0, scanY2 + 8);
-      sg2.addColorStop(0, "rgba(0,229,255,0)");
-      sg2.addColorStop(0.5, `rgba(0,229,255,${pw ? 0.05 : 0.025})`);
-      sg2.addColorStop(1, "rgba(0,229,255,0)");
-      ctx.fillStyle = sg2; ctx.fillRect(0, scanY2 - 8, W, 16);
-
-      // ── Dual horizontal streaks ────────────────────────────────────────────
-      const sx = ((t * 0.15 + 0.1) % 1.4 - 0.2) * W;
-      const hg = ctx.createLinearGradient(sx - 120, 0, sx + 120, 0);
-      hg.addColorStop(0, "rgba(226,18,39,0)");
-      hg.addColorStop(0.5, `rgba(226,18,39,${pw ? 0.22 : 0.1})`);
-      hg.addColorStop(1, "rgba(226,18,39,0)");
-      ctx.fillStyle = hg; ctx.fillRect(sx - 120, 0, 240, H);
-
-      const sx2 = ((t * 0.09 + 0.7) % 1.4 - 0.2) * W;
-      const hg2 = ctx.createLinearGradient(sx2 - 80, 0, sx2 + 80, 0);
-      hg2.addColorStop(0, "rgba(139,92,246,0)");
-      hg2.addColorStop(0.5, `rgba(139,92,246,${pw ? 0.07 : 0.03})`);
-      hg2.addColorStop(1, "rgba(139,92,246,0)");
-      ctx.fillStyle = hg2; ctx.fillRect(sx2 - 80, 0, 160, H);
-
-      // ── Binary rain bits ──────────────────────────────────────────────────
-      ctx.font = `${7 * DPR}px monospace`;
-      bits.forEach(b => {
-        b.y += b.speed;
-        if (b.y > 1) { b.y = 0; b.x = Math.random(); b.val = Math.random() > 0.5 ? "1" : "0"; }
-        ctx.fillStyle = `rgba(226,18,39,${b.alpha * (pw ? 1.6 : 1)})`;
-        ctx.fillText(b.val, b.x * W, b.y * H);
+      // ── Horizontal streaks ──────────────────────────────────────────────────
+      streaks.forEach(s => {
+        s.x += s.speed;
+        if (s.x > 1.25) s.x = -0.25;
+        if (s.x < -0.25) s.x = 1.25;
+        const [r, g, b] = COLORS[s.color];
+        const cx = s.x * W;
+        const hw = s.w * W * 0.5;
+        const g1 = ctx.createLinearGradient(cx - hw, 0, cx + hw, 0);
+        g1.addColorStop(0, `rgba(${r},${g},${b},0)`);
+        g1.addColorStop(0.5, `rgba(${r},${g},${b},${pw ? s.a : s.a * 0.55})`);
+        g1.addColorStop(1, `rgba(${r},${g},${b},0)`);
+        ctx.fillStyle = g1;
+        ctx.fillRect(cx - hw, s.y * H - 1, hw * 2, 2);
       });
 
-      // ── Wave pulse rings ──────────────────────────────────────────────────
-      waveTimer++;
-      if (pw && waveTimer % 90 === 0) {
-        waves.push({ cx: Math.random() * W, r: 0, maxR: 30 * DPR + Math.random() * 20 * DPR, alpha: 0.35 });
+      // ── Dual vertical scan beams ────────────────────────────────────────────
+      const scanY1 = ((t * 0.32) % 1) * H;
+      const sg1 = ctx.createLinearGradient(0, scanY1 - 18, 0, scanY1 + 18);
+      sg1.addColorStop(0, "rgba(226,18,39,0)");
+      sg1.addColorStop(0.35, `rgba(226,18,39,${pw ? 0.16 : 0.07})`);
+      sg1.addColorStop(0.5, `rgba(255,80,80,${pw ? 0.1 : 0.045})`);
+      sg1.addColorStop(1, "rgba(226,18,39,0)");
+      ctx.fillStyle = sg1; ctx.fillRect(0, scanY1 - 18, W, 36);
+
+      const scanY2 = ((t * 0.19 + 0.55) % 1) * H;
+      const sg2 = ctx.createLinearGradient(0, scanY2 - 10, 0, scanY2 + 10);
+      sg2.addColorStop(0, "rgba(0,229,255,0)");
+      sg2.addColorStop(0.5, `rgba(0,229,255,${pw ? 0.06 : 0.028})`);
+      sg2.addColorStop(1, "rgba(0,229,255,0)");
+      ctx.fillStyle = sg2; ctx.fillRect(0, scanY2 - 10, W, 20);
+
+      // ── Binary matrix columns ─────────────────────────────────────────────
+      ctx.font = `${6 * DPR}px monospace`;
+      cols.forEach(col => {
+        col.chars.forEach(ch => {
+          ch.y += col.speed;
+          if (ch.y > 1.1) { ch.y -= 1.1; ch.v = Math.random() > 0.5 ? "1" : "0"; }
+          const alpha = ch.a * (pw ? 1.8 : 1);
+          if (alpha < 0.005) return;
+          ctx.fillStyle = `rgba(226,18,39,${alpha})`;
+          ctx.fillText(ch.v, col.x * W, ch.y * H);
+        });
+      });
+
+      // ── Neural network nodes + connections ─────────────────────────────────
+      nodes.forEach(n => {
+        n.x += n.vx; n.y += n.vy;
+        if (n.x < 0) n.x += 1; if (n.x > 1) n.x -= 1;
+        if (n.y < 0) n.y += 1; if (n.y > 1) n.y -= 1;
+      });
+      // Draw connections first
+      for (let i = 0; i < nodes.length; i++) {
+        for (let j = i + 1; j < nodes.length; j++) {
+          const dx = (nodes[i].x - nodes[j].x) * W;
+          const dy = (nodes[i].y - nodes[j].y) * H;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const maxDist = W * 0.12;
+          if (dist < maxDist) {
+            const aFade = (1 - dist / maxDist) * (pw ? 0.12 : 0.055);
+            ctx.beginPath();
+            ctx.moveTo(nodes[i].x * W, nodes[i].y * H);
+            ctx.lineTo(nodes[j].x * W, nodes[j].y * H);
+            ctx.strokeStyle = `rgba(226,18,39,${aFade})`;
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+          }
+        }
+      }
+      // Draw node dots
+      nodes.forEach(n => {
+        const pls = (Math.sin(t * 2 + n.phase) + 1) * 0.5;
+        const alpha = (0.2 + pls * 0.5) * (pw ? 1 : 0.5);
+        const [r, g, b] = COLORS[n.type];
+        ctx.beginPath();
+        ctx.arc(n.x * W, n.y * H, n.r * DPR, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`;
+        ctx.fill();
+      });
+
+      // ── Wave pulse rings ─────────────────────────────────────────────────
+      waveTick++;
+      if (pw && waveTick % 70 === 0) {
+        waves.push({ cx: (0.1 + Math.random() * 0.8) * W, r: 0, a: 0.4, color: Math.floor(Math.random() * 3) });
+      }
+      if (!pw && waveTick % 130 === 0) {
+        waves.push({ cx: (0.1 + Math.random() * 0.8) * W, r: 0, a: 0.22, color: 0 });
       }
       for (let i = waves.length - 1; i >= 0; i--) {
         const w = waves[i];
-        w.r += 1.2 * DPR; w.alpha -= 0.008;
-        if (w.alpha <= 0) { waves.splice(i, 1); continue; }
-        ctx.beginPath(); ctx.arc(w.cx, H / 2, w.r, 0, Math.PI * 2);
-        ctx.strokeStyle = `rgba(226,18,39,${w.alpha})`; ctx.lineWidth = 1.2; ctx.stroke();
+        w.r += 1.6 * DPR; w.a -= 0.007;
+        if (w.a <= 0) { waves.splice(i, 1); continue; }
+        const [r, g, b] = COLORS[w.color];
+        ctx.beginPath(); ctx.arc(w.cx, H * 0.5, w.r, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(${r},${g},${b},${w.a})`;
+        ctx.lineWidth = 1.4; ctx.stroke();
       }
 
-      // ── Corner HUD brackets ───────────────────────────────────────────────
-      const bs = 16 * DPR, bw = 1.8 * DPR;
-      const pulse = (Math.sin(t * 2.4) + 1) / 2;
-      ctx.strokeStyle = `rgba(226,18,39,${pw ? 0.75 + pulse * 0.2 : 0.45})`; ctx.lineWidth = bw;
+      // ── Corner HUD brackets ──────────────────────────────────────────────
+      const bs = 20 * DPR, bw = 2 * DPR;
+      const bAlpha = pw ? 0.8 + pulse * 0.2 : 0.5;
+      ctx.strokeStyle = `rgba(226,18,39,${bAlpha})`; ctx.lineWidth = bw;
+      // TL
       ctx.beginPath(); ctx.moveTo(0, bs); ctx.lineTo(0, 0); ctx.lineTo(bs, 0); ctx.stroke();
+      // TR
       ctx.beginPath(); ctx.moveTo(W - bs, 0); ctx.lineTo(W, 0); ctx.lineTo(W, bs); ctx.stroke();
+      // BL
       ctx.beginPath(); ctx.moveTo(0, H - bs); ctx.lineTo(0, H); ctx.lineTo(bs, H); ctx.stroke();
+      // BR
       ctx.beginPath(); ctx.moveTo(W - bs, H); ctx.lineTo(W, H); ctx.lineTo(W, H - bs); ctx.stroke();
-      // Inner tick marks on brackets
-      ctx.strokeStyle = `rgba(226,18,39,${pw ? 0.4 : 0.22})`; ctx.lineWidth = 0.8;
-      ctx.beginPath(); ctx.moveTo(bs * 0.5, 0); ctx.lineTo(bs * 0.5, 4 * DPR); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(0, bs * 0.5); ctx.lineTo(4 * DPR, bs * 0.5); ctx.stroke();
-
-      // ── Power mode glow bands ────────────────────────────────────────────
-      if (pw) {
-        const pls = 0.16 + pulse * 0.14;
-        const lg = ctx.createLinearGradient(0, 0, 40 * DPR, 0);
-        lg.addColorStop(0, `rgba(226,18,39,${pls})`); lg.addColorStop(1, "rgba(226,18,39,0)");
-        ctx.fillStyle = lg; ctx.fillRect(0, 0, 40 * DPR, H);
-        const rg = ctx.createLinearGradient(W, 0, W - 40 * DPR, 0);
-        rg.addColorStop(0, `rgba(226,18,39,${pls})`); rg.addColorStop(1, "rgba(226,18,39,0)");
-        ctx.fillStyle = rg; ctx.fillRect(W - 40 * DPR, 0, 40 * DPR, H);
-        // Top glow band
-        const tg = ctx.createLinearGradient(0, 0, 0, 8 * DPR);
-        tg.addColorStop(0, `rgba(226,18,39,${pls * 0.8})`); tg.addColorStop(1, "rgba(226,18,39,0)");
-        ctx.fillStyle = tg; ctx.fillRect(0, 0, W, 8 * DPR);
-      }
-
-      // ── Floating particles ───────────────────────────────────────────────
-      pts.forEach(p => {
-        p.x += p.vx; p.y += p.vy;
-        if (p.x < 0) p.x = 1; if (p.x > 1) p.x = 0;
-        if (p.y < 0) p.y = 1; if (p.y > 1) p.y = 0;
-        const pls2 = (Math.sin(t * 2.4 + p.x * 12 + p.y * 8) + 1) / 2;
-        const alpha = p.a * (0.38 + pls2 * 0.62);
-        ctx.beginPath(); ctx.arc(p.x * W, p.y * H, p.r * DPR, 0, Math.PI * 2);
-        if (p.hue === 350) ctx.fillStyle = `rgba(226,18,39,${alpha})`;
-        else if (p.hue === 180) ctx.fillStyle = `rgba(0,229,255,${alpha * 0.45})`;
-        else ctx.fillStyle = `rgba(139,92,246,${alpha * 0.4})`;
-        ctx.fill();
+      // Inner tick marks
+      ctx.strokeStyle = `rgba(226,18,39,${pw ? 0.45 : 0.25})`; ctx.lineWidth = 0.9;
+      [0, W].forEach((cx, ci) => {
+        const sign = ci === 0 ? 1 : -1;
+        ctx.beginPath(); ctx.moveTo(cx + sign * bs * 0.5, 0); ctx.lineTo(cx + sign * bs * 0.5, 5 * DPR); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx, bs * 0.5); ctx.lineTo(cx + sign * 5 * DPR, bs * 0.5); ctx.stroke();
       });
+
+      // ── Power mode side glow bands ───────────────────────────────────────
+      if (pw) {
+        const pls2 = 0.18 + pulse * 0.16;
+        const lgL = ctx.createLinearGradient(0, 0, 48 * DPR, 0);
+        lgL.addColorStop(0, `rgba(226,18,39,${pls2})`); lgL.addColorStop(1, "rgba(226,18,39,0)");
+        ctx.fillStyle = lgL; ctx.fillRect(0, 0, 48 * DPR, H);
+        const lgR = ctx.createLinearGradient(W, 0, W - 48 * DPR, 0);
+        lgR.addColorStop(0, `rgba(226,18,39,${pls2})`); lgR.addColorStop(1, "rgba(226,18,39,0)");
+        ctx.fillStyle = lgR; ctx.fillRect(W - 48 * DPR, 0, 48 * DPR, H);
+        // Top edge shimmer
+        const lgT = ctx.createLinearGradient(0, 0, 0, 10 * DPR);
+        lgT.addColorStop(0, `rgba(226,18,39,${pls2 * 0.9})`); lgT.addColorStop(1, "rgba(226,18,39,0)");
+        ctx.fillStyle = lgT; ctx.fillRect(0, 0, W, 10 * DPR);
+      }
     }
 
     draw();
@@ -254,7 +332,159 @@ function TopBarHUDCanvas({ powerOn }: { powerOn: boolean }) {
   return (
     <canvas ref={canvasRef}
       className="absolute inset-0 w-full h-full pointer-events-none"
-      style={{ opacity: 0.9 }} />
+      style={{ opacity: 0.92, transform: "translateZ(0)", willChange: "transform" }} />
+  );
+}
+
+// ── Local Model Quick Toggle ───────────────────────────────────────────────────
+function LocalModelQuickToggle({ onOpenLocalModel }: { onOpenLocalModel: () => void }) {
+  const { state, dispatch } = useStore();
+  const useLocal = state.settings.useLocalModel;
+  const model    = state.settings.localModel || "dolphin-mixtral";
+  const [floatOpen, setFloatOpen] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+
+  function openFloat() {
+    if (btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      setPos({ top: r.bottom + 8, left: r.left });
+    }
+    setFloatOpen(o => !o);
+  }
+
+  useEffect(() => {
+    if (!floatOpen) return;
+    const h = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (btnRef.current && !btnRef.current.contains(t)) setFloatOpen(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [floatOpen]);
+
+  return (
+    <>
+      <motion.button
+        ref={btnRef}
+        onClick={openFloat}
+        className="flex-shrink-0 flex items-center gap-1.5 px-2 py-1.5 rounded-lg relative overflow-hidden"
+        style={{
+          color:      useLocal ? "#22c55e" : "rgba(255,80,80,0.65)",
+          background: useLocal ? "rgba(34,197,94,0.1)"  : "rgba(255,50,50,0.06)",
+          border:     `1px solid ${useLocal ? "rgba(34,197,94,0.35)" : "rgba(255,80,80,0.22)"}`,
+          boxShadow:  useLocal ? "0 0 12px rgba(34,197,94,0.2)" : "none",
+        }}
+        whileHover={{ scale: 1.05, y: -0.5 }}
+        whileTap={{ scale: 0.94 }}
+        aria-label="Local Model status"
+        title={useLocal ? `Local active: ${model}` : "Local model disabled"}
+      >
+        <motion.div
+          animate={useLocal ? { opacity: [1, 0.3, 1] } : { opacity: 0.5 }}
+          transition={{ duration: 1.6, repeat: Infinity }}
+        >
+          <Server className="w-3.5 h-3.5" />
+        </motion.div>
+        <div className="hidden sm:flex flex-col items-start leading-none gap-0.5">
+          <span className="text-[6.5px] font-black tracking-[0.3em] uppercase opacity-60">LOCAL</span>
+          <span className="text-[8px] font-black tracking-wide">{useLocal ? "ON" : "OFF"}</span>
+        </div>
+        {useLocal && (
+          <motion.span className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+            style={{ background: "#22c55e", boxShadow: "0 0 6px #22c55e" }}
+            animate={{ scale: [1, 1.4, 1], opacity: [1, 0.4, 1] }}
+            transition={{ duration: 1.4, repeat: Infinity }} />
+        )}
+      </motion.button>
+
+      {/* External floating window */}
+      <AnimatePresence>
+        {floatOpen && (
+          <>
+            <motion.div className="fixed inset-0 z-[1998]"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}
+              onClick={() => setFloatOpen(false)} />
+
+            <motion.div
+              className="fixed z-[1999] rounded-2xl overflow-hidden"
+              style={{
+                top: Math.min(pos.top, window.innerHeight - 300),
+                left: Math.min(pos.left, window.innerWidth - 320),
+                width: 300,
+                background: "linear-gradient(160deg, rgba(5,3,12,0.99) 0%, rgba(3,2,8,0.99) 100%)",
+                border: "1px solid rgba(34,197,94,0.3)",
+                boxShadow: "0 0 60px rgba(34,197,94,0.12), 0 20px 60px rgba(0,0,0,0.85), inset 0 1px 0 rgba(34,197,94,0.12)",
+              }}
+              initial={{ opacity: 0, scale: 0.9, y: -8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: -8 }}
+              transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <div className="h-px w-full" style={{ background: "linear-gradient(90deg,transparent,#22c55e,rgba(34,197,94,0.4),transparent)" }} />
+              {/* Corner brackets */}
+              <span className="absolute top-2 left-2 w-3 h-3 border-t border-l pointer-events-none" style={{ borderColor: "rgba(34,197,94,0.5)" }} />
+              <span className="absolute top-2 right-2 w-3 h-3 border-t border-r pointer-events-none" style={{ borderColor: "rgba(34,197,94,0.5)" }} />
+              <span className="absolute bottom-2 left-2 w-3 h-3 border-b border-l pointer-events-none" style={{ borderColor: "rgba(34,197,94,0.3)" }} />
+              <span className="absolute bottom-2 right-2 w-3 h-3 border-b border-r pointer-events-none" style={{ borderColor: "rgba(34,197,94,0.3)" }} />
+
+              <div className="px-5 pt-4 pb-3">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+                    style={{ background: useLocal ? "rgba(34,197,94,0.15)" : "rgba(255,80,80,0.1)", border: `1px solid ${useLocal ? "rgba(34,197,94,0.4)" : "rgba(255,80,80,0.3)"}` }}>
+                    <Server className="w-4 h-4" style={{ color: useLocal ? "#22c55e" : "rgba(255,80,80,0.8)" }} />
+                  </div>
+                  <div>
+                    <div className="text-[8px] font-black tracking-[0.4em] uppercase" style={{ color: "rgba(255,255,255,0.22)" }}>LOCAL MODEL</div>
+                    <div className="text-[13px] font-black" style={{ color: useLocal ? "#22c55e" : "rgba(255,80,80,0.9)" }}>
+                      {useLocal ? "نشط" : "معطَّل"}
+                    </div>
+                  </div>
+                  <motion.button onClick={() => setFloatOpen(false)}
+                    className="ml-auto w-7 h-7 rounded-lg flex items-center justify-center text-[13px]"
+                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.35)" }}
+                    whileHover={{ background: "rgba(226,18,39,0.12)", color: "#e21227" }}>×</motion.button>
+                </div>
+
+                <div className="text-[10px] font-mono mb-3 px-2 py-1.5 rounded-lg truncate"
+                  style={{ background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                  {state.settings.localEndpoint || "http://localhost:11434/v1"} · {model}
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <motion.button
+                    onClick={() => {
+                      dispatch({ type: "SET_SETTINGS", patch: { useLocalModel: !useLocal } });
+                      setFloatOpen(false);
+                    }}
+                    className="w-full py-2.5 rounded-xl text-[11px] font-black tracking-wider uppercase"
+                    style={{
+                      background: useLocal ? "rgba(255,50,50,0.12)" : "rgba(34,197,94,0.12)",
+                      border: `1px solid ${useLocal ? "rgba(255,80,80,0.35)" : "rgba(34,197,94,0.35)"}`,
+                      color: useLocal ? "rgba(255,80,80,0.9)" : "#22c55e",
+                    }}
+                    whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                  >
+                    {useLocal ? "⊘  تعطيل النموذج المحلي" : "⊕  تفعيل النموذج المحلي"}
+                  </motion.button>
+                  <motion.button
+                    onClick={() => { setFloatOpen(false); onOpenLocalModel(); }}
+                    className="w-full py-2 rounded-xl text-[10px] font-black tracking-wider uppercase"
+                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.45)" }}
+                    whileHover={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.7)" }}
+                    whileTap={{ scale: 0.97 }}
+                  >
+                    ⚙ إعدادات متقدمة
+                  </motion.button>
+                </div>
+              </div>
+              <div className="h-px" style={{ background: "linear-gradient(90deg,transparent,rgba(34,197,94,0.3),transparent)" }} />
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </>
   );
 }
 
@@ -557,26 +787,41 @@ function HUDBtn({
       onClick={onClick}
       title={tip ?? label}
       aria-label={label}
-      className="flex-shrink-0 flex items-center gap-1.5 py-1.5 rounded-lg relative overflow-hidden whitespace-nowrap"
+      className="flex-shrink-0 flex items-center gap-1.5 rounded-lg relative overflow-hidden whitespace-nowrap"
       style={{
-        padding: isIconOnly ? "6px 8px" : undefined,
-        paddingLeft: isIconOnly ? undefined : "8px",
-        paddingRight: isIconOnly ? undefined : "10px",
-        background: active ? `${color}22` : `${color}0e`,
-        border: active ? `1px solid ${color}77` : `1px solid ${color}30`,
+        padding: isIconOnly ? "6px 8px" : "6px 10px 6px 8px",
+        background: active
+          ? `linear-gradient(135deg, ${color}28 0%, ${color}10 100%)`
+          : `linear-gradient(135deg, ${color}12 0%, ${color}06 100%)`,
+        border: active ? `1px solid ${color}80` : `1px solid ${color}35`,
         color: color,
-        boxShadow: active ? `0 0 14px ${color}44, inset 0 1px 0 ${color}22` : undefined,
+        boxShadow: active
+          ? `0 0 18px ${color}50, 0 2px 12px ${color}22, inset 0 1px 0 ${color}28`
+          : `inset 0 1px 0 ${color}10`,
+        transform: "translateZ(0)",
+        willChange: "transform",
       }}
       whileHover={{
-        scale: 1.05, y: -1,
-        boxShadow: `0 4px 22px ${color}28, 0 0 12px ${color}18, inset 0 1px 0 ${color}20`,
-        backgroundColor: `${color}18`,
-        borderColor: `${color}60`,
+        scale: 1.06, y: -1.5,
+        boxShadow: `0 6px 28px ${color}35, 0 0 18px ${color}25, inset 0 1px 0 ${color}30`,
+        backgroundColor: `${color}1e`,
+        borderColor: `${color}70`,
       }}
-      whileTap={{ scale: 0.94 }}
-      transition={{ type: "spring", stiffness: 500, damping: 28 }}
+      whileTap={{ scale: 0.93, y: 0 }}
+      transition={{ type: "spring", stiffness: 600, damping: 25 }}
     >
-      <Icon className="w-3.5 h-3.5 flex-shrink-0" />
+      {/* Shimmer sweep on hover */}
+      <motion.span className="absolute inset-y-0 pointer-events-none"
+        style={{ width: 32, background: `linear-gradient(90deg,transparent,${color}22,transparent)`, left: "-100%" }}
+        whileHover={{ left: "200%" }}
+        transition={{ duration: 0.45, ease: "easeOut" }} />
+      {/* Active pulse line */}
+      {active && (
+        <motion.span className="absolute inset-x-0 bottom-0 h-px pointer-events-none"
+          style={{ background: `linear-gradient(90deg,transparent,${color},transparent)` }}
+          animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1.5, repeat: Infinity }} />
+      )}
+      <Icon className="w-3.5 h-3.5 flex-shrink-0" style={{ filter: `drop-shadow(0 0 3px ${color}88)` }} />
       {!isIconOnly && (
         <span className="hidden sm:block text-[10px] font-black tracking-wide uppercase">
           {shortLabel ?? label}
@@ -584,7 +829,7 @@ function HUDBtn({
       )}
       {!isIconOnly && badge && (
         <span className="hidden sm:block text-[7px] font-black px-1 py-0.5 rounded"
-          style={{ background: `${color}25`, color: color, border: `1px solid ${color}40` }}>
+          style={{ background: `${color}28`, color: color, border: `1px solid ${color}45`, boxShadow: `0 0 6px ${color}30` }}>
           {badge}
         </span>
       )}
@@ -600,7 +845,7 @@ function VDivider() {
   );
 }
 
-// ── Model selector 3D ─────────────────────────────────────────────────────────
+// ── Model selector 3D — External floating window ──────────────────────────────
 function ModelSelector3D({
   onOpenPricing,
 }: {
@@ -611,15 +856,23 @@ function ModelSelector3D({
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
-  const ref = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+
+  function openWindow() {
+    if (btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      setPos({ top: r.bottom + 8, left: Math.min(r.left, window.innerWidth - 346) });
+    }
+    setOpen(o => !o);
+  }
 
   useEffect(() => {
-    const h = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, []);
+    if (!open) return;
+    const h = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("keydown", h);
+    return () => document.removeEventListener("keydown", h);
+  }, [open]);
 
   const active = getModel(state.activeModel);
   const ActiveIcon = active.icon;
@@ -629,192 +882,178 @@ function ModelSelector3D({
   );
 
   return (
-    <div className="relative flex-shrink-0" ref={ref}>
+    <>
       <motion.button
-        onClick={() => setOpen(o => !o)}
+        ref={btnRef}
+        onClick={openWindow}
         aria-label={`${t("top.switchModel")} — ${active.id}`}
-        className="flex items-center gap-2 px-2 py-1 rounded-xl relative overflow-hidden"
+        className="flex-shrink-0 flex items-center gap-2 px-2 py-1 rounded-xl relative overflow-hidden"
         style={{
           background: open
-            ? "linear-gradient(135deg,rgba(226,18,39,0.14) 0%,rgba(20,8,8,0.95) 100%)"
-            : "linear-gradient(135deg,rgba(226,18,39,0.07) 0%,rgba(12,8,8,0.9) 100%)",
-          border: `1px solid rgba(226,18,39,${open ? 0.55 : 0.22})`,
+            ? "linear-gradient(135deg,rgba(226,18,39,0.16) 0%,rgba(20,8,8,0.96) 100%)"
+            : "linear-gradient(135deg,rgba(226,18,39,0.08) 0%,rgba(12,8,8,0.92) 100%)",
+          border: `1px solid rgba(226,18,39,${open ? 0.6 : 0.24})`,
           boxShadow: open
-            ? "0 0 24px rgba(226,18,39,0.22), inset 0 1px 0 rgba(226,18,39,0.15)"
+            ? "0 0 28px rgba(226,18,39,0.25), inset 0 1px 0 rgba(226,18,39,0.18)"
             : "0 0 10px rgba(226,18,39,0.1), inset 0 1px 0 rgba(255,255,255,0.04)",
         }}
-        whileHover={{ scale: 1.02 }}
+        whileHover={{ scale: 1.03, boxShadow: "0 0 20px rgba(226,18,39,0.2)" }}
         whileTap={{ scale: 0.97 }}
         transition={{ type: "spring", stiffness: 500, damping: 30 }}
       >
-        {/* HUD top-left corner */}
-        <span className="absolute top-0.5 left-0.5 w-2 h-2 border-t border-l pointer-events-none"
-          style={{ borderColor: "rgba(226,18,39,0.6)" }} />
-        <span className="absolute bottom-0.5 right-0.5 w-2 h-2 border-b border-r pointer-events-none"
-          style={{ borderColor: "rgba(226,18,39,0.6)" }} />
+        <span className="absolute top-0.5 left-0.5 w-2 h-2 border-t border-l pointer-events-none" style={{ borderColor: "rgba(226,18,39,0.6)" }} />
+        <span className="absolute bottom-0.5 right-0.5 w-2 h-2 border-b border-r pointer-events-none" style={{ borderColor: "rgba(226,18,39,0.6)" }} />
 
-        {/* Model icon with glow ring */}
         <span className="relative flex items-center justify-center w-7 h-7 rounded-lg flex-shrink-0"
-          style={{
-            background: "rgba(226,18,39,0.14)",
-            border: "1px solid rgba(226,18,39,0.3)",
-            boxShadow: "0 0 10px rgba(226,18,39,0.25)",
-          }}>
+          style={{ background: "rgba(226,18,39,0.14)", border: "1px solid rgba(226,18,39,0.3)", boxShadow: "0 0 10px rgba(226,18,39,0.25)" }}>
           <ActiveIcon className={`w-3.5 h-3.5 ${active.color}`} />
-          {/* Pulse ring */}
           <motion.span className="absolute inset-0 rounded-lg pointer-events-none"
-            animate={{ opacity: [0.5, 0, 0.5], scale: [1, 1.25, 1] }}
+            animate={{ opacity: [0.5, 0, 0.5], scale: [1, 1.3, 1] }}
             transition={{ duration: 2.5, repeat: Infinity }}
             style={{ border: "1px solid rgba(226,18,39,0.4)" }} />
         </span>
 
-        {/* Model name + meta */}
         <div className="hidden sm:flex flex-col items-start leading-none gap-0.5">
-          <span className="text-[7px] font-black tracking-[0.2em] uppercase"
-            style={{ color: "rgba(226,18,39,0.55)" }}>
-            MODEL
-          </span>
-          <span className="text-[11px] font-black max-w-[120px] truncate"
-            style={{ color: "rgba(255,255,255,0.92)" }}>
-            {active.id}
-          </span>
+          <span className="text-[7px] font-black tracking-[0.2em] uppercase" style={{ color: "rgba(226,18,39,0.55)" }}>MODEL</span>
+          <span className="text-[11px] font-black max-w-[120px] truncate" style={{ color: "rgba(255,255,255,0.92)" }}>{active.id}</span>
         </div>
 
-        {/* Chevron */}
-        <motion.svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-          strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 flex-shrink-0"
+        <motion.svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+          strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3 flex-shrink-0"
           style={{ color: "rgba(226,18,39,0.55)" }}
-          animate={{ rotate: open ? 180 : 0 }}
-          transition={{ duration: 0.2 }}>
+          animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.18 }}>
           <path d="m6 9 6 6 6-6" />
         </motion.svg>
       </motion.button>
 
-      {/* Dropdown */}
+      {/* EXTERNAL floating window — fixed position, outside TopBar DOM */}
       <AnimatePresence>
         {open && (
-          <motion.div
-            initial={{ opacity: 0, y: -6, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -6, scale: 0.97 }}
-            transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
-            className="absolute top-full left-0 mt-2 z-50 rounded-2xl overflow-hidden"
-            style={{
-              width: 330,
-              background: "rgba(5,3,10,0.98)",
-              border: "1px solid rgba(226,18,39,0.25)",
-              boxShadow: "0 0 50px rgba(226,18,39,0.12), 0 20px 60px rgba(0,0,0,0.9), inset 0 1px 0 rgba(226,18,39,0.1)",
-              backdropFilter: "blur(20px)",
-            }}
-          >
-            <div className="h-px" style={{ background: "linear-gradient(90deg,transparent,#e21227,rgba(255,100,100,0.5),transparent)" }} />
+          <>
+            <motion.div className="fixed inset-0 z-[1996]"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(5px)" }}
+              onClick={() => setOpen(false)} />
 
-            {/* Search */}
-            <div className="p-2.5" style={{ borderBottom: "1px solid rgba(226,18,39,0.08)" }}>
-              <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3" style={{ color: "rgba(226,18,39,0.5)" }} />
-                <input
-                  autoFocus
-                  value={q}
-                  onChange={e => setQ(e.target.value)}
-                  placeholder={t("top.searchModels")}
-                  className="w-full rounded-lg pl-7 pr-3 py-1.5 text-[11px] outline-none"
-                  style={{
-                    background: "rgba(226,18,39,0.06)",
-                    border: "1px solid rgba(226,18,39,0.2)",
-                    color: "rgba(255,255,255,0.85)",
-                  }}
-                />
+            <motion.div
+              className="fixed z-[1997] rounded-2xl overflow-hidden"
+              style={{
+                top: pos.top, left: pos.left,
+                width: 338,
+                maxHeight: "min(76vh, 600px)",
+                background: "linear-gradient(160deg, rgba(6,4,14,0.99) 0%, rgba(4,2,10,0.99) 100%)",
+                border: "1px solid rgba(226,18,39,0.28)",
+                boxShadow: "0 0 80px rgba(226,18,39,0.14), 0 24px 80px rgba(0,0,0,0.92), inset 0 1px 0 rgba(226,18,39,0.12)",
+              }}
+              initial={{ opacity: 0, scale: 0.92, y: -10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: -10 }}
+              transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <div className="h-px" style={{ background: "linear-gradient(90deg,transparent,#e21227,rgba(255,100,100,0.5),transparent)" }} />
+              {/* Scan sweep */}
+              <motion.div className="absolute inset-x-0 top-0 h-full pointer-events-none"
+                style={{ background: "linear-gradient(180deg,rgba(226,18,39,0.04),transparent 35%)" }}
+                animate={{ opacity: [0.7, 0.3, 0.7] }} transition={{ duration: 3, repeat: Infinity }} />
+              {/* Corner brackets */}
+              {[["top-2 left-2 border-t border-l"],["top-2 right-2 border-t border-r"],["bottom-2 left-2 border-b border-l"],["bottom-2 right-2 border-b border-r"]].map(([cls], i) => (
+                <span key={i} className={`absolute w-3 h-3 pointer-events-none ${cls}`} style={{ borderColor: "rgba(226,18,39,0.45)" }} />
+              ))}
+
+              {/* Header */}
+              <div className="flex items-center justify-between px-4 pt-3 pb-2">
+                <div className="text-[8px] font-black tracking-[0.5em] uppercase" style={{ color: "rgba(226,18,39,0.5)" }}>AI MODEL SELECT</div>
+                <motion.button onClick={() => setOpen(false)}
+                  className="w-6 h-6 rounded-lg flex items-center justify-center text-[12px]"
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.35)" }}
+                  whileHover={{ background: "rgba(226,18,39,0.12)", color: "#e21227" }}>×</motion.button>
               </div>
-            </div>
 
-            {/* Model list */}
-            <div className="p-1.5 max-h-[min(72vh,580px)] overflow-y-auto space-y-0.5"
-              style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(226,18,39,0.3) transparent" }}>
-              {filtered.map(m => {
-                const Icon = m.icon;
-                const isFree = m.id === "CHAT-GPT Fast";
-                const locked = !isFree && !tierAtLeast(state.subscription.tier, "starter");
-                const isActive = state.activeModel === m.id;
-                return (
-                  <motion.button
-                    key={m.id}
-                    onClick={() => {
-                      if (locked) {
-                        toast({ description: `${m.id} requires Starter plan.` });
-                        setOpen(false); onOpenPricing(); return;
-                      }
-                      dispatch({ type: "SET_MODEL", model: m.id });
-                      setOpen(false);
-                    }}
-                    className="w-full flex items-start gap-2.5 p-2 rounded-xl text-left relative overflow-hidden"
-                    style={{
-                      background: isActive ? "rgba(226,18,39,0.1)" : "transparent",
-                      border: `1px solid ${isActive ? "rgba(226,18,39,0.3)" : "transparent"}`,
-                      opacity: locked ? 0.55 : 1,
-                    }}
-                    whileHover={{ background: "rgba(226,18,39,0.07)" }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <span className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
-                      style={{ background: "rgba(226,18,39,0.1)", border: "1px solid rgba(226,18,39,0.2)" }}>
-                      {locked ? <Lock className="w-3.5 h-3.5" style={{ color: "rgba(255,255,255,0.3)" }} /> : <Icon className={`w-4 h-4 ${m.color}`} />}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[12px] font-bold truncate" style={{ color: isActive ? "#e21227" : "rgba(255,255,255,0.88)" }}>
-                          {m.id}
-                        </span>
-                        {m.badge && !locked && (
-                          <span className="text-[8px] font-black px-1.5 py-0.5 rounded"
-                            style={{ background: "rgba(226,18,39,0.18)", color: "#e21227", border: "1px solid rgba(226,18,39,0.3)" }}>
-                            {m.badge}
-                          </span>
-                        )}
-                        {locked && (
-                          <span className="text-[8px] font-black px-1.5 py-0.5 rounded"
-                            style={{ background: "rgba(245,158,11,0.15)", color: "#f59e0b", border: "1px solid rgba(245,158,11,0.3)" }}>
-                            STARTER+
-                          </span>
-                        )}
-                      </div>
-                      <span className="block text-[10px] leading-snug mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>
-                        {m.desc}
+              {/* Search */}
+              <div className="px-3 pb-2" style={{ borderBottom: "1px solid rgba(226,18,39,0.08)" }}>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3" style={{ color: "rgba(226,18,39,0.5)" }} />
+                  <input
+                    autoFocus
+                    value={q}
+                    onChange={e => setQ(e.target.value)}
+                    placeholder={t("top.searchModels")}
+                    className="w-full rounded-lg pl-7 pr-3 py-1.5 text-[11px] outline-none"
+                    style={{ background: "rgba(226,18,39,0.06)", border: "1px solid rgba(226,18,39,0.2)", color: "rgba(255,255,255,0.85)" }}
+                  />
+                </div>
+              </div>
+
+              {/* Model list */}
+              <div className="p-1.5 overflow-y-auto space-y-0.5"
+                style={{ maxHeight: "min(55vh, 440px)", scrollbarWidth: "thin", scrollbarColor: "rgba(226,18,39,0.3) transparent" }}>
+                {filtered.map(m => {
+                  const Icon = m.icon;
+                  const isFree = m.id === "CHAT-GPT Fast";
+                  const locked = !isFree && !tierAtLeast(state.subscription.tier, "starter");
+                  const isActive = state.activeModel === m.id;
+                  return (
+                    <motion.button
+                      key={m.id}
+                      onClick={() => {
+                        if (locked) { toast({ description: `${m.id} requires Starter plan.` }); setOpen(false); onOpenPricing(); return; }
+                        dispatch({ type: "SET_MODEL", model: m.id });
+                        setOpen(false);
+                      }}
+                      className="w-full flex items-start gap-2.5 p-2 rounded-xl text-left relative overflow-hidden"
+                      style={{
+                        background: isActive ? "rgba(226,18,39,0.1)" : "transparent",
+                        border: `1px solid ${isActive ? "rgba(226,18,39,0.3)" : "transparent"}`,
+                        opacity: locked ? 0.55 : 1,
+                      }}
+                      whileHover={{ background: "rgba(226,18,39,0.07)", borderColor: "rgba(226,18,39,0.15)" }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <span className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
+                        style={{ background: "rgba(226,18,39,0.1)", border: "1px solid rgba(226,18,39,0.2)" }}>
+                        {locked ? <Lock className="w-3.5 h-3.5" style={{ color: "rgba(255,255,255,0.3)" }} /> : <Icon className={`w-4 h-4 ${m.color}`} />}
                       </span>
-                    </div>
-                    {isActive && (
-                      <motion.span className="w-1.5 h-1.5 rounded-full mt-2.5 flex-shrink-0"
-                        style={{ background: "#e21227", boxShadow: "0 0 6px #e21227" }}
-                        animate={{ opacity: [1, 0.4, 1] }}
-                        transition={{ duration: 1.5, repeat: Infinity }} />
-                    )}
-                  </motion.button>
-                );
-              })}
-              {filtered.length === 0 && (
-                <p className="text-center py-6 text-[11px]" style={{ color: "rgba(255,255,255,0.3)" }}>
-                  {t("toolsHub.noResults", { q })}
-                </p>
-              )}
-            </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[12px] font-bold truncate" style={{ color: isActive ? "#e21227" : "rgba(255,255,255,0.88)" }}>{m.id}</span>
+                          {m.badge && !locked && (
+                            <span className="text-[7px] font-black px-1.5 py-0.5 rounded" style={{ background: "rgba(226,18,39,0.18)", color: "#e21227", border: "1px solid rgba(226,18,39,0.3)" }}>{m.badge}</span>
+                          )}
+                          {locked && (
+                            <span className="text-[7px] font-black px-1.5 py-0.5 rounded" style={{ background: "rgba(245,158,11,0.15)", color: "#f59e0b", border: "1px solid rgba(245,158,11,0.3)" }}>STARTER+</span>
+                          )}
+                        </div>
+                        <span className="block text-[10px] leading-snug mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>{m.desc}</span>
+                      </div>
+                      {isActive && (
+                        <motion.span className="w-1.5 h-1.5 rounded-full mt-2.5 flex-shrink-0"
+                          style={{ background: "#e21227", boxShadow: "0 0 6px #e21227" }}
+                          animate={{ opacity: [1, 0.4, 1] }} transition={{ duration: 1.5, repeat: Infinity }} />
+                      )}
+                    </motion.button>
+                  );
+                })}
+                {filtered.length === 0 && (
+                  <p className="text-center py-6 text-[11px]" style={{ color: "rgba(255,255,255,0.3)" }}>{t("toolsHub.noResults", { q })}</p>
+                )}
+              </div>
 
-            {/* Footer */}
-            <div style={{ borderTop: "1px solid rgba(226,18,39,0.1)" }}>
-              <motion.button
-                onClick={() => { onOpenPricing(); setOpen(false); }}
-                className="w-full flex items-center gap-2 px-4 py-2.5 text-[12px] font-bold"
-                style={{ color: "#e21227" }}
-                whileHover={{ background: "rgba(226,18,39,0.06)" }}
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                {t("top.getMoreTokens")}
-              </motion.button>
-            </div>
-            <div className="h-px" style={{ background: "linear-gradient(90deg,transparent,rgba(226,18,39,0.4),transparent)" }} />
-          </motion.div>
+              {/* Footer */}
+              <div style={{ borderTop: "1px solid rgba(226,18,39,0.1)" }}>
+                <motion.button onClick={() => { onOpenPricing(); setOpen(false); }}
+                  className="w-full flex items-center gap-2 px-4 py-2.5 text-[11px] font-bold"
+                  style={{ color: "#e21227" }}
+                  whileHover={{ background: "rgba(226,18,39,0.06)" }}>
+                  <Sparkles className="w-3.5 h-3.5" />
+                  {t("top.getMoreTokens")}
+                </motion.button>
+              </div>
+              <div className="h-px" style={{ background: "linear-gradient(90deg,transparent,rgba(226,18,39,0.4),transparent)" }} />
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
-    </div>
+    </>
   );
 }
 
@@ -1244,20 +1483,7 @@ export function TopBar({
           </motion.button>
         )}
 
-        <motion.button
-          onClick={onOpenLocalModel}
-          className="flex-shrink-0 p-2 rounded-lg"
-          style={{
-            color: state.settings.useLocalModel ? "#22c55e" : "rgba(255,255,255,0.35)",
-            background: state.settings.useLocalModel ? "rgba(34,197,94,0.1)" : "transparent",
-            border: `1px solid ${state.settings.useLocalModel ? "rgba(34,197,94,0.35)" : "rgba(255,255,255,0.08)"}`,
-          }}
-          whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.94 }}
-          aria-label="Local Model"
-          title={state.settings.useLocalModel ? `Local: ${state.settings.localModel}` : "Ollama / LM Studio"}
-        >
-          <Server className="w-4 h-4" />
-        </motion.button>
+        <LocalModelQuickToggle onOpenLocalModel={onOpenLocalModel} />
 
         <motion.button
           onClick={togglePower}
