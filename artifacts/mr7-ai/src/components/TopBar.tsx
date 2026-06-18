@@ -262,19 +262,19 @@ function TopBarHUDCanvas({ powerOn }: { powerOn: boolean }) {
 type PerfMode     = "low" | "medium" | "high" | "xhigh";
 type WorkflowMode = "Smarter" | "Lite" | "Autonomous" | "Max" | "Power" | "Turbo";
 
-const PERF_DEFS: { id: PerfMode; label: string; color: string; desc: string }[] = [
-  { id: "low",    label: "LOW",   color: "#4ade80", desc: "موفّر" },
-  { id: "medium", label: "MED",   color: "#fbbf24", desc: "متوازن" },
-  { id: "high",   label: "HIGH",  color: "#f97316", desc: "مرتفع" },
-  { id: "xhigh",  label: "XHIGH", color: "#e21227", desc: "أقصى"  },
+const PERF_DEFS: { id: PerfMode; label: string; color: string; desc: string; descEn: string }[] = [
+  { id: "low",    label: "LOW",   color: "#4ade80", desc: "موفّر للطاقة",   descEn: "Power Saver"  },
+  { id: "medium", label: "MED",   color: "#fbbf24", desc: "متوازن",         descEn: "Balanced"     },
+  { id: "high",   label: "HIGH",  color: "#f97316", desc: "أداء عالٍ",      descEn: "High Perf"    },
+  { id: "xhigh",  label: "XHIGH", color: "#e21227", desc: "الحد الأقصى",    descEn: "Extreme"      },
 ];
-const WFLOW_DEFS: { id: WorkflowMode; color: string; desc: string }[] = [
-  { id: "Smarter",    color: "#6366f1", desc: "ذكاء متقدم" },
-  { id: "Lite",       color: "#06b6d4", desc: "خفيف وسريع" },
-  { id: "Autonomous", color: "#8b5cf6", desc: "مستقل"     },
-  { id: "Max",        color: "#e21227", desc: "أقصى قدرة" },
-  { id: "Power",      color: "#f97316", desc: "طاقة عالية"},
-  { id: "Turbo",      color: "#fbbf24", desc: "توربو"     },
+const WFLOW_DEFS: { id: WorkflowMode; color: string; desc: string; icon: string }[] = [
+  { id: "Smarter",    color: "#6366f1", desc: "ذكاء متقدم",   icon: "◈" },
+  { id: "Lite",       color: "#06b6d4", desc: "خفيف وسريع",   icon: "◇" },
+  { id: "Autonomous", color: "#8b5cf6", desc: "مستقل",         icon: "◉" },
+  { id: "Max",        color: "#e21227", desc: "أقصى قدرة",    icon: "◆" },
+  { id: "Power",      color: "#f97316", desc: "طاقة عالية",   icon: "⬡" },
+  { id: "Turbo",      color: "#fbbf24", desc: "توربو",         icon: "⬢" },
 ];
 const LS_PERF  = "mr7-op-perf";
 const LS_WFLOW = "mr7-op-wflow";
@@ -285,151 +285,254 @@ function OperationModeBtn3D() {
   const [wflowMode, setWflowMode] = useState<WorkflowMode>(() =>
     (localStorage.getItem(LS_WFLOW) as WorkflowMode) || "Smarter");
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
 
   const perf  = PERF_DEFS.find(p => p.id === perfMode)!;
   const wflow = WFLOW_DEFS.find(w => w.id === wflowMode)!;
 
-  useEffect(() => {
-    if (!open) return;
-    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, [open]);
-
-  const savePerfMode = (m: PerfMode) => { setPerfMode(m); localStorage.setItem(LS_PERF, m); };
+  const savePerfMode  = (m: PerfMode)     => { setPerfMode(m);  localStorage.setItem(LS_PERF, m);  };
   const saveWflowMode = (m: WorkflowMode) => { setWflowMode(m); localStorage.setItem(LS_WFLOW, m); };
 
   return (
-    <div className="relative flex-shrink-0" ref={ref}>
+    <>
       {/* Trigger */}
       <motion.button
         onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl relative overflow-hidden"
+        className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl relative overflow-hidden flex-shrink-0"
         style={{
           background: `linear-gradient(135deg, ${perf.color}1a 0%, rgba(0,0,0,0.65) 100%)`,
-          border: `1px solid ${perf.color}${open ? "55" : "30"}`,
-          boxShadow: `0 0 18px ${perf.color}${open ? "35" : "18"}, inset 0 1px 0 ${perf.color}18`,
-          minWidth: 0,
+          border: `1px solid ${perf.color}${open ? "66" : "30"}`,
+          boxShadow: `0 0 18px ${perf.color}${open ? "40" : "18"}, inset 0 1px 0 ${perf.color}18`,
         }}
         whileHover={{ scale: 1.04, y: -0.5 }}
         whileTap={{ scale: 0.95 }}
         title={`وضع التشغيل — ${perf.label} · ${wflowMode}`}
         aria-label="أوضاع التشغيل"
       >
-        {/* HUD corners */}
-        <span className="absolute top-0.5 left-0.5 w-2 h-2 border-t border-l pointer-events-none" style={{ borderColor: perf.color + "55" }} />
-        <span className="absolute bottom-0.5 right-0.5 w-2 h-2 border-b border-r pointer-events-none" style={{ borderColor: perf.color + "55" }} />
-        {/* Scan beam */}
+        <span className="absolute top-0.5 left-0.5 w-2 h-2 border-t border-l pointer-events-none" style={{ borderColor: perf.color + "66" }} />
+        <span className="absolute bottom-0.5 right-0.5 w-2 h-2 border-b border-r pointer-events-none" style={{ borderColor: perf.color + "66" }} />
         <motion.span className="absolute inset-y-0 pointer-events-none"
           style={{ width: 40, background: `linear-gradient(90deg,transparent,${perf.color}22,transparent)` }}
           animate={{ x: ["-100%", "400%"] }}
           transition={{ duration: 2.8, repeat: Infinity, ease: "linear" }} />
-
-        {/* Pulse dot */}
         <motion.div className="w-1.5 h-1.5 rounded-full flex-shrink-0"
           style={{ background: perf.color, boxShadow: `0 0 8px ${perf.color}` }}
           animate={{ opacity: [1, 0.25, 1], scale: [1, 1.4, 1] }}
           transition={{ duration: 1.4, repeat: Infinity }} />
-
-        {/* Perf label */}
         <div className="flex flex-col items-start leading-none gap-0.5">
           <span className="text-[7px] font-black tracking-[0.25em] uppercase" style={{ color: perf.color + "99" }}>PERF</span>
           <span className="text-[9px] font-black tracking-wide" style={{ color: perf.color }}>{perf.label}</span>
         </div>
-
         <div className="w-px h-5 mx-0.5 flex-shrink-0" style={{ background: "rgba(255,255,255,0.08)" }} />
-
-        {/* Workflow label */}
         <div className="flex flex-col items-start leading-none gap-0.5">
           <span className="text-[7px] font-black tracking-[0.25em] uppercase hidden sm:block" style={{ color: wflow.color + "99" }}>FLOW</span>
           <span className="text-[9px] font-black tracking-wide hidden sm:block" style={{ color: wflow.color }}>{wflowMode.slice(0, 5).toUpperCase()}</span>
         </div>
       </motion.button>
 
-      {/* Dropdown panel */}
+      {/* Full-screen window overlay */}
       <AnimatePresence>
         {open && (
-          <motion.div
-            initial={{ opacity: 0, y: -8, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -6, scale: 0.95 }}
-            transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-            className="absolute top-full left-0 mt-2 z-50 rounded-2xl overflow-hidden"
-            style={{
-              width: 248,
-              background: "rgba(4,2,12,0.98)",
-              border: "1px solid rgba(226,18,39,0.2)",
-              boxShadow: "0 0 48px rgba(226,18,39,0.10), 0 20px 60px rgba(0,0,0,0.92)",
-              backdropFilter: "blur(24px)",
-            }}
-          >
-            <div className="h-px" style={{ background: "linear-gradient(90deg,transparent,#e21227,transparent)" }} />
+          <>
+            {/* Backdrop */}
+            <motion.div
+              className="fixed inset-0 z-[998]"
+              style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)" }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setOpen(false)}
+            />
 
-            {/* Performance section */}
-            <div className="p-2.5">
-              <div className="text-[8px] font-black tracking-[0.3em] uppercase mb-2 px-0.5" style={{ color: "rgba(255,255,255,0.22)" }}>
-                PERFORMANCE LEVEL
-              </div>
-              <div className="grid grid-cols-4 gap-1">
-                {PERF_DEFS.map(p => (
-                  <motion.button key={p.id}
-                    onClick={() => savePerfMode(p.id)}
-                    className="flex flex-col items-center gap-1 py-2.5 rounded-xl relative overflow-hidden"
-                    style={{
-                      background: perfMode === p.id ? `${p.color}1c` : "rgba(255,255,255,0.03)",
-                      border: `1px solid ${perfMode === p.id ? p.color + "55" : "rgba(255,255,255,0.07)"}`,
-                      boxShadow: perfMode === p.id ? `0 0 16px ${p.color}30, inset 0 1px 0 ${p.color}18` : "none",
-                    }}
-                    whileHover={{ scale: 1.06, background: `${p.color}14` }}
-                    whileTap={{ scale: 0.92 }}
-                  >
-                    <motion.div className="w-2 h-2 rounded-full"
-                      style={{ background: p.color, boxShadow: perfMode === p.id ? `0 0 10px ${p.color}` : "none" }}
-                      animate={perfMode === p.id ? { opacity: [1, 0.3, 1] } : {}}
-                      transition={{ duration: 1.4, repeat: Infinity }} />
-                    <span className="text-[8px] font-black tracking-wide" style={{ color: perfMode === p.id ? p.color : "rgba(255,255,255,0.38)" }}>{p.label}</span>
-                  </motion.button>
-                ))}
-              </div>
-            </div>
+            {/* Window */}
+            <motion.div
+              className="fixed z-[999] rounded-2xl overflow-hidden"
+              style={{
+                top: "50%", left: "50%",
+                width: "min(660px, 96vw)",
+                background: "linear-gradient(160deg, rgba(5,3,14,0.99) 0%, rgba(3,2,10,0.99) 100%)",
+                border: `1px solid ${perf.color}35`,
+                boxShadow: `0 0 100px ${perf.color}20, 0 0 40px rgba(0,0,0,0.8), inset 0 1px 0 ${perf.color}18`,
+              }}
+              initial={{ opacity: 0, scale: 0.88, x: "-50%", y: "-50%" }}
+              animate={{ opacity: 1, scale: 1,    x: "-50%", y: "-50%" }}
+              exit={{ opacity: 0, scale: 0.90,    x: "-50%", y: "-50%" }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            >
+              {/* Top glow line */}
+              <div className="h-px w-full" style={{ background: `linear-gradient(90deg,transparent,${perf.color},rgba(255,255,255,0.3),${perf.color},transparent)` }} />
 
-            <div className="mx-2.5 h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
+              {/* Animated scan beam across window */}
+              <motion.div className="absolute inset-x-0 top-0 h-full pointer-events-none"
+                style={{ background: `linear-gradient(180deg,${perf.color}06,transparent 40%)` }}
+                animate={{ opacity: [0.6, 0.2, 0.6] }}
+                transition={{ duration: 3, repeat: Infinity }} />
 
-            {/* Workflow section */}
-            <div className="p-2.5">
-              <div className="text-[8px] font-black tracking-[0.3em] uppercase mb-2 px-0.5" style={{ color: "rgba(255,255,255,0.22)" }}>
-                WORKFLOW MODE
-              </div>
-              <div className="grid grid-cols-3 gap-1">
-                {WFLOW_DEFS.map(w => (
-                  <motion.button key={w.id}
-                    onClick={() => saveWflowMode(w.id)}
-                    className="flex flex-col items-center gap-1 py-2.5 rounded-xl relative overflow-hidden"
-                    style={{
-                      background: wflowMode === w.id ? `${w.color}1c` : "rgba(255,255,255,0.03)",
-                      border: `1px solid ${wflowMode === w.id ? w.color + "55" : "rgba(255,255,255,0.07)"}`,
-                      boxShadow: wflowMode === w.id ? `0 0 16px ${w.color}30, inset 0 1px 0 ${w.color}18` : "none",
-                    }}
-                    whileHover={{ scale: 1.06, background: `${w.color}14` }}
-                    whileTap={{ scale: 0.92 }}
-                  >
-                    <motion.div className="w-2 h-2 rounded-full"
-                      style={{ background: w.color, boxShadow: wflowMode === w.id ? `0 0 10px ${w.color}` : "none" }}
-                      animate={wflowMode === w.id ? { opacity: [1, 0.3, 1] } : {}}
-                      transition={{ duration: 1.4, repeat: Infinity }} />
-                    <span className="text-[9px] font-black" style={{ color: wflowMode === w.id ? w.color : "rgba(255,255,255,0.42)" }}>{w.id}</span>
-                    <span className="text-[7px] font-mono" style={{ color: "rgba(255,255,255,0.18)" }}>{w.desc}</span>
-                  </motion.button>
-                ))}
-              </div>
-            </div>
+              {/* Corner brackets */}
+              {[["top-2 left-2 border-t border-l","top"],["top-2 right-2 border-t border-r","top"],
+                ["bottom-2 left-2 border-b border-l","bot"],["bottom-2 right-2 border-b border-r","bot"]].map(([cls], i) => (
+                <span key={i} className={`absolute w-4 h-4 pointer-events-none ${cls}`} style={{ borderColor: perf.color + "60" }} />
+              ))}
 
-            <div className="h-px" style={{ background: "linear-gradient(90deg,transparent,rgba(226,18,39,0.3),transparent)" }} />
-          </motion.div>
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 pt-4 pb-3 relative">
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    <motion.div className="w-8 h-8 rounded-xl flex items-center justify-center"
+                      style={{ background: `${perf.color}18`, border: `1px solid ${perf.color}45` }}>
+                      <motion.div className="w-3 h-3 rounded-full"
+                        style={{ background: perf.color, boxShadow: `0 0 12px ${perf.color}` }}
+                        animate={{ opacity: [1, 0.3, 1], scale: [1, 1.3, 1] }}
+                        transition={{ duration: 1.4, repeat: Infinity }} />
+                    </motion.div>
+                    <motion.div className="absolute inset-0 rounded-xl pointer-events-none"
+                      animate={{ boxShadow: [`0 0 0px ${perf.color}00`, `0 0 16px ${perf.color}60`, `0 0 0px ${perf.color}00`] }}
+                      transition={{ duration: 2, repeat: Infinity }} />
+                  </div>
+                  <div>
+                    <div className="text-[9px] font-black tracking-[0.4em] uppercase" style={{ color: "rgba(255,255,255,0.25)" }}>OPERATION CENTER</div>
+                    <div className="text-[15px] font-black tracking-wide" style={{ color: perf.color }}>
+                      {perf.label} · {wflowMode.toUpperCase()}
+                    </div>
+                  </div>
+                </div>
+                <motion.button
+                  onClick={() => setOpen(false)}
+                  className="w-8 h-8 rounded-xl flex items-center justify-center text-[14px] font-bold"
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.4)" }}
+                  whileHover={{ background: "rgba(226,18,39,0.15)", borderColor: "rgba(226,18,39,0.4)", color: "#e21227" }}
+                  whileTap={{ scale: 0.92 }}
+                >×</motion.button>
+              </div>
+
+              <div className="mx-5 h-px" style={{ background: `linear-gradient(90deg,transparent,${perf.color}30,transparent)` }} />
+
+              {/* Performance section */}
+              <div className="px-5 pt-4 pb-3">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="text-[8px] font-black tracking-[0.4em] uppercase" style={{ color: "rgba(255,255,255,0.2)" }}>PERFORMANCE LEVEL</div>
+                  <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.05)" }} />
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                  {PERF_DEFS.map((p, idx) => {
+                    const isActive = perfMode === p.id;
+                    const barWidth = [25, 50, 75, 100][idx];
+                    return (
+                      <motion.button key={p.id}
+                        onClick={() => savePerfMode(p.id)}
+                        className="flex flex-col items-center gap-2.5 py-4 px-2 rounded-2xl relative overflow-hidden"
+                        style={{
+                          background: isActive ? `${p.color}14` : "rgba(255,255,255,0.025)",
+                          border: `1px solid ${isActive ? p.color + "55" : "rgba(255,255,255,0.07)"}`,
+                          boxShadow: isActive ? `0 0 24px ${p.color}28, inset 0 1px 0 ${p.color}20` : "none",
+                        }}
+                        whileHover={{ scale: 1.04, background: `${p.color}12` }}
+                        whileTap={{ scale: 0.94 }}
+                      >
+                        {isActive && (
+                          <motion.div className="absolute inset-x-0 top-0 h-px"
+                            style={{ background: `linear-gradient(90deg,transparent,${p.color},transparent)` }}
+                            animate={{ opacity: [0.5, 1, 0.5] }}
+                            transition={{ duration: 1.5, repeat: Infinity }} />
+                        )}
+                        {/* Bar visualizer */}
+                        <div className="w-full flex items-end gap-0.5 h-7">
+                          {[...Array(5)].map((_, bi) => {
+                            const filled = bi < Math.ceil(barWidth / 20);
+                            return (
+                              <motion.div key={bi}
+                                className="flex-1 rounded-sm"
+                                style={{
+                                  height: `${(bi + 1) * 20}%`,
+                                  background: filled ? (isActive ? p.color : p.color + "60") : "rgba(255,255,255,0.06)",
+                                  boxShadow: filled && isActive ? `0 0 6px ${p.color}80` : "none",
+                                }}
+                                animate={filled && isActive ? { opacity: [0.7, 1, 0.7] } : {}}
+                                transition={{ duration: 1.2, delay: bi * 0.1, repeat: Infinity }} />
+                            );
+                          })}
+                        </div>
+                        <span className="text-[10px] font-black tracking-widest" style={{ color: isActive ? p.color : "rgba(255,255,255,0.35)" }}>{p.label}</span>
+                        <span className="text-[8px] font-mono" style={{ color: isActive ? p.color + "aa" : "rgba(255,255,255,0.18)" }}>{p.descEn}</span>
+                        {isActive && (
+                          <motion.div className="w-1.5 h-1.5 rounded-full"
+                            style={{ background: p.color, boxShadow: `0 0 8px ${p.color}` }}
+                            animate={{ opacity: [1, 0.3, 1] }}
+                            transition={{ duration: 1.2, repeat: Infinity }} />
+                        )}
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="mx-5 h-px" style={{ background: "rgba(255,255,255,0.05)" }} />
+
+              {/* Workflow section */}
+              <div className="px-5 pt-3 pb-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="text-[8px] font-black tracking-[0.4em] uppercase" style={{ color: "rgba(255,255,255,0.2)" }}>WORKFLOW MODE</div>
+                  <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.05)" }} />
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {WFLOW_DEFS.map(w => {
+                    const isActive = wflowMode === w.id;
+                    return (
+                      <motion.button key={w.id}
+                        onClick={() => saveWflowMode(w.id)}
+                        className="flex flex-col items-center gap-2 py-3.5 px-3 rounded-2xl relative overflow-hidden"
+                        style={{
+                          background: isActive ? `${w.color}14` : "rgba(255,255,255,0.025)",
+                          border: `1px solid ${isActive ? w.color + "55" : "rgba(255,255,255,0.07)"}`,
+                          boxShadow: isActive ? `0 0 20px ${w.color}28, inset 0 1px 0 ${w.color}20` : "none",
+                        }}
+                        whileHover={{ scale: 1.04, background: `${w.color}12` }}
+                        whileTap={{ scale: 0.94 }}
+                      >
+                        {isActive && (
+                          <motion.div className="absolute inset-x-0 top-0 h-px"
+                            style={{ background: `linear-gradient(90deg,transparent,${w.color},transparent)` }}
+                            animate={{ opacity: [0.5, 1, 0.5] }}
+                            transition={{ duration: 1.5, repeat: Infinity }} />
+                        )}
+                        <span className="text-[18px]" style={{ color: isActive ? w.color : "rgba(255,255,255,0.25)", filter: isActive ? `drop-shadow(0 0 6px ${w.color})` : "none" }}>{w.icon}</span>
+                        <span className="text-[10px] font-black tracking-wide" style={{ color: isActive ? w.color : "rgba(255,255,255,0.5)" }}>{w.id}</span>
+                        <span className="text-[8px] font-mono text-center" style={{ color: "rgba(255,255,255,0.2)" }}>{w.desc}</span>
+                        {isActive && (
+                          <motion.div className="w-1.5 h-1.5 rounded-full"
+                            style={{ background: w.color, boxShadow: `0 0 6px ${w.color}` }}
+                            animate={{ opacity: [1, 0.3, 1] }}
+                            transition={{ duration: 1.4, repeat: Infinity }} />
+                        )}
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Status footer */}
+              <div className="px-5 py-2.5 flex items-center justify-between" style={{ background: "rgba(0,0,0,0.4)", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1.5">
+                    <motion.div className="w-1.5 h-1.5 rounded-full" style={{ background: perf.color }}
+                      animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1.2, repeat: Infinity }} />
+                    <span className="text-[9px] font-mono font-bold" style={{ color: perf.color }}>{perf.label}</span>
+                  </div>
+                  <span className="text-[9px] font-mono" style={{ color: "rgba(255,255,255,0.15)" }}>·</span>
+                  <div className="flex items-center gap-1.5">
+                    <motion.div className="w-1.5 h-1.5 rounded-full" style={{ background: wflow.color }}
+                      animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1.4, repeat: Infinity }} />
+                    <span className="text-[9px] font-mono font-bold" style={{ color: wflow.color }}>{wflowMode}</span>
+                  </div>
+                </div>
+                <span className="text-[7.5px] font-mono tracking-widest" style={{ color: "rgba(255,255,255,0.15)" }}>OPERATION · CENTER</span>
+              </div>
+
+              <div className="h-px w-full" style={{ background: `linear-gradient(90deg,transparent,${perf.color}40,transparent)` }} />
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
-    </div>
+    </>
   );
 }
 
@@ -954,8 +1057,8 @@ export function TopBar({
         transition: "box-shadow 0.4s, border-color 0.4s",
       }}
     >
-      {/* ── Main row (h-14) ─────────────────────────────────────────── */}
-      <div className="h-14 flex items-center justify-between px-2 sm:px-3 relative overflow-hidden">
+      {/* ── Main row (h-14) — single scrollable strip ───────────────── */}
+      <div className="h-14 flex items-center px-1 relative overflow-hidden">
 
       {/* 3D HUD canvas background */}
       <TopBarHUDCanvas powerOn={powerOn} />
@@ -972,12 +1075,34 @@ export function TopBar({
           animation: "topbar-travel 3.5s linear infinite",
         }} />
 
-      {/* ── LEFT: menu + sidebar toggle + model selector + op mode ─────── */}
-      <div className="flex items-center gap-1.5 flex-shrink-0 relative z-10">
+      {/* ── LEFT scroll arrow — outside scrollable zone ──────────── */}
+      <AnimatePresence>
+        {canScrollLeft && (
+          <motion.button
+            initial={{ opacity: 0, width: 0 }}
+            animate={{ opacity: 1, width: "auto" }}
+            exit={{ opacity: 0, width: 0 }}
+            onClick={() => scrollBy(-220)}
+            className="flex-shrink-0 p-1 rounded-lg z-20 relative"
+            style={{ color: "rgba(226,18,39,0.8)", background: "rgba(226,18,39,0.1)", border: "1px solid rgba(226,18,39,0.25)" }}
+            whileHover={{ background: "rgba(226,18,39,0.2)" }}
+            aria-label="تمرير لليسار"
+          >
+            <ChevronLeft className="w-3.5 h-3.5" />
+          </motion.button>
+        )}
+      </AnimatePresence>
+
+      {/* ── SINGLE SCROLLABLE STRIP — left + center + right ─────── */}
+      <div
+        ref={scrollRef}
+        className="flex-1 flex items-center gap-1.5 overflow-x-auto relative z-10 px-1"
+        style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
+      >
         {/* Mobile hamburger */}
         <motion.button
           onClick={onMenuClick}
-          className="p-2 md:hidden rounded-lg"
+          className="p-2 md:hidden rounded-lg flex-shrink-0"
           style={{ color: "rgba(255,255,255,0.45)" }}
           whileHover={{ color: "#e21227", background: "rgba(226,18,39,0.1)" }}
           whileTap={{ scale: 0.92 }}
@@ -986,11 +1111,11 @@ export function TopBar({
           <Menu className="w-5 h-5" />
         </motion.button>
 
-        {/* Desktop sidebar collapse toggle — 3D styled */}
+        {/* Desktop sidebar collapse toggle */}
         {onToggleSidebar && (
           <motion.button
             onClick={onToggleSidebar}
-            className="hidden md:flex p-2 rounded-lg relative overflow-hidden"
+            className="hidden md:flex p-2 rounded-lg relative overflow-hidden flex-shrink-0"
             style={{
               color: sidebarCollapsed ? "#e21227" : "rgba(255,255,255,0.42)",
               background: sidebarCollapsed ? "rgba(226,18,39,0.12)" : "rgba(255,255,255,0.03)",
@@ -1003,14 +1128,10 @@ export function TopBar({
             title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             transition={{ type: "spring", stiffness: 500, damping: 28 }}
           >
-            {sidebarCollapsed
-              ? <PanelLeftOpen className="w-4 h-4" />
-              : <PanelLeftClose className="w-4 h-4" />}
-            {/* Pulse ring when collapsed */}
+            {sidebarCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
             {sidebarCollapsed && (
               <motion.span className="absolute inset-0 rounded-lg pointer-events-none"
-                animate={{ opacity: [0.4, 0, 0.4] }}
-                transition={{ duration: 2, repeat: Infinity }}
+                animate={{ opacity: [0.4, 0, 0.4] }} transition={{ duration: 2, repeat: Infinity }}
                 style={{ border: "1px solid rgba(226,18,39,0.6)" }} />
             )}
           </motion.button>
@@ -1021,248 +1142,215 @@ export function TopBar({
 
         {/* Operation Mode Button */}
         <OperationModeBtn3D />
-      </div>
 
-      {/* ── CENTER: 4 circular 3D buttons — all same size 36px ───────────── */}
-      <div className="flex items-center gap-2 flex-shrink-0 relative z-10 mx-2" style={{ minWidth: 0, overflow: "visible" }}>
-        <ProviderHealthBadge3D />
-        <AIQuickSetupButton />
-        <QuantumPersona3D onOpenPersonaManager={onOpenPersonaManager} />
-        <PersonaSwitcher3D onOpenPersonaEditor={onOpenPersonaEditor} onOpenPersonaManager={onOpenPersonaManager} />
-      </div>
+        <VDivider />
 
-      {/* ── RIGHT: scrollable toolbar ─────────────────────────────────── */}
-      <div className="flex items-center gap-0.5 flex-1 min-w-0 justify-end relative z-10">
-
-        {/* Left scroll arrow */}
-        <AnimatePresence>
-          {canScrollLeft && (
-            <motion.button
-              initial={{ opacity: 0, width: 0 }}
-              animate={{ opacity: 1, width: "auto" }}
-              exit={{ opacity: 0, width: 0 }}
-              onClick={() => scrollBy(-180)}
-              className="flex-shrink-0 p-1 rounded-lg"
-              style={{ color: "rgba(226,18,39,0.7)", background: "rgba(226,18,39,0.08)", border: "1px solid rgba(226,18,39,0.2)" }}
-              whileHover={{ background: "rgba(226,18,39,0.15)" }}
-              aria-label="تمرير لليسار"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </motion.button>
-          )}
-        </AnimatePresence>
-
-        {/* Scrollable zone */}
-        <div
-          ref={scrollRef}
-          className="flex items-center gap-1 overflow-x-auto flex-1 min-w-0"
-          style={{ scrollbarWidth: "none" }}
-        >
-          {/* ── GROUP 1 — Core ──────────────────────────────────────────── */}
-          <HUDBtn icon={LayoutGrid} label={t("top.toolsHub")} shortLabel={t("top.tools")} color="#10b981" onClick={onOpenToolsHub} />
-          <HUDBtn icon={Bot} label="KaliAgent" color="#ff4d4d" onClick={onOpenAgent} iconOnly />
-          <HUDBtn icon={Hexagon}   label="NEXUS"      color="#fbbf24" onClick={onOpenNexus}   badge="5X" />
-          <HUDBtn icon={Shield}    label="Arsenal"    color="#e21227" onClick={onOpenArsenal} />
-          <VDivider />
-
-          {/* ── GROUP 2 — Ops ───────────────────────────────────────────── */}
-          {onOpenWarRoom              && <HUDBtn icon={Target}      label="War Room"     color="#e21227" onClick={onOpenWarRoom} />}
-          {onOpenDeepSearch           && <HUDBtn icon={Search}      label="Deep Search"  color="#f97316" onClick={onOpenDeepSearch} />}
-          {onOpenChainInvestigation   && <HUDBtn icon={GitBranch}   label="Chain Intel"  color="#8b5cf6" onClick={onOpenChainInvestigation} />}
-          {onOpenRedTeam              && <HUDBtn icon={Bug}         label="Red Team"     color="#e21227" onClick={onOpenRedTeam} badge="!" />}
-          {onOpenCognitiveWarfare     && <HUDBtn icon={BrainCircuit}label="Cog. Warfare" color="#8b5cf6" onClick={onOpenCognitiveWarfare} />}
-          {onOpenAutonomousOffense    && <HUDBtn icon={Flame}       label="Offense"      color="#f97316" onClick={onOpenAutonomousOffense} />}
-          {onOpenAttackGraph          && <HUDBtn icon={Share2}      label="Atk. Graph"   color="#10b981" onClick={onOpenAttackGraph} />}
-          {onOpenAutonomousDecisionEngine && <HUDBtn icon={BrainCircuit} label="AI Engine" shortLabel="ADE" color="#8b5cf6" onClick={onOpenAutonomousDecisionEngine} badge="NEW" />}
-          {onOpenJARVISCommandCenter && <HUDBtn icon={Bot} label="JARVIS" shortLabel="JRV" color="#00d4ff" onClick={onOpenJARVISCommandCenter} badge="NEW" />}
-          {(onOpenWarRoom || onOpenDeepSearch || onOpenChainInvestigation || onOpenRedTeam || onOpenCognitiveWarfare || onOpenAutonomousOffense || onOpenAttackGraph || onOpenAutonomousDecisionEngine || onOpenJARVISCommandCenter) && <VDivider />}
-
-          {/* ── GROUP 3 — Analytics & Intelligence ─────────────────────── */}
-          {onOpenNeuralMatrix && <HUDBtn icon={Crosshair}   label="Neural Matrix" color="#e21227"  onClick={onOpenNeuralMatrix} />}
-          {onOpenModelCompare && <HUDBtn icon={Columns3}    label="Compare"       color="#818cf8"  onClick={onOpenModelCompare} />}
-          {onOpenAnalytics    && <HUDBtn icon={BarChart2}   label="Analytics"     color="#3b82f6"  onClick={onOpenAnalytics} />}
-          {onOpenPerfDash     && <HUDBtn icon={Activity}    label="Perf"          color="#e21227"  onClick={onOpenPerfDash} />}
-          {onOpenCostDash     && <HUDBtn icon={DollarSign}  label="Cost"          color="#22c55e"  onClick={onOpenCostDash} />}
-          {(onOpenNeuralMatrix || onOpenModelCompare || onOpenAnalytics || onOpenPerfDash || onOpenCostDash) && <VDivider />}
-
-          {/* ── GROUP 4 — Cyber Intel ────────────────────────────────────── */}
-          {onOpenCisaLive       && <HUDBtn icon={ShieldAlert}  label="CISA Live"    color="#e21227" onClick={onOpenCisaLive} />}
-          {onOpenCveTimeline    && <HUDBtn icon={BarChart2}    label="CVE Timeline" color="#f97316" onClick={onOpenCveTimeline} />}
-          {onOpenThreatMap      && <HUDBtn icon={Globe}        label="Threat Map"   color="#00e5ff" onClick={onOpenThreatMap}   badge="3D" />}
-          {onOpenCveTracker     && <HUDBtn icon={ShieldAlert}  label="CVE Intel"    color="#e21227" onClick={onOpenCveTracker} />}
-          {onOpenLiveOps        && <HUDBtn icon={Activity}     label="Live Ops"     color="#8b5cf6" onClick={onOpenLiveOps} />}
-          {onOpenCyberHierarchy && <HUDBtn icon={Cpu}          label="Cyber Hier."  color="#00ff41" onClick={onOpenCyberHierarchy} />}
-          {onOpenDedupViz       && <HUDBtn icon={GitMerge}     label="Dedup"        color="#a78bfa" onClick={onOpenDedupViz} />}
-          {onOpenThreatFeed     && <HUDBtn icon={ShieldAlert}  label="Threat Feed"  color="#e21227" onClick={onOpenThreatFeed} />}
-          {onOpenSecurityDash   && <HUDBtn icon={ShieldCheck}  label="Security"     color="#00e5ff" onClick={onOpenSecurityDash} />}
-          {onOpenContextMemory  && <HUDBtn icon={BrainCircuit} label="Memory"       color="#a78bfa" onClick={onOpenContextMemory} />}
-          {onOpenAnomalyLog     && <HUDBtn icon={AlertTriangle}label="Anomaly"      color="#e21227" onClick={onOpenAnomalyLog} />}
-          {onOpenNetworkTopo    && <HUDBtn icon={Network}      label="NET·HUD"      color="#3b82f6" onClick={onOpenNetworkTopo} active={hudsVisible} />}
-          {onOpenPrefetch       && <HUDBtn icon={Gauge}        label="Prefetch"     color="#fbbf24" onClick={onOpenPrefetch} />}
-          {onOpenMasterHud      && <HUDBtn icon={Globe}        label="HUD"          color="#22c55e" onClick={onOpenMasterHud} />}
-          {onOpenCyberHub       && <HUDBtn icon={Zap}          label="Cyber Hub"    color="#e21227" onClick={onOpenCyberHub} badge="3D" />}
-          {onOpenWidgetsDock    && <HUDBtn icon={Gauge}        label="Widgets HUD"  color="#06b6d4" onClick={onOpenWidgetsDock} badge="6P" />}
-          {(onOpenCisaLive || onOpenCveTimeline || onOpenCyberHierarchy || onOpenThreatFeed) && <VDivider />}
-
-          {/* ── GROUP 5 — System ────────────────────────────────────────── */}
-
-          {/* Provider chip */}
-          {onOpenProviderSettings && (
-            <motion.button
-              onClick={onOpenProviderSettings}
-              className="flex-shrink-0 flex items-center gap-1.5 px-2 py-1.5 rounded-lg"
-              style={{
-                background: "rgba(139,92,246,0.08)",
-                border: "1px solid rgba(139,92,246,0.25)",
-                color: "rgba(167,139,250,0.85)",
-              }}
-              whileHover={{ scale: 1.04, background: "rgba(139,92,246,0.15)", borderColor: "rgba(139,92,246,0.5)" }}
-              whileTap={{ scale: 0.96 }}
-              title="إعدادات المزوّد"
-            >
-              <span className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                style={{ background: "rgba(167,139,250,0.9)", boxShadow: "0 0 6px rgba(139,92,246,0.8)" }} />
-              <span className="hidden sm:block text-[10px] font-black tracking-wider uppercase">
-                {(state.activeProvider ?? "personal").slice(0, 8)}
-              </span>
-              {state.activeProviderModel && (
-                <span className="hidden md:block text-[9px] font-mono"
-                  style={{ color: "rgba(167,139,250,0.45)" }}>
-                  /{state.activeProviderModel.split("/").pop()?.slice(0, 10)}
-                </span>
-              )}
-            </motion.button>
-          )}
-
-          {/* Local Model */}
-          <motion.button
-            onClick={onOpenLocalModel}
-            className="flex-shrink-0 p-2 rounded-lg"
+        {/* ── CENTER: 4 futuristic 3D holographic buttons ──────────── */}
+        <div className="flex-shrink-0 relative flex items-center" style={{ padding: "2px 0" }}>
+          {/* Holographic panel glow */}
+          <div className="absolute inset-0 rounded-2xl pointer-events-none"
             style={{
-              color: state.settings.useLocalModel ? "#22c55e" : "rgba(255,255,255,0.35)",
-              background: state.settings.useLocalModel ? "rgba(34,197,94,0.1)" : "transparent",
-              border: `1px solid ${state.settings.useLocalModel ? "rgba(34,197,94,0.35)" : "rgba(255,255,255,0.08)"}`,
-            }}
-            whileHover={{ scale: 1.06 }}
-            whileTap={{ scale: 0.94 }}
-            aria-label="Local Model"
-            title={state.settings.useLocalModel ? `Local: ${state.settings.localModel}` : "Ollama / LM Studio"}
-          >
-            <Server className="w-4 h-4" />
-          </motion.button>
+              background: "linear-gradient(135deg, rgba(226,18,39,0.04) 0%, rgba(139,92,246,0.04) 50%, rgba(0,229,255,0.04) 100%)",
+              border: "1px solid rgba(255,255,255,0.06)",
+              boxShadow: "0 0 20px rgba(226,18,39,0.06), inset 0 1px 0 rgba(255,255,255,0.04)",
+            }} />
+          {/* Top corner brackets */}
+          <span className="absolute top-0.5 left-1 w-2.5 h-2.5 border-t border-l pointer-events-none" style={{ borderColor: "rgba(226,18,39,0.45)" }} />
+          <span className="absolute top-0.5 right-1 w-2.5 h-2.5 border-t border-r pointer-events-none" style={{ borderColor: "rgba(226,18,39,0.45)" }} />
+          <span className="absolute bottom-0.5 left-1 w-2.5 h-2.5 border-b border-l pointer-events-none" style={{ borderColor: "rgba(226,18,39,0.3)" }} />
+          <span className="absolute bottom-0.5 right-1 w-2.5 h-2.5 border-b border-r pointer-events-none" style={{ borderColor: "rgba(226,18,39,0.3)" }} />
+          {/* Scan sweep */}
+          <motion.div className="absolute inset-y-0 w-8 pointer-events-none rounded-2xl"
+            style={{ background: "linear-gradient(90deg,transparent,rgba(226,18,39,0.08),transparent)" }}
+            animate={{ x: ["-100%", "500%"] }}
+            transition={{ duration: 4, repeat: Infinity, ease: "linear" }} />
 
-          {/* Power Mode */}
-          <motion.button
-            onClick={togglePower}
-            className="flex-shrink-0 flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg"
-            style={powerOn ? {
-              background: "rgba(226,18,39,0.18)",
-              border: "1px solid rgba(226,18,39,0.65)",
-              color: "#e21227",
-              boxShadow: "0 0 20px rgba(226,18,39,0.5), 0 0 40px rgba(226,18,39,0.18)",
-            } : {
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.12)",
-              color: "rgba(200,210,230,0.65)",
-            }}
-            whileHover={{ scale: 1.05, y: -0.5 }}
-            whileTap={{ scale: 0.94 }}
-            aria-label={t("power.title")}
-            title={t(powerOn ? "power.tooltipOn" : "power.tooltipOff")}
-            transition={{ type: "spring", stiffness: 500, damping: 28 }}
-          >
-            <motion.div
-              animate={powerOn ? { rotate: [0, 5, -5, 0] } : {}}
-              transition={{ duration: 3, repeat: Infinity }}
-            >
-              <Zap className={`w-3.5 h-3.5 ${powerOn ? "fill-current" : ""}`} />
-            </motion.div>
-            <span className="hidden sm:block text-[10px] font-black tracking-widest uppercase">
-              {t("power.title")}
-            </span>
-            {powerOn && (
-              <motion.span
-                className="text-[7px] font-black px-1 py-0.5 rounded"
-                style={{ background: "rgba(226,18,39,0.3)", color: "#ff5577" }}
-                animate={{ opacity: [1, 0.5, 1] }}
-                transition={{ duration: 1.2, repeat: Infinity }}
-              >
-                ON
-              </motion.span>
-            )}
-          </motion.button>
-
-          {/* Buy Tokens */}
-          <motion.button
-            onClick={onOpenPricing}
-            className="flex-shrink-0 flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-lg text-white text-[10px] font-black tracking-wide"
-            style={{
-              background: "linear-gradient(135deg,#d946ef 0%,#8b5cf6 50%,#6366f1 100%)",
-              boxShadow: "0 0 20px rgba(217,70,239,0.35), 0 0 40px rgba(139,92,246,0.18), inset 0 1px 0 rgba(255,255,255,0.25)",
-            }}
-            whileHover={{ scale: 1.05, y: -0.5, boxShadow: "0 0 28px rgba(217,70,239,0.5), 0 0 50px rgba(139,92,246,0.25)" }}
-            whileTap={{ scale: 0.95 }}
-            aria-label={t("top.buyTokens")}
-            title={t("top.buyTokens")}
-          >
-            <Coins className="w-3.5 h-3.5" />
-            <span className="hidden sm:block">{t("top.buyTokens")}</span>
-          </motion.button>
-
-          {/* Help */}
-          <motion.button
-            onClick={onOpenHelp}
-            className="flex-shrink-0 hidden sm:flex p-2 rounded-lg"
-            style={{ color: "rgba(255,255,255,0.3)", border: "1px solid rgba(255,255,255,0.07)" }}
-            whileHover={{ color: "rgba(255,255,255,0.75)", background: "rgba(255,255,255,0.06)", scale: 1.06 }}
-            whileTap={{ scale: 0.94 }}
-            aria-label={t("top.shortcuts")}
-            title={t("top.shortcuts")}
-          >
-            <HelpCircle className="w-4 h-4" />
-          </motion.button>
-
-              {/* Compact toggle */}
-          <motion.button
-            onClick={toggleCompact}
-            className="flex-shrink-0 p-2 rounded-lg"
-            style={{
-              color: compact ? "#00e5ff" : "rgba(255,255,255,0.3)",
-              background: compact ? "rgba(0,229,255,0.08)" : "transparent",
-              border: `1px solid ${compact ? "rgba(0,229,255,0.3)" : "rgba(255,255,255,0.08)"}`,
-            }}
-            whileHover={{ scale: 1.06, background: "rgba(0,229,255,0.12)" }}
-            whileTap={{ scale: 0.94 }}
-            title={compact ? "وضع موسّع" : "وضع مضغوط"}
-            aria-label="تبديل الوضع المضغوط"
-          >
-            {compact ? <PanelLeftOpen className="w-3.5 h-3.5" /> : <PanelLeftClose className="w-3.5 h-3.5" />}
-          </motion.button>
-
-          {/* Utility panels */}
-          <NotificationsPanel />
-          <ThemePopover />
-          <TokensPopover onUpgrade={onOpenPricing} />
+          <div className="flex items-center gap-1.5 px-2 relative z-10">
+            <ProviderHealthBadge3D />
+            <AIQuickSetupButton />
+            <QuantumPersona3D onOpenPersonaManager={onOpenPersonaManager} />
+            <PersonaSwitcher3D onOpenPersonaEditor={onOpenPersonaEditor} onOpenPersonaManager={onOpenPersonaManager} />
+          </div>
         </div>
 
-        {/* Right scroll arrow */}
-        <AnimatePresence>
-          {canScrollRight && (
-            <motion.button
-              initial={{ opacity: 0, width: 0 }}
-              animate={{ opacity: 1, width: "auto" }}
-              exit={{ opacity: 0, width: 0 }}
-              onClick={() => scrollBy(180)}
-              className="flex-shrink-0 p-1 rounded-lg"
-              style={{ color: "rgba(226,18,39,0.7)", background: "rgba(226,18,39,0.08)", border: "1px solid rgba(226,18,39,0.2)" }}
-              whileHover={{ background: "rgba(226,18,39,0.15)" }}
-              aria-label="تمرير لليمين"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </motion.button>
+        <VDivider />
+
+        {/* ── RIGHT toolbar buttons — now inline in the single strip ── */}
+        {/* ── GROUP 1 — Core ──────────────────────────────────────────── */}
+        <HUDBtn icon={LayoutGrid} label={t("top.toolsHub")} shortLabel={t("top.tools")} color="#10b981" onClick={onOpenToolsHub} />
+        <HUDBtn icon={Bot} label="KaliAgent" color="#ff4d4d" onClick={onOpenAgent} iconOnly />
+        <HUDBtn icon={Hexagon}   label="NEXUS"      color="#fbbf24" onClick={onOpenNexus}   badge="5X" />
+        <HUDBtn icon={Shield}    label="Arsenal"    color="#e21227" onClick={onOpenArsenal} />
+        <VDivider />
+
+        {/* ── GROUP 2 — Ops ───────────────────────────────────────────── */}
+        {onOpenWarRoom              && <HUDBtn icon={Target}      label="War Room"     color="#e21227" onClick={onOpenWarRoom} />}
+        {onOpenDeepSearch           && <HUDBtn icon={Search}      label="Deep Search"  color="#f97316" onClick={onOpenDeepSearch} />}
+        {onOpenChainInvestigation   && <HUDBtn icon={GitBranch}   label="Chain Intel"  color="#8b5cf6" onClick={onOpenChainInvestigation} />}
+        {onOpenRedTeam              && <HUDBtn icon={Bug}         label="Red Team"     color="#e21227" onClick={onOpenRedTeam} badge="!" />}
+        {onOpenCognitiveWarfare     && <HUDBtn icon={BrainCircuit}label="Cog. Warfare" color="#8b5cf6" onClick={onOpenCognitiveWarfare} />}
+        {onOpenAutonomousOffense    && <HUDBtn icon={Flame}       label="Offense"      color="#f97316" onClick={onOpenAutonomousOffense} />}
+        {onOpenAttackGraph          && <HUDBtn icon={Share2}      label="Atk. Graph"   color="#10b981" onClick={onOpenAttackGraph} />}
+        {onOpenAutonomousDecisionEngine && <HUDBtn icon={BrainCircuit} label="AI Engine" shortLabel="ADE" color="#8b5cf6" onClick={onOpenAutonomousDecisionEngine} badge="NEW" />}
+        {onOpenJARVISCommandCenter && <HUDBtn icon={Bot} label="JARVIS" shortLabel="JRV" color="#00d4ff" onClick={onOpenJARVISCommandCenter} badge="NEW" />}
+        {(onOpenWarRoom || onOpenDeepSearch || onOpenChainInvestigation || onOpenRedTeam || onOpenCognitiveWarfare || onOpenAutonomousOffense || onOpenAttackGraph || onOpenAutonomousDecisionEngine || onOpenJARVISCommandCenter) && <VDivider />}
+
+        {/* ── GROUP 3 — Analytics & Intelligence ─────────────────────── */}
+        {onOpenNeuralMatrix && <HUDBtn icon={Crosshair}   label="Neural Matrix" color="#e21227"  onClick={onOpenNeuralMatrix} />}
+        {onOpenModelCompare && <HUDBtn icon={Columns3}    label="Compare"       color="#818cf8"  onClick={onOpenModelCompare} />}
+        {onOpenAnalytics    && <HUDBtn icon={BarChart2}   label="Analytics"     color="#3b82f6"  onClick={onOpenAnalytics} />}
+        {onOpenPerfDash     && <HUDBtn icon={Activity}    label="Perf"          color="#e21227"  onClick={onOpenPerfDash} />}
+        {onOpenCostDash     && <HUDBtn icon={DollarSign}  label="Cost"          color="#22c55e"  onClick={onOpenCostDash} />}
+        {(onOpenNeuralMatrix || onOpenModelCompare || onOpenAnalytics || onOpenPerfDash || onOpenCostDash) && <VDivider />}
+
+        {/* ── GROUP 4 — Cyber Intel ────────────────────────────────────── */}
+        {onOpenCisaLive       && <HUDBtn icon={ShieldAlert}  label="CISA Live"    color="#e21227" onClick={onOpenCisaLive} />}
+        {onOpenCveTimeline    && <HUDBtn icon={BarChart2}    label="CVE Timeline" color="#f97316" onClick={onOpenCveTimeline} />}
+        {onOpenThreatMap      && <HUDBtn icon={Globe}        label="Threat Map"   color="#00e5ff" onClick={onOpenThreatMap}   badge="3D" />}
+        {onOpenCveTracker     && <HUDBtn icon={ShieldAlert}  label="CVE Intel"    color="#e21227" onClick={onOpenCveTracker} />}
+        {onOpenLiveOps        && <HUDBtn icon={Activity}     label="Live Ops"     color="#8b5cf6" onClick={onOpenLiveOps} />}
+        {onOpenCyberHierarchy && <HUDBtn icon={Cpu}          label="Cyber Hier."  color="#00ff41" onClick={onOpenCyberHierarchy} />}
+        {onOpenDedupViz       && <HUDBtn icon={GitMerge}     label="Dedup"        color="#a78bfa" onClick={onOpenDedupViz} />}
+        {onOpenThreatFeed     && <HUDBtn icon={ShieldAlert}  label="Threat Feed"  color="#e21227" onClick={onOpenThreatFeed} />}
+        {onOpenSecurityDash   && <HUDBtn icon={ShieldCheck}  label="Security"     color="#00e5ff" onClick={onOpenSecurityDash} />}
+        {onOpenContextMemory  && <HUDBtn icon={BrainCircuit} label="Memory"       color="#a78bfa" onClick={onOpenContextMemory} />}
+        {onOpenAnomalyLog     && <HUDBtn icon={AlertTriangle}label="Anomaly"      color="#e21227" onClick={onOpenAnomalyLog} />}
+        {onOpenNetworkTopo    && <HUDBtn icon={Network}      label="NET·HUD"      color="#3b82f6" onClick={onOpenNetworkTopo} active={hudsVisible} />}
+        {onOpenPrefetch       && <HUDBtn icon={Gauge}        label="Prefetch"     color="#fbbf24" onClick={onOpenPrefetch} />}
+        {onOpenMasterHud      && <HUDBtn icon={Globe}        label="HUD"          color="#22c55e" onClick={onOpenMasterHud} />}
+        {onOpenCyberHub       && <HUDBtn icon={Zap}          label="Cyber Hub"    color="#e21227" onClick={onOpenCyberHub} badge="3D" />}
+        {onOpenWidgetsDock    && <HUDBtn icon={Gauge}        label="Widgets HUD"  color="#06b6d4" onClick={onOpenWidgetsDock} badge="6P" />}
+        {(onOpenCisaLive || onOpenCveTimeline || onOpenCyberHierarchy || onOpenThreatFeed) && <VDivider />}
+
+        {/* ── GROUP 5 — System ────────────────────────────────────────── */}
+        {onOpenProviderSettings && (
+          <motion.button
+            onClick={onOpenProviderSettings}
+            className="flex-shrink-0 flex items-center gap-1.5 px-2 py-1.5 rounded-lg"
+            style={{ background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.25)", color: "rgba(167,139,250,0.85)" }}
+            whileHover={{ scale: 1.04, background: "rgba(139,92,246,0.15)", borderColor: "rgba(139,92,246,0.5)" }}
+            whileTap={{ scale: 0.96 }}
+            title="إعدادات المزوّد"
+          >
+            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: "rgba(167,139,250,0.9)", boxShadow: "0 0 6px rgba(139,92,246,0.8)" }} />
+            <span className="hidden sm:block text-[10px] font-black tracking-wider uppercase">
+              {(state.activeProvider ?? "personal").slice(0, 8)}
+            </span>
+            {state.activeProviderModel && (
+              <span className="hidden md:block text-[9px] font-mono" style={{ color: "rgba(167,139,250,0.45)" }}>
+                /{state.activeProviderModel.split("/").pop()?.slice(0, 10)}
+              </span>
+            )}
+          </motion.button>
+        )}
+
+        <motion.button
+          onClick={onOpenLocalModel}
+          className="flex-shrink-0 p-2 rounded-lg"
+          style={{
+            color: state.settings.useLocalModel ? "#22c55e" : "rgba(255,255,255,0.35)",
+            background: state.settings.useLocalModel ? "rgba(34,197,94,0.1)" : "transparent",
+            border: `1px solid ${state.settings.useLocalModel ? "rgba(34,197,94,0.35)" : "rgba(255,255,255,0.08)"}`,
+          }}
+          whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.94 }}
+          aria-label="Local Model"
+          title={state.settings.useLocalModel ? `Local: ${state.settings.localModel}` : "Ollama / LM Studio"}
+        >
+          <Server className="w-4 h-4" />
+        </motion.button>
+
+        <motion.button
+          onClick={togglePower}
+          className="flex-shrink-0 flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg"
+          style={powerOn ? {
+            background: "rgba(226,18,39,0.18)", border: "1px solid rgba(226,18,39,0.65)", color: "#e21227",
+            boxShadow: "0 0 20px rgba(226,18,39,0.5), 0 0 40px rgba(226,18,39,0.18)",
+          } : {
+            background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(200,210,230,0.65)",
+          }}
+          whileHover={{ scale: 1.05, y: -0.5 }} whileTap={{ scale: 0.94 }}
+          aria-label={t("power.title")} title={t(powerOn ? "power.tooltipOn" : "power.tooltipOff")}
+          transition={{ type: "spring", stiffness: 500, damping: 28 }}
+        >
+          <motion.div animate={powerOn ? { rotate: [0, 5, -5, 0] } : {}} transition={{ duration: 3, repeat: Infinity }}>
+            <Zap className={`w-3.5 h-3.5 ${powerOn ? "fill-current" : ""}`} />
+          </motion.div>
+          <span className="hidden sm:block text-[10px] font-black tracking-widest uppercase">{t("power.title")}</span>
+          {powerOn && (
+            <motion.span className="text-[7px] font-black px-1 py-0.5 rounded"
+              style={{ background: "rgba(226,18,39,0.3)", color: "#ff5577" }}
+              animate={{ opacity: [1, 0.5, 1] }} transition={{ duration: 1.2, repeat: Infinity }}>
+              ON
+            </motion.span>
           )}
-        </AnimatePresence>
-      </div>
+        </motion.button>
+
+        <motion.button
+          onClick={onOpenPricing}
+          className="flex-shrink-0 flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-lg text-white text-[10px] font-black tracking-wide"
+          style={{
+            background: "linear-gradient(135deg,#d946ef 0%,#8b5cf6 50%,#6366f1 100%)",
+            boxShadow: "0 0 20px rgba(217,70,239,0.35), 0 0 40px rgba(139,92,246,0.18), inset 0 1px 0 rgba(255,255,255,0.25)",
+          }}
+          whileHover={{ scale: 1.05, y: -0.5, boxShadow: "0 0 28px rgba(217,70,239,0.5), 0 0 50px rgba(139,92,246,0.25)" }}
+          whileTap={{ scale: 0.95 }}
+          aria-label={t("top.buyTokens")} title={t("top.buyTokens")}
+        >
+          <Coins className="w-3.5 h-3.5" />
+          <span className="hidden sm:block">{t("top.buyTokens")}</span>
+        </motion.button>
+
+        <motion.button
+          onClick={onOpenHelp}
+          className="flex-shrink-0 hidden sm:flex p-2 rounded-lg"
+          style={{ color: "rgba(255,255,255,0.3)", border: "1px solid rgba(255,255,255,0.07)" }}
+          whileHover={{ color: "rgba(255,255,255,0.75)", background: "rgba(255,255,255,0.06)", scale: 1.06 }}
+          whileTap={{ scale: 0.94 }}
+          aria-label={t("top.shortcuts")} title={t("top.shortcuts")}
+        >
+          <HelpCircle className="w-4 h-4" />
+        </motion.button>
+
+        <motion.button
+          onClick={toggleCompact}
+          className="flex-shrink-0 p-2 rounded-lg"
+          style={{
+            color: compact ? "#00e5ff" : "rgba(255,255,255,0.3)",
+            background: compact ? "rgba(0,229,255,0.08)" : "transparent",
+            border: `1px solid ${compact ? "rgba(0,229,255,0.3)" : "rgba(255,255,255,0.08)"}`,
+          }}
+          whileHover={{ scale: 1.06, background: "rgba(0,229,255,0.12)" }}
+          whileTap={{ scale: 0.94 }}
+          title={compact ? "وضع موسّع" : "وضع مضغوط"}
+          aria-label="تبديل الوضع المضغوط"
+        >
+          {compact ? <PanelLeftOpen className="w-3.5 h-3.5" /> : <PanelLeftClose className="w-3.5 h-3.5" />}
+        </motion.button>
+
+        <NotificationsPanel />
+        <ThemePopover />
+        <TokensPopover onUpgrade={onOpenPricing} />
+
+      </div>{/* end scrollable strip */}
+
+      {/* ── RIGHT scroll arrow — outside scrollable zone ─────────── */}
+      <AnimatePresence>
+        {canScrollRight && (
+          <motion.button
+            initial={{ opacity: 0, width: 0 }}
+            animate={{ opacity: 1, width: "auto" }}
+            exit={{ opacity: 0, width: 0 }}
+            onClick={() => scrollBy(220)}
+            className="flex-shrink-0 p-1 rounded-lg z-20 relative"
+            style={{ color: "rgba(226,18,39,0.8)", background: "rgba(226,18,39,0.1)", border: "1px solid rgba(226,18,39,0.25)" }}
+            whileHover={{ background: "rgba(226,18,39,0.2)" }}
+            aria-label="تمرير لليمين"
+          >
+            <ChevronRight className="w-3.5 h-3.5" />
+          </motion.button>
+        )}
+      </AnimatePresence>
+
       </div>{/* end h-14 main row */}
 
       {/* ── Pinned shortcuts row ──────────────────────────────────────── */}

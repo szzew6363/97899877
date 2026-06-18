@@ -10,6 +10,7 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { UserMenu } from "./UserMenu";
 import { TIER_TOKENS, TIER_LABELS } from "@/lib/subscription";
 import { DarkWebMonitor } from "./DarkWebMonitor";
+import { SidebarTelemetryHUD } from "./SidebarTelemetryHUD";
 
 import type { UtilityTool } from "./modals/UtilityToolModal";
 
@@ -961,6 +962,9 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapsed, onOpenP
             )}
           </AnimatePresence>
         </div>
+
+        {/* SYSTEM TELEMETRY HUD */}
+        <SidebarTelemetryHUD />
 
         {/* DARK WEB MONITOR — collapsible */}
         <div>
