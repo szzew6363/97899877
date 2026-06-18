@@ -73,7 +73,8 @@ export type ArsenalModuleId =
   | "aiAtlas" | "odysseusDeepResearch" | "odysseusCompare" | "odysseusDocEditor"
   | "odysseusTaskCalendar" | "odysseusModelCookbook" | "odysseusEmailAI"
   // Batch 14 — Odysseus Full Workspace + F.R.I.D.A.Y. Tony Stark AI + J.A.R.V.I.S. Hologram
-  | "odysseusWorkspace" | "fridayAI" | "jarvisHologram";
+  | "odysseusWorkspace" | "fridayAI" | "jarvisHologram"
+  | "agent4";
 
 export type ArsenalModule = {
   id: ArsenalModuleId;
@@ -1005,6 +1006,12 @@ export const ARSENAL_MODULES: ArsenalModule[] = [
     desc: "Just A Rather Very Intelligent System — Iron Man's primary AI rendered as a full 3D holographic interface. Six floating perspective panels with gesture-reactive tilt: JARVIS AI Chat (refined British AI persona), Threat Monitor (live threat feed with severity levels), System Status (Arc Reactor metrics + real-time clock), Intel Feed (OSINT/CVE/network alerts + AI scan), Network Topology (live node-edge canvas), and Arsenal Control (all modules status). Hologram view + Terminal view. HUD scan lines, particle grid, corner targeting reticles, orbital dot animations, and cyan holographic aesthetic.",
     icon: Globe, color: "#00d4ff", border: "rgba(0,212,255,0.4)", bg: "rgba(0,212,255,0.07)", glow: "rgba(0,212,255,0.3)",
     source: "Friday Tony Stark", tag: "HOLOGRAM",
+  },
+  {
+    id: "agent4", name: "AGENT 4", subtitle: "بناء التطبيقات · تخطيط ذكي · وكلاء متوازية · نشر فوري · 5 أوضاع تشغيل",
+    desc: "نظام الذكاء الاصطناعي المتقدم Agent 4 — بناء تطبيقات كاملة من وصف نصي (Frontend + Backend + Database + Auth)، وضع التخطيط الذكي متعدد المراحل، تنفيذ متوازي بخمسة وكلاء متخصصين، بحث ويب ذكي، تحليل وإصلاح الأخطاء تلقائياً، خطط نشر كاملة مع Docker وCI/CD، إدارة التعاون الجماعي. خمسة أوضاع تشغيل: Lite · Autonomous · Max · Power · Turbo (2.5×). واجهة ثلاثية الأبعاد بشبكة عصبية حية.",
+    icon: Cpu, color: "#06b6d4", border: "rgba(6,182,212,0.4)", bg: "rgba(6,182,212,0.07)", glow: "rgba(6,182,212,0.35)",
+    source: "Agent 4 System", tag: "AGENT4",
   },
 ];
 

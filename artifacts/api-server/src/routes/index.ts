@@ -15,6 +15,7 @@ import shellRouter from "./shell";
 import gitRouter from "./git";
 import providersRouter from "./providers";
 import localProxyRouter from "./local-proxy";
+import agent4Router from "./agent4";
 
 const router: IRouter = Router();
 
@@ -34,5 +35,6 @@ router.use(shellRouter);
 router.use(gitRouter);
 router.use(providersRouter);
 router.use(localProxyRouter);
+router.use(agent4Router);
 
 export default router;

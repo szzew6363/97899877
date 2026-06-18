@@ -160,6 +160,7 @@ import { OdysseusEmailAIModal } from "./modals/OdysseusEmailAIModal";
 import { OdysseusWorkspaceModal } from "./modals/OdysseusWorkspaceModal";
 import { FridayAIModal } from "./modals/FridayAIModal";
 import { JarvisHologramModal } from "./modals/JarvisHologramModal";
+import AgentFourModal from "./modals/AgentFourModal";
 
 interface Props {
   moduleId: ArsenalModuleId;
@@ -489,6 +490,7 @@ export function ArsenalFullPage({ moduleId, onBack }: Props) {
       case "odysseusWorkspace":      return <OdysseusWorkspaceModal open={open} onOpenChange={v => !v && onBack()} />;
       case "fridayAI":               return <FridayAIModal open={open} onOpenChange={v => !v && onBack()} />;
       case "jarvisHologram":         return <JarvisHologramModal open={open} onOpenChange={v => !v && onBack()} />;
+      case "agent4":                 return <AgentFourModal open={open} onOpenChange={v => !v && onBack()} />;
       default:                return null;
     }
   })();
