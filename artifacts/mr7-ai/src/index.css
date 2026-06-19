@@ -3630,3 +3630,103 @@ svg:hover {
     animation: neon-border-pulse-ai 9s ease-in-out infinite !important;
   }
 }
+
+/* ── Performance: CSS shimmer (replaces heavy Framer Motion repeat:Infinity) ── */
+@keyframes btn-shimmer {
+  0%   { transform: translateX(-120%) skewX(-15deg); }
+  100% { transform: translateX(420%)  skewX(-15deg); }
+}
+@keyframes btn-pulse-dot {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.28; }
+}
+@keyframes ring-pulse {
+  0%, 100% { opacity: 0.18; transform: scale(1); }
+  50%       { opacity: 0.5;  transform: scale(1.05); }
+}
+@keyframes scan-line {
+  0%   { left: -10%; }
+  100% { left: 110%; }
+}
+@keyframes window-scan {
+  0%   { top: 0%;   }
+  100% { top: 100%; }
+}
+
+/* Use GPU-composited properties only */
+.btn-shimmer-inner {
+  position: absolute; inset-block: 0;
+  width: 28px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+  animation: btn-shimmer 2.8s linear infinite;
+  will-change: transform;
+}
+.pulse-dot {
+  animation: btn-pulse-dot 1.6s ease-in-out infinite;
+  will-change: opacity;
+}
+.ring-pulse {
+  animation: ring-pulse 2.2s ease-in-out infinite;
+  will-change: opacity, transform;
+}
+.scan-line-anim {
+  position: absolute; top: 0; bottom: 0;
+  width: 20%;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(226,18,39,0.07), transparent);
+  animation: scan-line 4s linear infinite;
+  will-change: left;
+}
+.window-scan-line {
+  position: absolute; inset-x: 0; height: 1px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(0,229,255,0.5), transparent);
+  animation: window-scan 5s linear infinite;
+  will-change: top;
+}
+
+/* ── DraggableWindow GPU containment ── */
+.draggable-win {
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  contain: layout style paint;
+}
+
+/* ── TopBar button: reduce layout thrashing ── */
+.hud-btn {
+  contain: layout style;
+  will-change: transform;
+}
+
+/* ── Reduce paint on hidden tab ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── Window title bar gradient ── */
+.win-title-bar {
+  background: linear-gradient(90deg,
+    rgba(0,229,255,0.05) 0%,
+    transparent 40%,
+    transparent 60%,
+    rgba(0,229,255,0.05) 100%);
+  cursor: move;
+  user-select: none;
+}
+
+/* ── Enhanced scrollbar for windows ── */
+.win-content::-webkit-scrollbar { width: 4px; }
+.win-content::-webkit-scrollbar-track { background: transparent; }
+.win-content::-webkit-scrollbar-thumb {
+  background: rgba(0,229,255,0.2);
+  border-radius: 2px;
+}
+.win-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(0,229,255,0.4);
+}

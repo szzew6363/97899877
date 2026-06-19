@@ -48,6 +48,7 @@ import { securityLayer } from "./lib/security-layer";
 import { prefetchEngine } from "./lib/prefetch-engine";
 import type { ArsenalModuleId } from "./components/modals/ArsenalHubModal";
 import type { UtilityTool } from "./components/modals/UtilityToolModal";
+import { WindowManagerProvider } from "./components/DraggableWindow";
 
 // ── LAZY MODAL IMPORTS ────────────────────────────────────────────────────────
 const ApiAccessModal        = lazy(() => import("./components/modals/ApiAccessModal").then(m=>({default:m.ApiAccessModal})));
@@ -893,8 +894,10 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <StoreProvider>
         <TooltipProvider>
-          <AppContent />
-          <Toaster />
+          <WindowManagerProvider>
+            <AppContent />
+            <Toaster />
+          </WindowManagerProvider>
         </TooltipProvider>
       </StoreProvider>
     </QueryClientProvider>
