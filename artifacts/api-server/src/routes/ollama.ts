@@ -195,28 +195,72 @@ router.post("/ollama/install", async (_req, res) => {
 
   const send = (msg: string) => res.write(`data: ${JSON.stringify({ msg })}\n\n`);
 
-  try {
-    send("📦 Installing Ollama...");
-    const dir = path.dirname(OLLAMA_BIN);
-    await execAsync(`mkdir -p ${dir}`);
-    send("⬇️  Downloading Ollama binary...");
-    await execAsync(
-      `curl -fsSL https://ollama.com/download/ollama-linux-amd64 -o ${OLLAMA_BIN} && chmod +x ${OLLAMA_BIN}`,
-      { timeout: 120_000 }
-    );
-    send("✅ Ollama installed successfully!");
-    send("🚀 Starting Ollama server...");
+  // If already running just report success
+  if (await isOllamaRunning()) {
+    send("🟢 Ollama is already running!");
+    res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+    res.end();
+    return res;
+  }
+
+  // If binary exists, just start it
+  if (fs.existsSync(OLLAMA_BIN)) {
+    send("✅ Binary found — starting Ollama...");
     spawn(OLLAMA_BIN, ["serve"], {
-      detached: true,
-      stdio: "ignore",
+      detached: true, stdio: "ignore",
       env: { ...process.env, HOME: "/home/runner" },
     }).unref();
     await new Promise(r => setTimeout(r, 3000));
     const running = await isOllamaRunning();
-    send(running ? "🟢 Ollama is running!" : "⚠️  Ollama started but health check failed.");
-  } catch (err) {
-    send(`❌ Error: ${String(err)}`);
+    send(running ? "🟢 Ollama is running!" : "⚠️  Server didn't respond — check /tmp/ollama.log");
+    res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+    res.end();
+    return res;
   }
+
+  try {
+    send("📦 Installing Ollama v0.30.10...");
+    const dir = path.dirname(OLLAMA_BIN);
+    await execAsync(`mkdir -p ${dir}`);
+
+    send("⬇️  Downloading tar.zst archive (~500 MB — may take 2-3 min)...");
+    const VERSION = "v0.30.10";
+    const URL = `https://github.com/ollama/ollama/releases/download/${VERSION}/ollama-linux-amd64.tar.zst`;
+    const TMP = `/tmp/ollama-install-${Date.now()}`;
+
+    await execAsync(`mkdir -p ${TMP}`, { timeout: 5_000 });
+    await execAsync(
+      `curl -fL --progress-bar "${URL}" -o "${TMP}/ollama.tar.zst"`,
+      { timeout: 300_000 }
+    );
+
+    send("📦 Extracting archive...");
+    await execAsync(
+      `cd "${TMP}" && tar --use-compress-program=zstd -xf ollama.tar.zst`,
+      { timeout: 60_000 }
+    );
+
+    const { stdout } = await execAsync(`find "${TMP}" -name "ollama" -type f | head -1`);
+    const found = stdout.trim();
+    if (!found) throw new Error("Binary not found inside archive");
+
+    await execAsync(`cp "${found}" "${OLLAMA_BIN}" && chmod +x "${OLLAMA_BIN}" && rm -rf "${TMP}"`);
+    send("✅ Ollama installed!");
+
+    send("🚀 Starting Ollama server...");
+    spawn(OLLAMA_BIN, ["serve"], {
+      detached: true, stdio: "ignore",
+      env: { ...process.env, HOME: "/home/runner" },
+    }).unref();
+    await new Promise(r => setTimeout(r, 3000));
+    const running = await isOllamaRunning();
+    send(running ? "🟢 Ollama is running on :11434!" : "⚠️  Server didn't respond. Try refreshing.");
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    send(`❌ Install failed: ${msg}`);
+    send("💡 Tip: Use Hugging Face Spaces tab for 24/7 GPU-powered Ollama instead.");
+  }
+
   res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
   res.end();
   return res;
