@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useContext, createContext, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
@@ -530,7 +531,8 @@ function LocalModelQuickToggle({ onOpenLocalModel }: { onOpenLocalModel: () => v
         )}
       </motion.button>
 
-      {/* External floating window */}
+      {/* External floating window — portal to document.body */}
+      {createPortal(
       <AnimatePresence>
         {floatOpen && (
           <>
@@ -662,6 +664,7 @@ function LocalModelQuickToggle({ onOpenLocalModel }: { onOpenLocalModel: () => v
           </>
         )}
       </AnimatePresence>
+      , document.body)}
     </>
   );
 }
@@ -732,7 +735,8 @@ function OperationModeBtn3D() {
         </div>
       </motion.button>
 
-      {/* Full-screen window overlay */}
+      {/* Full-screen window overlay — portal to document.body */}
+      {createPortal(
       <AnimatePresence>
         {open && (
           <>
@@ -925,6 +929,7 @@ function OperationModeBtn3D() {
           </>
         )}
       </AnimatePresence>
+      , document.body)}
     </>
   );
 }
@@ -1087,7 +1092,8 @@ function ModelSelector3D({
         </motion.svg>
       </motion.button>
 
-      {/* EXTERNAL floating window — fixed position, outside TopBar DOM */}
+      {/* EXTERNAL floating window — portal to document.body */}
+      {createPortal(
       <AnimatePresence>
         {open && (
           <>
@@ -1265,6 +1271,7 @@ function ModelSelector3D({
           </>
         )}
       </AnimatePresence>
+      , document.body)}
     </>
   );
 }
