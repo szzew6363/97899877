@@ -69,6 +69,7 @@ interface TopBarProps {
   onOpenAutonomousDecisionEngine?: () => void;
   onOpenJARVISCommandCenter?: () => void;
   onOpenOmegaAgent?: () => void;
+  onOpenOllamaHub?: () => void;
   hudsVisible?: boolean;
   sidebarCollapsed?: boolean;
   onToggleSidebar?: () => void;
@@ -1544,6 +1545,7 @@ export function TopBar({
   onOpenAutonomousDecisionEngine,
   onOpenJARVISCommandCenter,
   onOpenOmegaAgent,
+  onOpenOllamaHub,
   hudsVisible,
   sidebarCollapsed,
   onToggleSidebar,
@@ -1733,7 +1735,8 @@ export function TopBar({
         {onOpenAutonomousDecisionEngine && <HUDBtn icon={BrainCircuit} label="AI Engine" shortLabel="ADE" color="#8b5cf6" onClick={onOpenAutonomousDecisionEngine} badge="NEW" />}
         {onOpenJARVISCommandCenter && <HUDBtn icon={Bot} label="JARVIS" shortLabel="JRV" color="#00d4ff" onClick={onOpenJARVISCommandCenter} badge="NEW" />}
         {onOpenOmegaAgent && <HUDBtn icon={Cpu} label="Omega Agent" shortLabel="OMEGA" color="#e21227" onClick={onOpenOmegaAgent} badge="Ω" />}
-        {(onOpenWarRoom || onOpenDeepSearch || onOpenChainInvestigation || onOpenRedTeam || onOpenCognitiveWarfare || onOpenAutonomousOffense || onOpenAttackGraph || onOpenAutonomousDecisionEngine || onOpenJARVISCommandCenter || onOpenOmegaAgent) && <VDivider />}
+        {onOpenOllamaHub && <HUDBtn icon={Cpu} label="Ollama Hub" shortLabel="OLLAMA" color="#7c3aed" onClick={onOpenOllamaHub} badge="🧠" />}
+        {(onOpenWarRoom || onOpenDeepSearch || onOpenChainInvestigation || onOpenRedTeam || onOpenCognitiveWarfare || onOpenAutonomousOffense || onOpenAttackGraph || onOpenAutonomousDecisionEngine || onOpenJARVISCommandCenter || onOpenOmegaAgent || onOpenOllamaHub) && <VDivider />}
 
         {/* ── GROUP 3 — Analytics & Intelligence ─────────────────────── */}
         {onOpenNeuralMatrix && <HUDBtn icon={Crosshair}   label="Neural Matrix" color="#e21227"  onClick={onOpenNeuralMatrix} />}

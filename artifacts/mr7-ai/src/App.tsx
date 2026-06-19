@@ -199,6 +199,7 @@ const SOCCommandModal    = lazy(() => import("./components/modals/SOCCommandModa
 const AutonomousDecisionEngineModal = lazy(() => import("./components/modals/AutonomousDecisionEngineModal").then(m=>({default:m.AutonomousDecisionEngineModal})));
 const JARVISCommandCenterModal      = lazy(() => import("./components/modals/JARVISCommandCenterModal").then(m=>({default:m.JARVISCommandCenterModal})));
 const OmegaAgentModal               = lazy(() => import("./components/modals/OmegaAgentModal").then(m=>({default:m.OmegaAgentModal})));
+const OllamaHub3D                   = lazy(() => import("./components/OllamaHub3D").then(m=>({default:m.OllamaHub3D})));
 
 // ── MODAL STATE REDUCER ───────────────────────────────────────────────────────
 const MODAL_IDS = [
@@ -232,6 +233,7 @@ const MODAL_IDS = [
   'autonomousDecisionEngine',
   'jarvisCommandCenter',
   'omegaAgent',
+  'ollamaHub',
 ] as const;
 
 type ModalId = typeof MODAL_IDS[number];
@@ -619,6 +621,7 @@ function AppContent() {
           onOpenAutonomousDecisionEngine={() => open('autonomousDecisionEngine')}
           onOpenJARVISCommandCenter={() => open('jarvisCommandCenter')}
           onOpenOmegaAgent={() => open('omegaAgent')}
+          onOpenOllamaHub={() => open('ollamaHub')}
         />
         <ChatView onOpenOsintDash={() => open('osintDash')} />
         {modals.compare && <CompareView onClose={() => close('compare')} />}
@@ -1001,6 +1004,13 @@ function AppContent() {
       <WindowChrome open={modals.omegaAgent} color="#fbbf24" title="OMEGA AGENT" onClose={() => close('omegaAgent')}>
         <OmegaAgentModal open={modals.omegaAgent} onOpenChange={(v) => mDispatch({type:'SET',id:'omegaAgent',value:v})} />
       </WindowChrome>
+
+      {/* ── OLLAMA NEURAL HUB — Local AI Model Command Center ── */}
+      <Suspense fallback={null}>
+        {modals.ollamaHub && (
+          <OllamaHub3D open={modals.ollamaHub} onClose={() => close('ollamaHub')} />
+        )}
+      </Suspense>
     </div>
     </>
   );

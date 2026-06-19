@@ -16,6 +16,7 @@ import gitRouter from "./git";
 import providersRouter from "./providers";
 import localProxyRouter from "./local-proxy";
 import agent4Router from "./agent4";
+import ollamaRouter from "./ollama";
 
 const router: IRouter = Router();
 
@@ -36,5 +37,6 @@ router.use(gitRouter);
 router.use(providersRouter);
 router.use(localProxyRouter);
 router.use(agent4Router);
+router.use(ollamaRouter);
 
 export default router;
