@@ -14,7 +14,7 @@ import { AI_MODELS, getModel } from "@/lib/ai-config";
 import { tierAtLeast } from "@/lib/subscription";
 import {
   Menu, Sparkles, Coins, LayoutGrid, HelpCircle, Search, Zap, Server, Bot,
-  Hexagon, Shield, Columns3, Crosshair, BarChart2,
+  Hexagon, Shield, Columns3, Crosshair, BarChart2, ChevronLeft, ChevronRight,
   Target, GitBranch, Bug, Activity, DollarSign, GitMerge, ShieldAlert, ShieldCheck,
   BrainCircuit, Gauge, Globe, AlertTriangle, Network, Cpu, Lock,
   Flame, Share2, PanelLeftClose, PanelLeftOpen,
@@ -1332,11 +1332,12 @@ function PinnedShortcutsBar({
   };
 
   return (
-    <div className="relative flex items-center gap-1.5 px-3 overflow-hidden flex-wrap"
+    <div className="relative flex items-center gap-1.5 px-3 overflow-x-auto overflow-y-hidden"
       style={{
-        minHeight: 34,
+        height: 34,
         background: "linear-gradient(180deg, rgba(6,4,12,0.99) 0%, rgba(4,3,9,0.99) 100%)",
         borderTop: "1px solid rgba(226,18,39,0.08)",
+        scrollbarWidth: "none",
       }}>
       {/* Travelling scan line — CSS-only */}
       <span className="scan-line-anim" />
@@ -1493,6 +1494,23 @@ export function TopBar({
   const { toast } = useToast();
   const powerOn = state.settings.powerMode;
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft,  setCanScrollLeft]  = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  function checkScroll() {
+    const el = scrollRef.current; if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 4);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  }
+  useEffect(() => {
+    const el = scrollRef.current; if (!el) return;
+    checkScroll();
+    el.addEventListener("scroll", checkScroll, { passive: true });
+    const ro = new ResizeObserver(checkScroll); ro.observe(el);
+    return () => { el.removeEventListener("scroll", checkScroll); ro.disconnect(); };
+  }, []);
+  function scrollBy(d: number) { scrollRef.current?.scrollBy({ left: d, behavior: "smooth" }); }
 
   function togglePower() {
     const next = !powerOn;
@@ -1541,9 +1559,29 @@ export function TopBar({
           animation: "topbar-travel 3.5s linear infinite",
         }} />
 
-      {/* ── MAIN STRIP — left + center + right ─────────────────── */}
+      {/* ── LEFT scroll arrow ─────────────────────────────────── */}
+      <AnimatePresence>
+        {canScrollLeft && (
+          <motion.button
+            initial={{ opacity: 0, width: 0 }}
+            animate={{ opacity: 1, width: "auto" }}
+            exit={{ opacity: 0, width: 0 }}
+            onClick={() => scrollBy(-220)}
+            className="flex-shrink-0 p-1 rounded-lg z-20 relative"
+            style={{ color: "rgba(226,18,39,0.8)", background: "rgba(226,18,39,0.1)", border: "1px solid rgba(226,18,39,0.25)" }}
+            whileHover={{ background: "rgba(226,18,39,0.2)" }}
+            aria-label="تمرير لليسار"
+          >
+            <ChevronLeft className="w-3.5 h-3.5" />
+          </motion.button>
+        )}
+      </AnimatePresence>
+
+      {/* ── MAIN STRIP — أفقي فقط ─────────────────────────────── */}
       <div
-        className="flex-1 flex items-center gap-1.5 overflow-hidden relative z-10 px-1"
+        ref={scrollRef}
+        className="flex-1 flex items-center gap-1.5 overflow-x-auto overflow-y-hidden relative z-10 px-1"
+        style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
       >
         {/* Mobile hamburger */}
         <motion.button
@@ -1803,6 +1841,24 @@ export function TopBar({
         <TokensPopover onUpgrade={onOpenPricing} />
 
       </div>{/* end main strip */}
+
+      {/* ── RIGHT scroll arrow ────────────────────────────────── */}
+      <AnimatePresence>
+        {canScrollRight && (
+          <motion.button
+            initial={{ opacity: 0, width: 0 }}
+            animate={{ opacity: 1, width: "auto" }}
+            exit={{ opacity: 0, width: 0 }}
+            onClick={() => scrollBy(220)}
+            className="flex-shrink-0 p-1 rounded-lg z-20 relative"
+            style={{ color: "rgba(226,18,39,0.8)", background: "rgba(226,18,39,0.1)", border: "1px solid rgba(226,18,39,0.25)" }}
+            whileHover={{ background: "rgba(226,18,39,0.2)" }}
+            aria-label="تمرير لليمين"
+          >
+            <ChevronRight className="w-3.5 h-3.5" />
+          </motion.button>
+        )}
+      </AnimatePresence>
 
       </div>{/* end h-14 main row */}
 
