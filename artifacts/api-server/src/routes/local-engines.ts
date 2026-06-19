@@ -8,13 +8,13 @@ const execAsync = promisify(exec);
 const router = Router();
 
 const ENGINES = [
-  { id: "ollama",      label: "Ollama",      port: 11434, base: "http://localhost:11434", apiPath: "/api/tags",         modelsKey: "models",  idKey: "name",  canInstall: true },
-  { id: "lmstudio",   label: "LM Studio",   port: 1234,  base: "http://localhost:1234",  apiPath: "/v1/models",        modelsKey: "data",    idKey: "id",    canInstall: false },
-  { id: "jan",        label: "Jan",          port: 1337,  base: "http://localhost:1337",  apiPath: "/v1/models",        modelsKey: "data",    idKey: "id",    canInstall: false },
-  { id: "gpt4all",    label: "GPT4All",      port: 4891,  base: "http://localhost:4891",  apiPath: "/v1/models",        modelsKey: "data",    idKey: "id",    canInstall: false },
-  { id: "openwebui",  label: "Open WebUI",   port: 3000,  base: "http://localhost:3000",  apiPath: "/api/models",       modelsKey: "data",    idKey: "id",    canInstall: true  },
-  { id: "llamafile",  label: "Llamafile",    port: 8081,  base: "http://localhost:8081",  apiPath: "/v1/models",        modelsKey: "data",    idKey: "id",    canInstall: true  },
-  { id: "kobold",     label: "KoboldCPP",    port: 5001,  base: "http://localhost:5001",  apiPath: "/api/v1/model",     modelsKey: null,      idKey: "result",canInstall: true  },
+  { id: "ollama",         label: "Ollama",         port: 11434, base: "http://localhost:11434", apiPath: "/api/tags",    modelsKey: "models", idKey: "name",  canInstall: true  },
+  { id: "lmstudio",      label: "LM Studio",      port: 1234,  base: "http://localhost:1234",  apiPath: "/v1/models",   modelsKey: "data",   idKey: "id",    canInstall: false },
+  { id: "jan",           label: "Jan",             port: 1337,  base: "http://localhost:1337",  apiPath: "/v1/models",   modelsKey: "data",   idKey: "id",    canInstall: false },
+  { id: "textgenwebui",  label: "text-gen-webui",  port: 5000,  base: "http://localhost:5000",  apiPath: "/v1/models",   modelsKey: "data",   idKey: "id",    canInstall: false },
+  { id: "gpt4all",       label: "GPT4All",         port: 4891,  base: "http://localhost:4891",  apiPath: "/v1/models",   modelsKey: "data",   idKey: "id",    canInstall: false },
+  { id: "llamafile",     label: "Llamafile",       port: 8081,  base: "http://localhost:8081",  apiPath: "/v1/models",   modelsKey: "data",   idKey: "id",    canInstall: true  },
+  { id: "kobold",        label: "KoboldCPP",       port: 5001,  base: "http://localhost:5001",  apiPath: "/api/v1/model",modelsKey: null,     idKey: "result",canInstall: true  },
 ] as const;
 
 type EngineId = typeof ENGINES[number]["id"];
@@ -93,7 +93,7 @@ function checkInstallAvailable(id: EngineId): boolean {
            fs.existsSync(path.join(BIN_DIR, "koboldcpp"));
   }
   if (id === "openwebui") {
-    try { execAsync("python3 -c 'import open_webui'"); return true; } catch { return false; }
+    return false;
   }
   return false;
 }
