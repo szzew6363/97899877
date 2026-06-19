@@ -327,14 +327,12 @@ export function ThinkingIndicator({ agentMode = false }: ThinkingIndicatorProps)
         {/* Corner brackets */}
         <CornerBrackets color={col} />
 
-        {/* Top energy bar */}
-        <motion.div
-          animate={{ backgroundPosition: ["200% center", "-200% center"] }}
-          transition={{ duration: 2.2, repeat: Infinity, ease: "linear" }}
-          style={{
+        {/* Top energy bar — CSS shimmer */}
+        <div className="btn-shimmer-inner" style={{
             height: "2px",
             background: `linear-gradient(90deg, transparent 0%, ${col}00 10%, ${col}cc 40%, ${col} 50%, ${col}cc 60%, ${col}00 90%, transparent 100%)`,
             backgroundSize: "300% auto",
+            animationDuration: "2.2s",
           }}
         />
 
@@ -342,29 +340,25 @@ export function ThinkingIndicator({ agentMode = false }: ThinkingIndicatorProps)
         <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 14px 6px" }}>
           {/* Brain orb */}
           <div style={{ position: "relative", flexShrink: 0 }}>
-            <motion.div
-              animate={{ scale: [1, 1.35, 1], opacity: [0.25, 0, 0.25] }}
-              transition={{ duration: 1.9, repeat: Infinity }}
-              style={{ position: "absolute", inset: "-6px", borderRadius: "50%", background: col }}
+            <div className="ring-pulse"
+              style={{ position: "absolute", inset: "-6px", borderRadius: "50%", background: col, animationDuration: "1.9s" }}
             />
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 2.8, repeat: Infinity, ease: "linear" }}
+            <div className="spin-fast"
               style={{
                 position: "absolute", inset: "-4px", borderRadius: "50%",
                 border: "1.5px solid transparent",
                 borderTopColor: col,
                 borderRightColor: `${col}40`,
+                animationDuration: "2.8s",
               }}
             />
-            <motion.div
-              animate={{ rotate: -360 }}
-              transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
+            <div className="spin-slow-rev"
               style={{
                 position: "absolute", inset: "-7px", borderRadius: "50%",
                 border: "1px solid transparent",
                 borderBottomColor: `${col}30`,
                 borderLeftColor: `${col}18`,
+                animationDuration: "5s",
               }}
             />
             <div style={{
@@ -435,14 +429,14 @@ export function ThinkingIndicator({ agentMode = false }: ThinkingIndicatorProps)
           }}>
             {CH.map(c => (
               <div key={c.name} style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                <motion.div
-                  animate={{ opacity: [1, 0.3, 1] }}
-                  transition={{ duration: 1.2 + Math.random(), repeat: Infinity, ease: "easeInOut" }}
+                <div
+                  className="pulse-dot"
                   style={{
                     width: "5px", height: "5px", borderRadius: "50%",
                     background: c.color,
                     boxShadow: `0 0 6px ${c.color}`,
                     flexShrink: 0,
+                    animationDuration: "1.4s",
                   }}
                 />
                 <span style={{
@@ -525,14 +519,13 @@ export function ThinkingIndicator({ agentMode = false }: ThinkingIndicatorProps)
                 boxShadow: `0 0 8px ${col}80`,
               }}
             />
-            {/* Scan pulse */}
-            <motion.div
-              animate={{ x: ["-60%", "160%"] }}
-              transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+            {/* Scan pulse — CSS */}
+            <span className="btn-shimmer-inner"
               style={{
-                position: "absolute", top: 0, height: "100%", width: "35%",
+                width: "35%",
                 background: `linear-gradient(90deg, transparent, ${col}cc, transparent)`,
                 borderRadius: "3px",
+                animationDuration: "1.8s",
               }}
             />
           </div>

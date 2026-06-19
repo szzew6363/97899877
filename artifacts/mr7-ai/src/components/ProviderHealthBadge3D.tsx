@@ -1006,10 +1006,9 @@ function ProviderHealthRow({ name, color, health, latency }: {
   return (
     <div className="flex items-center gap-2 px-3 py-2 rounded-xl"
       style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
-      <motion.div className="w-2 h-2 rounded-full flex-shrink-0"
-        style={{ background: hc, boxShadow: `0 0 6px ${hc}` }}
-        animate={{ opacity: health === "error" ? [1, 0.2] : health === "checking" ? [0.4, 1] : [0.7, 1] }}
-        transition={{ duration: health === "error" ? 0.35 : 1.1, repeat: Infinity, repeatType: "reverse" }} />
+      <div className="w-2 h-2 rounded-full flex-shrink-0 pulse-dot"
+        style={{ background: hc, boxShadow: `0 0 6px ${hc}`,
+          animationDuration: health === "error" ? "0.35s" : health === "checking" ? "0.7s" : "1.1s" }} />
       <span className="flex-1 text-[9px] font-bold truncate" style={{ color: "rgba(255,255,255,0.7)" }}>{name}</span>
       <span className="text-[8px] font-mono font-black" style={{ color: hc }}>
         {latency != null ? `${latency}ms` : HEALTH_LABEL[health]}
@@ -1178,15 +1177,11 @@ export function ProviderHealthBadge3D() {
         aria-label="حالة اتصال المزوّد"
       >
         {/* Idle outer orbit ring */}
-        <motion.span className="absolute inset-0 rounded-full pointer-events-none"
-          style={{ border: `1px solid rgba(139,92,246,${health === "healthy" ? 0.28 : health === "error" ? 0.0 : 0.18})`, margin: "-5px" }}
-          animate={{ opacity: [0.25, 0.60, 0.25], scale: [1, 1.08, 1] }}
-          transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }} />
-        {/* Health-status outer ring */}
-        <motion.span className="absolute inset-0 rounded-full pointer-events-none"
-          style={{ border: `1px dashed rgba(${health === "healthy" ? "34,197,94" : health === "error" ? "226,18,39" : "245,158,11"},0.20)`, margin: "-10px" }}
-          animate={{ rotate: [0, 360] }}
-          transition={{ duration: 6, repeat: Infinity, ease: "linear" }} />
+        <span className="absolute inset-0 rounded-full pointer-events-none ring-pulse"
+          style={{ border: `1px solid rgba(139,92,246,${health === "healthy" ? 0.28 : health === "error" ? 0.0 : 0.18})`, margin: "-5px" }} />
+        {/* Health-status outer ring — CSS */}
+        <span className="absolute inset-0 rounded-full pointer-events-none spin-slow"
+          style={{ border: `1px dashed rgba(${health === "healthy" ? "34,197,94" : health === "error" ? "226,18,39" : "245,158,11"},0.20)`, margin: "-10px" }} />
         <QuantumPlanet3D health={health} latency={latency} open={open} hover={planetHover} />
       </motion.button>
 
@@ -1268,10 +1263,9 @@ export function ProviderHealthBadge3D() {
                 <div className="p-3 space-y-3">
                   <div className="rounded-xl p-3 flex items-center gap-3"
                     style={{ background: `linear-gradient(135deg,${hColor}12 0%,${hColor}04 100%)`, border: `1px solid ${hColor}2e` }}>
-                    <motion.div className="w-3.5 h-3.5 rounded-full flex-shrink-0"
-                      style={{ background: hColor, boxShadow: `0 0 14px ${hColor}` }}
-                      animate={{ opacity: health === "error" ? [1, 0.15] : [0.6, 1], scale: health === "healthy" ? [1, 1.18, 1] : 1 }}
-                      transition={{ duration: health === "error" ? 0.4 : 1.3, repeat: Infinity, repeatType: "reverse" }} />
+                    <div className="w-3.5 h-3.5 rounded-full flex-shrink-0 pulse-dot"
+                      style={{ background: hColor, boxShadow: `0 0 14px ${hColor}`,
+                        animationDuration: health === "error" ? "0.4s" : "1.3s" }} />
                     <div className="flex-1">
                       <div className="text-xs font-black" style={{ color: hColor }}>{HEALTH_AR[health]}</div>
                       <div className="text-[8px] font-mono mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>
@@ -1537,10 +1531,10 @@ export function ProviderHealthBadge3D() {
                   <div className="flex justify-center items-center py-4">
                     <div className="relative w-28 h-28 flex items-center justify-center">
                       {[0,1,2].map(i => (
-                        <motion.div key={i} className="absolute inset-0 rounded-full border"
-                          style={{ borderColor: hColor, opacity: 0.15 }}
-                          animate={{ scale: [1, 1.6 + i * 0.3], opacity: [0.5, 0] }}
-                          transition={{ duration: 2, repeat: Infinity, delay: i * 0.55, ease: "easeOut" }} />
+                        <span key={i} className="absolute inset-0 rounded-full border"
+                          style={{ borderColor: hColor, opacity: 0.15,
+                            animation: `holo-pulse-${(i % 3) + 1} 2s ease-out infinite`,
+                            animationDelay: `${i * 0.55}s` }} />
                       ))}
                       <div className="w-20 h-20 rounded-full flex flex-col items-center justify-center"
                         style={{ background: `radial-gradient(circle,${hColor}22,${hColor}06)`, border: `1px solid ${hColor}44` }}>
@@ -1630,10 +1624,8 @@ export function ProviderHealthBadge3D() {
                       { name:"Together",  x:30, y:62, color:"#ec4899", region:"US"      },
                     ].map(node => (
                       <div key={node.name} className="absolute flex flex-col items-center" style={{ left: `${node.x}%`, top: `${node.y}%`, transform: "translate(-50%,-50%)" }}>
-                        <motion.div className="w-2 h-2 rounded-full"
-                          style={{ background: node.color, boxShadow: `0 0 8px ${node.color}80` }}
-                          animate={{ scale: [1, 1.4, 1], opacity: [0.8, 1, 0.8] }}
-                          transition={{ duration: 2 + Math.random()*1.5, repeat: Infinity, ease: "easeInOut" }} />
+                        <div className="w-2 h-2 rounded-full pulse-dot"
+                          style={{ background: node.color, boxShadow: `0 0 8px ${node.color}80` }} />
                         <div className="text-[5px] font-black font-mono mt-0.5 whitespace-nowrap" style={{ color: `${node.color}cc` }}>{node.name}</div>
                       </div>
                     ))}

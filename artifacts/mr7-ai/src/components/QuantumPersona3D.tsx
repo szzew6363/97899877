@@ -557,17 +557,13 @@ export function QuantumPersona3D({ onOpenPersonaManager }: QuantumPersona3DProps
         <QuantumBrain3D open={showPanel} hover={hover} activeColor={activeColor} />
 
         {/* Active indicator — dual ring pulse */}
-        <motion.div
-          className="absolute bottom-0.5 right-0.5 w-2.5 h-2.5 rounded-full"
-          style={{ background: activeColor, boxShadow: `0 0 10px ${activeColor}` }}
-          animate={{ opacity: [1, 0.30, 1], scale: [1, 1.45, 1] }}
-          transition={{ duration: 1.8, repeat: Infinity }}
+        <div
+          className="absolute bottom-0.5 right-0.5 w-2.5 h-2.5 rounded-full pulse-dot"
+          style={{ background: activeColor, boxShadow: `0 0 10px ${activeColor}`, animationDuration: "1.8s" }}
         />
-        <motion.div
-          className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border"
-          style={{ borderColor: activeColor + "60" }}
-          animate={{ opacity: [0.6, 0, 0.6], scale: [1, 1.8, 1] }}
-          transition={{ duration: 1.8, repeat: Infinity, delay: 0.4 }}
+        <div
+          className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border ring-pulse"
+          style={{ borderColor: activeColor + "60", animationDelay: "0.4s" }}
         />
 
         {/* Hover tooltip */}
@@ -603,11 +599,9 @@ export function QuantumPersona3D({ onOpenPersonaManager }: QuantumPersona3DProps
                 overflow: "hidden", display: "flex", flexDirection: "column",
               }}>
 
-              {/* Animated scan line */}
-              <motion.div className="absolute inset-x-0 h-px pointer-events-none z-20"
-                style={{ background: `linear-gradient(90deg,transparent,${activeColor}80,transparent)` }}
-                animate={{ top: ["0%","100%","0%"] }}
-                transition={{ duration: 5, repeat: Infinity, ease: "linear" }} />
+              {/* Animated scan line — CSS */}
+              <span className="absolute inset-x-0 h-px pointer-events-none z-20 window-scan-line"
+                style={{ background: `linear-gradient(90deg,transparent,${activeColor}80,transparent)` }} />
 
               {/* Corner brackets */}
               <span className="absolute top-3 left-3 w-5 h-5 border-t-2 border-l-2 pointer-events-none" style={{ borderColor: `${activeColor}80` }} />
@@ -633,8 +627,7 @@ export function QuantumPersona3D({ onOpenPersonaManager }: QuantumPersona3DProps
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="flex flex-col items-center">
-                    <motion.div className="w-2 h-2 rounded-full" style={{ background: activeColor, boxShadow: `0 0 10px ${activeColor}` }}
-                      animate={{ opacity: [0.5,1], scale: [0.9,1.15] }} transition={{ duration: 1.1, repeat: Infinity, repeatType: "reverse" }} />
+                    <div className="w-2 h-2 rounded-full pulse-dot" style={{ background: activeColor, boxShadow: `0 0 10px ${activeColor}`, animationDuration: "1.1s" }} />
                     <span className="text-[6px] font-black font-mono mt-0.5" style={{ color: `${activeColor}70` }}>LIVE</span>
                   </div>
                   <motion.button onClick={() => setShowPanel(false)}
@@ -724,8 +717,7 @@ export function QuantumPersona3D({ onOpenPersonaManager }: QuantumPersona3DProps
                             boxShadow: isActive ? `0 0 14px ${pc}25` : "none",
                           }}
                           whileHover={{ scale: 1.02, background: `${pc}12` }} whileTap={{ scale: 0.97 }}>
-                          {isActive && <motion.div className="absolute left-0 inset-y-0 w-0.5 rounded-full" style={{ background: pc }}
-                            animate={{ opacity: [0.6,1,0.6] }} transition={{ duration: 1.5, repeat: Infinity }} />}
+                          {isActive && <div className="absolute left-0 inset-y-0 w-0.5 rounded-full pulse-dot" style={{ background: pc, animationDuration: "1.5s" }} />}
                           <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0"
                             style={{ background: `${pc}20`, border: `1px solid ${pc}35` }}>
                             <Icon className="w-3 h-3" style={{ color: `${pc}ee` }} />

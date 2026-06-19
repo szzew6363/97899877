@@ -3730,3 +3730,32 @@ svg:hover {
 .win-content::-webkit-scrollbar-thumb:hover {
   background: rgba(0,229,255,0.4);
 }
+
+/* ── Spin slow (replaces rotate:[0,360] repeat:Infinity) ── */
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes spin-slow-rev {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(-360deg); }
+}
+.spin-slow     { animation: spin-slow     6s linear infinite; will-change: transform; }
+.spin-slow-rev { animation: spin-slow-rev 2.5s linear infinite; will-change: transform; }
+.spin-fast     { animation: spin-slow     1.5s linear infinite; will-change: transform; }
+
+/* ── Holo pulse ring (replaces HoloPulseRing Framer Motion) ── */
+@keyframes holo-pulse-1 { 0%{transform:scale(1);opacity:.5} 100%{transform:scale(2.6);opacity:0} }
+@keyframes holo-pulse-2 { 0%{transform:scale(1);opacity:.4} 100%{transform:scale(3.0);opacity:0} }
+@keyframes holo-pulse-3 { 0%{transform:scale(1);opacity:.3} 100%{transform:scale(3.4);opacity:0} }
+.holo-pulse-ring-1 { animation: holo-pulse-1 2.5s ease-out infinite; }
+.holo-pulse-ring-2 { animation: holo-pulse-2 2.9s ease-out infinite; animation-delay:.83s; }
+.holo-pulse-ring-3 { animation: holo-pulse-3 3.3s ease-out infinite; animation-delay:1.66s; }
+
+/* ── Opacity fade (replaces animate={{opacity:[0.7,0.3,0.7]}} etc.) ── */
+@keyframes fade-breathe {
+  0%,100% { opacity: var(--pulse-hi, 0.7); }
+  50%      { opacity: var(--pulse-lo, 0.3); }
+}
+.breathe { animation: fade-breathe 3s ease-in-out infinite; }
+.breathe-fast { animation: fade-breathe 1.2s ease-in-out infinite; }

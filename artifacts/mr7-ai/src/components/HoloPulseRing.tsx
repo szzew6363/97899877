@@ -1,7 +1,5 @@
-import { motion } from "framer-motion";
-
 /* ════════════════════════════════════════════
-   HOLO PULSE RING
+   HOLO PULSE RING  — CSS-only (zero Framer Motion)
    Decorative concentric pulsing rings for
    ambient 3D depth — wraps any element.
 ════════════════════════════════════════════ */
@@ -30,26 +28,18 @@ export function HoloPulseRing({
       className={className}
       style={{ position: "relative", width: size, height: size, display: "flex", alignItems: "center", justifyContent: "center", ...style }}
     >
-      {/* Pulse rings */}
+      {/* Pulse rings — CSS keyframe animations */}
       {Array.from({ length: rings }).map((_, i) => (
-        <motion.div
+        <span
           key={i}
-          animate={{
-            scale: [1, 2.2 + i * 0.4],
-            opacity: [0.5, 0],
-          }}
-          transition={{
-            duration: speed + i * 0.4,
-            repeat: Infinity,
-            ease: "easeOut",
-            delay: i * (speed / rings),
-          }}
           style={{
             position: "absolute",
             inset: 0,
             borderRadius: "50%",
             border: `1px solid ${color}`,
             pointerEvents: "none",
+            animation: `holo-pulse-${(i % 3) + 1} ${speed + i * 0.4}s ease-out infinite`,
+            animationDelay: `${i * (speed / rings)}s`,
           }}
         />
       ))}
@@ -60,7 +50,7 @@ export function HoloPulseRing({
   );
 }
 
-/* Standalone spinner ring variant */
+/* Standalone spinner ring variant — CSS-only */
 export function CyberSpinnerRing({
   size = 32,
   color = "#e21227",
@@ -73,21 +63,20 @@ export function CyberSpinnerRing({
         position: "absolute", inset: 0, borderRadius: "50%",
         border: `${thickness}px solid ${color}10`,
       }} />
-      {/* Spinning arc */}
-      <motion.div
-        animate={{ rotate: 360 }}
-        transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+      {/* Spinning arc — CSS */}
+      <div
+        className="spin-fast"
         style={{
           position: "absolute", inset: 0, borderRadius: "50%",
           border: `${thickness}px solid transparent`,
           borderTopColor: color,
           borderRightColor: `${color}55`,
+          animationDuration: "1.5s",
         }}
       />
-      {/* Reverse spinning arc */}
-      <motion.div
-        animate={{ rotate: -360 }}
-        transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
+      {/* Reverse spinning arc — CSS */}
+      <div
+        className="spin-slow-rev"
         style={{
           position: "absolute",
           inset: thickness * 2,
@@ -95,6 +84,7 @@ export function CyberSpinnerRing({
           border: `${thickness * 0.75}px solid transparent`,
           borderBottomColor: `${color}60`,
           borderLeftColor: `${color}30`,
+          animationDuration: "2.5s",
         }}
       />
       {/* Center dot */}

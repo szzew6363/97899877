@@ -739,12 +739,9 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapsed, onOpenP
           whileTap={{ scale: 0.98 }}
           transition={{ type: "spring", stiffness: 400, damping: 28 }}
         >
-          {/* 3D scanline sweep */}
-          <motion.div
-            className="absolute inset-0 pointer-events-none"
-            animate={{ x: ["-100%", "200%"] }}
-            transition={{ duration: 2.5, repeat: Infinity, ease: "linear", repeatDelay: 4 }}
-            style={{ background: "linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.06) 50%,transparent 100%)", width: "60%" }}
+          {/* 3D scanline sweep — CSS */}
+          <span className="absolute inset-0 pointer-events-none btn-shimmer-inner"
+            style={{ background: "linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.06) 50%,transparent 100%)", animationDuration: "6s" }}
           />
           <span className="relative text-[9px] font-mono font-bold uppercase tracking-widest text-white/30 group-hover:text-white/55 transition-colors">
             {communityOpen && offerOpen && tokensOpen ? "Collapse All" : "Expand All"}
@@ -1073,23 +1070,17 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapsed, onOpenP
             title="OMEGA AGENT"
             aria-label="فتح OMEGA AGENT"
           >
-            {/* Scan line */}
-            <motion.div
-              className="absolute inset-y-0 pointer-events-none"
+            {/* Scan line — CSS */}
+            <span className="absolute inset-y-0 pointer-events-none btn-shimmer-inner"
               style={{ width: 60, background: "linear-gradient(90deg,transparent,rgba(226,18,39,0.30),transparent)" }}
-              animate={{ x: ["-100%", "500%"] }}
-              transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
             />
             {/* Corner brackets */}
             <span className="absolute top-1 left-1 w-2 h-2 border-t border-l pointer-events-none" style={{ borderColor: "rgba(226,18,39,0.65)" }} />
             <span className="absolute bottom-1 right-1 w-2 h-2 border-b border-r pointer-events-none" style={{ borderColor: "rgba(226,18,39,0.65)" }} />
 
-            <motion.div
-              animate={{ opacity: [1, 0.2, 1], scale: [1, 1.5, 1] }}
-              transition={{ duration: 1.6, repeat: Infinity }}
-            >
+            <div className="pulse-dot" style={{ animationDuration: "1.6s" }}>
               <Zap className="w-3.5 h-3.5 relative" style={{ color: "#e21227" }} />
-            </motion.div>
+            </div>
             <span className="relative text-[10px] font-black tracking-[0.25em] uppercase" style={{ color: "#ff4444", textShadow: "0 0 16px rgba(226,18,39,0.8)" }}>
               OMEGA AGENT
             </span>
@@ -1225,13 +1216,11 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapsed, onOpenP
                 filter: "blur(0.5px)",
               }} />
               {/* Scanline sweep across drawer */}
-              <motion.div
-                initial={{ y: "-100%" }}
-                animate={{ y: "100%" }}
-                transition={{ duration: 1.8, ease: "linear", delay: 0.1, repeat: Infinity, repeatDelay: 3 }}
+              <span
                 style={{
                   position: "absolute", left: 0, right: 0, height: 80, zIndex: 2, pointerEvents: "none",
                   background: "linear-gradient(180deg, transparent 0%, rgba(226,18,39,0.06) 50%, transparent 100%)",
+                  animation: "window-scan 4.8s linear infinite",
                 }}
               />
               {content}

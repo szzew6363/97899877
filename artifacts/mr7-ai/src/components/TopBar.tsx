@@ -516,20 +516,17 @@ function LocalModelQuickToggle({ onOpenLocalModel }: { onOpenLocalModel: () => v
           <span className="text-[8px] font-black tracking-wide">{useLocal ? "ON" : "OFF"}</span>
         </div>
 
-        {/* Live health dot */}
+        {/* Live health dot — CSS */}
         {useLocal && (
-          <motion.span className="w-2 h-2 rounded-full flex-shrink-0"
-            style={{ background: hColor, boxShadow: `0 0 8px ${hColor}` }}
-            animate={{ scale: [1, 1.5, 1], opacity: [1, 0.35, 1] }}
-            transition={{ duration: health === "checking" ? 0.7 : 1.6, repeat: Infinity }} />
+          <span className="w-2 h-2 rounded-full flex-shrink-0 pulse-dot"
+            style={{ background: hColor, boxShadow: `0 0 8px ${hColor}`,
+              animationDuration: health === "checking" ? "0.7s" : "1.6s" }} />
         )}
 
-        {/* Active pulse bottom line */}
+        {/* Active pulse bottom line — CSS */}
         {floatOpen && (
-          <motion.span className="absolute bottom-0 left-0 right-0 h-px pointer-events-none"
-            style={{ background: `linear-gradient(90deg,transparent,${hColor},transparent)` }}
-            animate={{ opacity: [0.5, 1, 0.5] }}
-            transition={{ duration: 1.2, repeat: Infinity }} />
+          <span className="absolute bottom-0 left-0 right-0 h-px pointer-events-none pulse-dot"
+            style={{ background: `linear-gradient(90deg,transparent,${hColor},transparent)` }} />
         )}
       </motion.button>
 
@@ -770,10 +767,9 @@ function OperationModeBtn3D() {
               <div className="h-px w-full" style={{ background: `linear-gradient(90deg,transparent,${perf.color},rgba(255,255,255,0.3),${perf.color},transparent)` }} />
 
               {/* Animated scan beam across window */}
-              <motion.div className="absolute inset-x-0 top-0 h-full pointer-events-none"
-                style={{ background: `linear-gradient(180deg,${perf.color}06,transparent 40%)` }}
-                animate={{ opacity: [0.6, 0.2, 0.6] }}
-                transition={{ duration: 3, repeat: Infinity }} />
+              <div className="absolute inset-x-0 top-0 h-full pointer-events-none breathe"
+                style={{ background: `linear-gradient(180deg,${perf.color}06,transparent 40%)`,
+                  "--pulse-hi": "0.6", "--pulse-lo": "0.2" } as React.CSSProperties} />
 
               {/* Corner brackets */}
               {[["top-2 left-2 border-t border-l","top"],["top-2 right-2 border-t border-r","top"],
@@ -787,14 +783,9 @@ function OperationModeBtn3D() {
                   <div className="relative">
                     <motion.div className="w-8 h-8 rounded-xl flex items-center justify-center"
                       style={{ background: `${perf.color}18`, border: `1px solid ${perf.color}45` }}>
-                      <motion.div className="w-3 h-3 rounded-full"
-                        style={{ background: perf.color, boxShadow: `0 0 12px ${perf.color}` }}
-                        animate={{ opacity: [1, 0.3, 1], scale: [1, 1.3, 1] }}
-                        transition={{ duration: 1.4, repeat: Infinity }} />
+                      <div className="w-3 h-3 rounded-full pulse-dot"
+                        style={{ background: perf.color, boxShadow: `0 0 12px ${perf.color}`, animationDuration: "1.4s" }} />
                     </motion.div>
-                    <motion.div className="absolute inset-0 rounded-xl pointer-events-none"
-                      animate={{ boxShadow: [`0 0 0px ${perf.color}00`, `0 0 16px ${perf.color}60`, `0 0 0px ${perf.color}00`] }}
-                      transition={{ duration: 2, repeat: Infinity }} />
                   </div>
                   <div>
                     <div className="text-[9px] font-black tracking-[0.4em] uppercase" style={{ color: "rgba(255,255,255,0.25)" }}>OPERATION CENTER</div>
@@ -840,35 +831,31 @@ function OperationModeBtn3D() {
                         whileTap={{ scale: 0.94 }}
                       >
                         {isActive && (
-                          <motion.div className="absolute inset-x-0 top-0 h-px"
-                            style={{ background: `linear-gradient(90deg,transparent,${p.color},transparent)` }}
-                            animate={{ opacity: [0.5, 1, 0.5] }}
-                            transition={{ duration: 1.5, repeat: Infinity }} />
+                          <span className="absolute inset-x-0 top-0 h-px pulse-dot"
+                            style={{ background: `linear-gradient(90deg,transparent,${p.color},transparent)`, animationDuration: "1.5s" }} />
                         )}
                         {/* Bar visualizer */}
                         <div className="w-full flex items-end gap-0.5 h-7">
                           {[...Array(5)].map((_, bi) => {
                             const filled = bi < Math.ceil(barWidth / 20);
                             return (
-                              <motion.div key={bi}
+                              <div key={bi}
                                 className="flex-1 rounded-sm"
                                 style={{
                                   height: `${(bi + 1) * 20}%`,
                                   background: filled ? (isActive ? p.color : p.color + "60") : "rgba(255,255,255,0.06)",
                                   boxShadow: filled && isActive ? `0 0 6px ${p.color}80` : "none",
+                                  opacity: filled && isActive ? undefined : 1,
                                 }}
-                                animate={filled && isActive ? { opacity: [0.7, 1, 0.7] } : {}}
-                                transition={{ duration: 1.2, delay: bi * 0.1, repeat: Infinity }} />
+                              />
                             );
                           })}
                         </div>
                         <span className="text-[10px] font-black tracking-widest" style={{ color: isActive ? p.color : "rgba(255,255,255,0.35)" }}>{p.label}</span>
                         <span className="text-[8px] font-mono" style={{ color: isActive ? p.color + "aa" : "rgba(255,255,255,0.18)" }}>{p.descEn}</span>
                         {isActive && (
-                          <motion.div className="w-1.5 h-1.5 rounded-full"
-                            style={{ background: p.color, boxShadow: `0 0 8px ${p.color}` }}
-                            animate={{ opacity: [1, 0.3, 1] }}
-                            transition={{ duration: 1.2, repeat: Infinity }} />
+                          <div className="w-1.5 h-1.5 rounded-full pulse-dot"
+                            style={{ background: p.color, boxShadow: `0 0 8px ${p.color}`, animationDuration: "1.2s" }} />
                         )}
                       </motion.button>
                     );
@@ -900,19 +887,15 @@ function OperationModeBtn3D() {
                         whileTap={{ scale: 0.94 }}
                       >
                         {isActive && (
-                          <motion.div className="absolute inset-x-0 top-0 h-px"
-                            style={{ background: `linear-gradient(90deg,transparent,${w.color},transparent)` }}
-                            animate={{ opacity: [0.5, 1, 0.5] }}
-                            transition={{ duration: 1.5, repeat: Infinity }} />
+                          <span className="absolute inset-x-0 top-0 h-px pulse-dot"
+                            style={{ background: `linear-gradient(90deg,transparent,${w.color},transparent)`, animationDuration: "1.5s" }} />
                         )}
                         <span className="text-[18px]" style={{ color: isActive ? w.color : "rgba(255,255,255,0.25)", filter: isActive ? `drop-shadow(0 0 6px ${w.color})` : "none" }}>{w.icon}</span>
                         <span className="text-[10px] font-black tracking-wide" style={{ color: isActive ? w.color : "rgba(255,255,255,0.5)" }}>{w.id}</span>
                         <span className="text-[8px] font-mono text-center" style={{ color: "rgba(255,255,255,0.2)" }}>{w.desc}</span>
                         {isActive && (
-                          <motion.div className="w-1.5 h-1.5 rounded-full"
-                            style={{ background: w.color, boxShadow: `0 0 6px ${w.color}` }}
-                            animate={{ opacity: [1, 0.3, 1] }}
-                            transition={{ duration: 1.4, repeat: Infinity }} />
+                          <div className="w-1.5 h-1.5 rounded-full pulse-dot"
+                            style={{ background: w.color, boxShadow: `0 0 6px ${w.color}`, animationDuration: "1.4s" }} />
                         )}
                       </motion.button>
                     );
@@ -926,14 +909,12 @@ function OperationModeBtn3D() {
               <div className="px-5 py-2.5 flex items-center justify-between flex-shrink-0" style={{ background: "rgba(0,0,0,0.4)", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-1.5">
-                    <motion.div className="w-1.5 h-1.5 rounded-full" style={{ background: perf.color }}
-                      animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1.2, repeat: Infinity }} />
+                    <div className="w-1.5 h-1.5 rounded-full pulse-dot" style={{ background: perf.color, animationDuration: "1.2s" }} />
                     <span className="text-[9px] font-mono font-bold" style={{ color: perf.color }}>{perf.label}</span>
                   </div>
                   <span className="text-[9px] font-mono" style={{ color: "rgba(255,255,255,0.15)" }}>·</span>
                   <div className="flex items-center gap-1.5">
-                    <motion.div className="w-1.5 h-1.5 rounded-full" style={{ background: wflow.color }}
-                      animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1.4, repeat: Infinity }} />
+                    <div className="w-1.5 h-1.5 rounded-full pulse-dot" style={{ background: wflow.color, animationDuration: "1.4s" }} />
                     <span className="text-[9px] font-mono font-bold" style={{ color: wflow.color }}>{wflowMode}</span>
                   </div>
                 </div>
@@ -998,11 +979,10 @@ function HUDBtn({
         style={{ width: 32, background: `linear-gradient(90deg,transparent,${color}22,transparent)`, left: "-100%" }}
         whileHover={{ left: "200%" }}
         transition={{ duration: 0.45, ease: "easeOut" }} />
-      {/* Active pulse line */}
+      {/* Active pulse line — CSS */}
       {active && (
-        <motion.span className="absolute inset-x-0 bottom-0 h-px pointer-events-none"
-          style={{ background: `linear-gradient(90deg,transparent,${color},transparent)` }}
-          animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1.5, repeat: Infinity }} />
+        <span className="absolute inset-x-0 bottom-0 h-px pointer-events-none pulse-dot"
+          style={{ background: `linear-gradient(90deg,transparent,${color},transparent)`, animationDuration: "1.5s" }} />
       )}
       <Icon className="w-3.5 h-3.5 flex-shrink-0" style={{ filter: `drop-shadow(0 0 3px ${color}88)` }} />
       {!isIconOnly && (
@@ -1091,9 +1071,7 @@ function ModelSelector3D({
         <span className="relative flex items-center justify-center w-7 h-7 rounded-lg flex-shrink-0"
           style={{ background: "rgba(226,18,39,0.14)", border: "1px solid rgba(226,18,39,0.3)", boxShadow: "0 0 10px rgba(226,18,39,0.25)" }}>
           <ActiveIcon className={`w-3.5 h-3.5 ${active.color}`} />
-          <motion.span className="absolute inset-0 rounded-lg pointer-events-none"
-            animate={{ opacity: [0.5, 0, 0.5], scale: [1, 1.3, 1] }}
-            transition={{ duration: 2.5, repeat: Infinity }}
+          <span className="absolute inset-0 rounded-lg pointer-events-none ring-pulse"
             style={{ border: "1px solid rgba(226,18,39,0.4)" }} />
         </span>
 
@@ -1136,9 +1114,9 @@ function ModelSelector3D({
             >
               <div className="h-px" style={{ background: "linear-gradient(90deg,transparent,#e21227,rgba(255,100,100,0.5),transparent)" }} />
               {/* Scan sweep */}
-              <motion.div className="absolute inset-x-0 top-0 h-full pointer-events-none"
-                style={{ background: "linear-gradient(180deg,rgba(226,18,39,0.04),transparent 35%)" }}
-                animate={{ opacity: [0.7, 0.3, 0.7] }} transition={{ duration: 3, repeat: Infinity }} />
+              <div className="absolute inset-x-0 top-0 h-full pointer-events-none breathe"
+                style={{ background: "linear-gradient(180deg,rgba(226,18,39,0.04),transparent 35%)",
+                  "--pulse-hi": "0.7", "--pulse-lo": "0.3" } as React.CSSProperties} />
               {/* Corner brackets */}
               {[["top-2 left-2 border-t border-l"],["top-2 right-2 border-t border-r"],["bottom-2 left-2 border-b border-l"],["bottom-2 right-2 border-b border-r"]].map(([cls], i) => (
                 <span key={i} className={`absolute w-3 h-3 pointer-events-none ${cls}`} style={{ borderColor: "rgba(226,18,39,0.45)" }} />
@@ -1176,11 +1154,9 @@ function ModelSelector3D({
                       <path d="M18.36 6.64a9 9 0 1 1-12.73 0" /><line x1="12" y1="2" x2="12" y2="12" />
                     </motion.svg>
                     {modelOff ? "OFF" : "ON"}
-                    {/* Shimmer sweep */}
-                    <motion.span className="absolute inset-y-0 w-6 pointer-events-none"
-                      style={{ background: `linear-gradient(90deg,transparent,${modelOff ? "rgba(255,45,85,0.3)" : "rgba(34,197,94,0.3)"},transparent)` }}
-                      animate={{ x: ["-150%", "250%"] }}
-                      transition={{ duration: 1.8, repeat: Infinity, ease: "linear" }} />
+                    {/* Shimmer sweep — CSS */}
+                    <span className="btn-shimmer-inner"
+                      style={{ background: `linear-gradient(90deg,transparent,${modelOff ? "rgba(255,45,85,0.3)" : "rgba(34,197,94,0.3)"},transparent)`, animationDuration: "1.8s" }} />
                   </motion.button>
                 </div>
                 <motion.button onClick={() => setOpen(false)}
@@ -1195,11 +1171,11 @@ function ModelSelector3D({
                   className="mx-3 mb-2 rounded-xl flex items-center gap-2 px-3 py-2"
                   style={{ background: "rgba(255,45,85,0.08)", border: "1px solid rgba(255,45,85,0.25)", boxShadow: "0 0 20px rgba(255,45,85,0.1)" }}
                 >
-                  <motion.div animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 0.8, repeat: Infinity }}>
+                  <div className="pulse-dot" style={{ animationDuration: "0.8s" }}>
                     <svg viewBox="0 0 24 24" fill="none" stroke="#ff2d55" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
                       <path d="M18.36 6.64a9 9 0 1 1-12.73 0" /><line x1="12" y1="2" x2="12" y2="12" />
                     </svg>
-                  </motion.div>
+                  </div>
                   <div>
                     <p className="text-[10px] font-black tracking-widest" style={{ color: "#ff2d55" }}>AI MODEL DISABLED</p>
                     <p className="text-[8px] text-muted-foreground/60 font-mono">All responses are paused · Click ON to resume</p>
@@ -1264,9 +1240,8 @@ function ModelSelector3D({
                         <span className="block text-[10px] leading-snug mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>{m.desc}</span>
                       </div>
                       {isActive && (
-                        <motion.span className="w-1.5 h-1.5 rounded-full mt-2.5 flex-shrink-0"
-                          style={{ background: "#e21227", boxShadow: "0 0 6px #e21227" }}
-                          animate={{ opacity: [1, 0.4, 1] }} transition={{ duration: 1.5, repeat: Infinity }} />
+                        <span className="w-1.5 h-1.5 rounded-full mt-2.5 flex-shrink-0 pulse-dot"
+                          style={{ background: "#e21227", boxShadow: "0 0 6px #e21227", animationDuration: "1.5s" }} />
                       )}
                     </motion.button>
                   );
@@ -1477,9 +1452,8 @@ function PinnedShortcutsBar({
                       </span>
                       {def.label}
                       {isPinned && (
-                        <motion.span className="ml-auto w-1 h-1 rounded-full"
-                          style={{ background: def.color, boxShadow: `0 0 4px ${def.color}` }}
-                          animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1.5, repeat: Infinity }} />
+                        <span className="ml-auto w-1 h-1 rounded-full pulse-dot"
+                          style={{ background: def.color, boxShadow: `0 0 4px ${def.color}`, animationDuration: "1.5s" }} />
                       )}
                     </motion.button>
                   );
@@ -1641,8 +1615,7 @@ export function TopBar({
           >
             {sidebarCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
             {sidebarCollapsed && (
-              <motion.span className="absolute inset-0 rounded-lg pointer-events-none"
-                animate={{ opacity: [0.4, 0, 0.4] }} transition={{ duration: 2, repeat: Infinity }}
+              <span className="absolute inset-0 rounded-lg pointer-events-none ring-pulse"
                 style={{ border: "1px solid rgba(226,18,39,0.6)" }} />
             )}
           </motion.button>
@@ -1791,17 +1764,14 @@ export function TopBar({
           aria-label={t("power.title")} title={t(powerOn ? "power.tooltipOn" : "power.tooltipOff")}
           transition={{ type: "spring", stiffness: 500, damping: 28 }}
         >
-          {/* Pulse rings when powered ON */}
+          {/* Pulse rings when powered ON — CSS */}
           {powerOn && (
             <>
-              <motion.span className="absolute inset-0 rounded-xl pointer-events-none"
-                style={{ border: "1px solid rgba(226,18,39,0.30)", margin: "-4px" }}
-                animate={{ opacity: [0.30, 0.65, 0.30], scale: [1, 1.06, 1] }}
-                transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }} />
-              <motion.span className="absolute inset-0 rounded-xl pointer-events-none"
-                style={{ border: "1px dashed rgba(226,18,39,0.15)", margin: "-9px" }}
-                animate={{ rotate: [0, 360] }}
-                transition={{ duration: 6, repeat: Infinity, ease: "linear" }} />
+              <span className="absolute inset-0 rounded-xl pointer-events-none ring-pulse"
+                style={{ border: "1px solid rgba(226,18,39,0.30)", margin: "-4px" }} />
+              <span className="absolute inset-0 rounded-xl pointer-events-none"
+                style={{ border: "1px dashed rgba(226,18,39,0.15)", margin: "-9px",
+                  animation: "spin-slow 6s linear infinite" }} />
             </>
           )}
           {/* Shimmer sweep — CSS */}
@@ -1809,22 +1779,19 @@ export function TopBar({
             style={{ background: `linear-gradient(90deg,transparent,rgba(226,18,39,${powerOn ? 0.22 : 0.08}),transparent)`,
               animationDuration: powerOn ? "1.8s" : "3.5s" }} />
 
-          <motion.div
-            animate={powerOn ? { rotate: [0, 6, -6, 0], filter: ["drop-shadow(0 0 4px rgba(226,18,39,0.8))", "drop-shadow(0 0 10px rgba(226,18,39,1))", "drop-shadow(0 0 4px rgba(226,18,39,0.8))"] } : {}}
-            transition={{ duration: 2.5, repeat: Infinity }}
-          >
+          <div style={powerOn ? { filter: "drop-shadow(0 0 6px rgba(226,18,39,0.9))" } : {}}>
             <Zap className={`w-4 h-4 ${powerOn ? "fill-current" : ""}`} />
-          </motion.div>
+          </div>
           <div className="hidden sm:flex flex-col items-start leading-none gap-0.5">
             <span className="text-[7px] font-black tracking-[0.25em] uppercase" style={{ color: powerOn ? "rgba(226,18,39,0.70)" : "rgba(255,255,255,0.28)" }}>POWER</span>
             <span className="text-[9px] font-black tracking-wide">{t("power.title")}</span>
           </div>
           {powerOn && (
-            <motion.span className="text-[7px] font-black px-1 py-0.5 rounded flex-shrink-0"
-              style={{ background: "rgba(226,18,39,0.28)", color: "#ff5577", border: "1px solid rgba(226,18,39,0.40)" }}
-              animate={{ opacity: [1, 0.4, 1] }} transition={{ duration: 1.0, repeat: Infinity }}>
+            <span className="text-[7px] font-black px-1 py-0.5 rounded flex-shrink-0 pulse-dot"
+              style={{ background: "rgba(226,18,39,0.28)", color: "#ff5577", border: "1px solid rgba(226,18,39,0.40)",
+                animationDuration: "1s" }}>
               ON
-            </motion.span>
+            </span>
           )}
         </motion.button>
 

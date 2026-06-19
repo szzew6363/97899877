@@ -40,15 +40,16 @@ function WindowHUDCanvas({ color, active }: { color: string; active: boolean }) 
 
   useEffect(() => {
     const cv = canvasRef.current; if (!cv) return;
-    const ctx = cv.getContext("2d", { alpha: true, desynchronized: true });
+    const ctx = cv.getContext("2d", { alpha: true, desynchronized: true })!;
     if (!ctx) return;
+    const cvEl = cv;
 
     let W = 0, H = 0;
     const DPR = Math.min(window.devicePixelRatio || 1, 1.5);
 
     function resize() {
-      W = cv.width  = cv.offsetWidth  * DPR;
-      H = cv.height = cv.offsetHeight * DPR;
+      W = cvEl.width  = cvEl.offsetWidth  * DPR;
+      H = cvEl.height = cvEl.offsetHeight * DPR;
     }
     resize();
     const ro = new ResizeObserver(resize);

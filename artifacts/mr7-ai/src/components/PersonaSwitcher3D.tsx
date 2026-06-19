@@ -293,10 +293,8 @@ export function PersonaSwitcher3D({ onOpenPersonaEditor, onOpenPersonaManager }:
       >
         <PersonaOrb color={color} pulse={isCustomActive} size={22} />
         {(showPanel || isCustomActive) && (
-          <motion.span
-            className="absolute inset-0 rounded-full pointer-events-none"
-            animate={{ opacity: [0.5, 0, 0.5], scale: [1, 1.35, 1] }}
-            transition={{ duration: 2.2, repeat: Infinity }}
+          <span
+            className="absolute inset-0 rounded-full pointer-events-none ring-pulse"
             style={{ border: `1px solid rgba(${cr},${cg},${cb},0.55)` }}
           />
         )}
@@ -327,11 +325,9 @@ export function PersonaSwitcher3D({ onOpenPersonaEditor, onOpenPersonaManager }:
               overflow: "hidden",
             }}
           >
-            {/* Animated scan line */}
-            <motion.div className="absolute inset-x-0 h-px pointer-events-none z-20"
-              style={{ background: `linear-gradient(90deg,transparent,rgba(${cr},${cg},${cb},0.6),transparent)` }}
-              animate={{ top: ["0%", "100%", "0%"] }}
-              transition={{ duration: 4, repeat: Infinity, ease: "linear" }} />
+            {/* Animated scan line — CSS */}
+            <span className="absolute inset-x-0 h-px pointer-events-none z-20 window-scan-line"
+              style={{ background: `linear-gradient(90deg,transparent,rgba(${cr},${cg},${cb},0.6),transparent)` }} />
 
             {/* Corner brackets */}
             <span className="absolute top-3 left-3 w-4 h-4 border-t-2 border-l-2 pointer-events-none rounded-tl" style={{ borderColor: `rgba(${cr},${cg},${cb},0.65)` }} />
@@ -360,10 +356,8 @@ export function PersonaSwitcher3D({ onOpenPersonaEditor, onOpenPersonaManager }:
               </div>
               <div className="flex items-center gap-2">
                 <div className="flex flex-col items-center gap-0.5">
-                  <motion.div className="w-2 h-2 rounded-full"
-                    style={{ background: `rgba(${cr},${cg},${cb},1)`, boxShadow: `0 0 10px rgba(${cr},${cg},${cb},0.9)` }}
-                    animate={{ opacity: [0.5, 1], scale: [0.85, 1.15] }}
-                    transition={{ duration: 1.1, repeat: Infinity, repeatType: "reverse" }} />
+                  <div className="w-2 h-2 rounded-full pulse-dot"
+                    style={{ background: `rgba(${cr},${cg},${cb},1)`, boxShadow: `0 0 10px rgba(${cr},${cg},${cb},0.9)`, animationDuration: "1.1s" }} />
                   <span className="text-[7px] font-black font-mono" style={{ color: `rgba(${cr},${cg},${cb},0.6)` }}>LIVE</span>
                 </div>
                 <motion.button onClick={() => setShowPanel(false)}
@@ -441,9 +435,8 @@ export function PersonaSwitcher3D({ onOpenPersonaEditor, onOpenPersonaManager }:
                         whileTap={{ scale: 0.96 }}
                       >
                         {isActive && (
-                          <motion.div className="absolute inset-y-0 left-0 w-0.5 rounded-full"
-                            style={{ background: `rgba(${pc[0]},${pc[1]},${pc[2]},1)` }}
-                            animate={{ opacity: [0.6, 1, 0.6] }} transition={{ duration: 1.5, repeat: Infinity }} />
+                          <div className="absolute inset-y-0 left-0 w-0.5 rounded-full pulse-dot"
+                            style={{ background: `rgba(${pc[0]},${pc[1]},${pc[2]},1)`, animationDuration: "1.5s" }} />
                         )}
                         <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
                           style={{ background: `rgba(${pc[0]},${pc[1]},${pc[2]},0.18)`, border: `1px solid rgba(${pc[0]},${pc[1]},${pc[2]},0.28)` }}>
