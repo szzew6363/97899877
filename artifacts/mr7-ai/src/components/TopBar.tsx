@@ -768,18 +768,20 @@ function OperationModeBtn3D() {
 
             {/* Window */}
             <motion.div
-              className="fixed z-[999] rounded-2xl overflow-hidden"
+              className="fixed z-[999] rounded-2xl overflow-hidden flex flex-col"
               style={{
                 top: "50%", left: "50%",
-                width: "min(660px, 96vw)",
+                width: "min(420px, 96vw)",
+                maxHeight: "88vh",
                 background: "linear-gradient(160deg, rgba(5,3,14,0.99) 0%, rgba(3,2,10,0.99) 100%)",
                 border: `1px solid ${perf.color}35`,
-                boxShadow: `0 0 100px ${perf.color}20, 0 0 40px rgba(0,0,0,0.8), inset 0 1px 0 ${perf.color}18`,
+                boxShadow: `0 0 80px ${perf.color}25, 0 0 40px rgba(0,0,0,0.9), 0 20px 60px rgba(0,0,0,0.7), inset 0 1px 0 ${perf.color}22`,
+                transformStyle: "preserve-3d",
               }}
-              initial={{ opacity: 0, scale: 0.88, x: "-50%", y: "-50%" }}
-              animate={{ opacity: 1, scale: 1,    x: "-50%", y: "-50%" }}
-              exit={{ opacity: 0, scale: 0.90,    x: "-50%", y: "-50%" }}
-              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              initial={{ opacity: 0, scale: 0.82, x: "-50%", y: "-50%", rotateX: 8 }}
+              animate={{ opacity: 1, scale: 1,    x: "-50%", y: "-50%", rotateX: 0 }}
+              exit={{ opacity: 0, scale: 0.88,    x: "-50%", y: "-50%", rotateX: -4 }}
+              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
             >
               {/* Top glow line */}
               <div className="h-px w-full" style={{ background: `linear-gradient(90deg,transparent,${perf.color},rgba(255,255,255,0.3),${perf.color},transparent)` }} />
@@ -828,6 +830,9 @@ function OperationModeBtn3D() {
               </div>
 
               <div className="mx-5 h-px" style={{ background: `linear-gradient(90deg,transparent,${perf.color}30,transparent)` }} />
+
+              {/* Scrollable content */}
+              <div className="overflow-y-auto flex-1" style={{ scrollbarWidth: "thin", scrollbarColor: `${perf.color}40 transparent` }}>
 
               {/* Performance section */}
               <div className="px-5 pt-4 pb-3">
@@ -932,8 +937,10 @@ function OperationModeBtn3D() {
                 </div>
               </div>
 
+              </div>{/* end scrollable */}
+
               {/* Status footer */}
-              <div className="px-5 py-2.5 flex items-center justify-between" style={{ background: "rgba(0,0,0,0.4)", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+              <div className="px-5 py-2.5 flex items-center justify-between flex-shrink-0" style={{ background: "rgba(0,0,0,0.4)", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-1.5">
                     <motion.div className="w-1.5 h-1.5 rounded-full" style={{ background: perf.color }}

@@ -569,20 +569,27 @@ export default function LandingPage() {
         <div style={{
           display: "inline-flex",
           alignItems: "center",
-          gap: "8px",
-          padding: "6px 16px",
+          gap: "10px",
+          padding: "8px 20px",
           borderRadius: "100px",
-          border: "1px solid rgba(226,18,39,0.4)",
-          background: "linear-gradient(135deg, rgba(226,18,39,0.12) 0%, rgba(226,18,39,0.05) 100%)",
-          color: "#e21227",
+          border: "1px solid rgba(226,18,39,0.6)",
+          background: "linear-gradient(135deg, rgba(226,18,39,0.18) 0%, rgba(100,0,20,0.12) 50%, rgba(226,18,39,0.08) 100%)",
+          color: "#ff3355",
           fontSize: "11px",
           fontFamily: "monospace",
+          fontWeight: "bold",
+          letterSpacing: "0.12em",
           marginBottom: "28px",
-          boxShadow: "0 0 20px rgba(226,18,39,0.2), inset 0 1px 0 rgba(255,255,255,0.08)",
-          backdropFilter: "blur(10px)",
+          boxShadow: "0 0 30px rgba(226,18,39,0.35), 0 0 60px rgba(226,18,39,0.12), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(226,18,39,0.2)",
+          backdropFilter: "blur(16px)",
+          animation: "neonFlicker 4s infinite",
+          position: "relative" as const,
+          overflow: "hidden" as const,
         }}>
-          <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#e21227", boxShadow: "0 0 8px #e21227", animation: "neonFlicker 3s infinite" }} />
-          v2.0 — Arsenal Mode Active
+          <span style={{ position: "absolute" as const, inset: 0, background: "linear-gradient(90deg, transparent, rgba(226,18,39,0.08), transparent)", animation: "holographic-shine 3s linear infinite", pointerEvents: "none" }} />
+          <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "#ff2d55", boxShadow: "0 0 12px #ff2d55, 0 0 24px rgba(255,45,85,0.5)", animation: "neonFlicker 2s infinite", flexShrink: 0 }} />
+          <span>v3.0 — ARSENAL MODE PRO</span>
+          <span style={{ fontSize: "8px", background: "rgba(255,45,85,0.2)", border: "1px solid rgba(255,45,85,0.4)", borderRadius: "4px", padding: "1px 5px", color: "#ff6b80", letterSpacing: "0.2em" }}>NEW</span>
         </div>
 
         {/* Title 3D */}

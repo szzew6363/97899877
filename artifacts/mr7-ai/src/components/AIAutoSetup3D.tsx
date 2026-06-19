@@ -347,7 +347,7 @@ export function AIAutoSetup3D({ onComplete }: { onComplete: () => void }) {
     const run = async () => {
       // Boot
       setPhase("boot");
-      addLog("[ KaliGPT ] تهيئة نواة الذكاء الاصطناعي v2.6...");
+      addLog("[ KaliGPT ] تهيئة نواة الذكاء الاصطناعي v3.0 ARSENAL MODE PRO...");
       await delay(400);
       addLog("[ SYS ] فحص طبقة التشفير AES-256...");
       await delay(350);
@@ -550,7 +550,7 @@ export function AIAutoSetup3D({ onComplete }: { onComplete: () => void }) {
           transition={{ delay: 0.3 }}
         >
           <div className="text-[10px] font-bold tracking-[0.5em] uppercase mb-1" style={{ color: providerColor }}>
-            KaliGPT — NEURAL CORE v2.6
+            KaliGPT — NEURAL CORE v3.0
           </div>
           <AnimatePresence mode="wait">
             <motion.div

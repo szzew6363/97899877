@@ -13,9 +13,13 @@ import { useToast } from "@/hooks/use-toast";
 
 // ── Server endpoints to auto-scan ────────────────────────────────────────────
 const AUTO_SCAN_TARGETS = [
-  { id: "ollama",   label: "Ollama",    port: 11434, color: "#00e5ff", url: "http://localhost:11434/v1" },
-  { id: "lmstudio", label: "LM Studio", port: 1234,  color: "#a78bfa", url: "http://localhost:1234/v1"  },
-  { id: "jan",      label: "Jan",       port: 1337,  color: "#34d399", url: "http://localhost:1337/v1"  },
+  { id: "ollama",        label: "Ollama",         port: 11434, color: "#00e5ff", url: "http://localhost:11434/v1" },
+  { id: "lmstudio",      label: "LM Studio",      port: 1234,  color: "#a78bfa", url: "http://localhost:1234/v1"  },
+  { id: "jan",           label: "Jan",             port: 1337,  color: "#34d399", url: "http://localhost:1337/v1"  },
+  { id: "gpt4all",       label: "GPT4All",         port: 4891,  color: "#f97316", url: "http://localhost:4891/v1"  },
+  { id: "openwebui",     label: "Open WebUI",      port: 3000,  color: "#06d6a0", url: "http://localhost:3000/v1"  },
+  { id: "llamafile",     label: "Llamafile",       port: 8080,  color: "#fbbf24", url: "http://localhost:8080/v1"  },
+  { id: "kobold",        label: "KoboldCPP",       port: 5001,  color: "#f72585", url: "http://localhost:5001/v1"  },
 ] as const;
 
 type ScanStatus = "idle" | "scanning" | "found" | "notfound";
@@ -80,12 +84,12 @@ function RadarScan3D({ results, scanning }: { results: ScanResult[]; scanning: b
         ctx.restore();
       }
 
-      // Server blips
-      const positions = [
-        { x: cx - 50, y: cy - 35 },
-        { x: cx + 45, y: cy + 10 },
-        { x: cx - 10, y: cy + 45 },
-      ];
+      // Server blips — dynamic circle arrangement
+      const positions = AUTO_SCAN_TARGETS.map((_, i) => {
+        const angle = (i / AUTO_SCAN_TARGETS.length) * Math.PI * 2 - Math.PI / 2;
+        const r = 58;
+        return { x: cx + Math.cos(angle) * r, y: cy + Math.sin(angle) * r };
+      });
       AUTO_SCAN_TARGETS.forEach((t, i) => {
         const res = results.find(r => r.id === t.id);
         const pos = positions[i];

@@ -3376,3 +3376,257 @@ html, body { overflow-x: hidden !important; }
   0%, 100% { border-color: rgba(226,18,39,0.6); box-shadow: 0 0 8px rgba(226,18,39,0.3); }
   50%       { border-color: rgba(0,229,255,0.4); box-shadow: 0 0 8px rgba(0,229,255,0.2); }
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   PHASE 7 — MAXIMUM 3D FUTURISTIC DESIGN SYSTEM v3.0
+   All buttons, panels, modals, windows — fully alive, pulsing, 3D
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── Global button 3D depth lift ── */
+button:not([disabled]):not([class*="neon-btn"]) {
+  transition: transform 0.18s cubic-bezier(0.23,1,0.32,1), box-shadow 0.18s ease !important;
+}
+button:not([disabled]):hover {
+  transform: translateY(-1px) translateZ(3px) !important;
+}
+button:not([disabled]):active {
+  transform: translateY(0px) translateZ(0px) scale(0.97) !important;
+}
+
+/* ── Universal interactive element 3D depth ── */
+@keyframes panel-breathe {
+  0%, 100% { box-shadow: 0 4px 24px rgba(0,0,0,0.6), 0 0 0 1px rgba(226,18,39,0.06); }
+  50%       { box-shadow: 0 8px 40px rgba(0,0,0,0.7), 0 0 0 1px rgba(226,18,39,0.14), 0 0 20px rgba(226,18,39,0.04); }
+}
+
+/* ── 3D dialog / modal glass depth ── */
+[role="dialog"],
+[data-state="open"] {
+  animation: panel-breathe 5s ease-in-out infinite;
+}
+
+/* ── Neon corner HUD brackets on all panels ── */
+@keyframes cornerPulse {
+  0%, 100% { opacity: 0.35; }
+  50%       { opacity: 0.8;  }
+}
+.rounded-2xl, .rounded-xl {
+  position: relative;
+}
+
+/* ── Live scanning line overlay on all cards ── */
+@keyframes card-scan {
+  0%   { top: 0%;   opacity: 0.12; }
+  80%  { opacity: 0.06; }
+  100% { top: 100%; opacity: 0;    }
+}
+
+/* ── 3D hover lift for all clickable cards ── */
+[role="button"]:not([disabled]),
+a[href]:not([class*="no-3d"]) {
+  transition: transform 0.2s cubic-bezier(0.23,1,0.32,1), box-shadow 0.2s ease !important;
+}
+[role="button"]:not([disabled]):hover {
+  transform: translateY(-2px) translateZ(6px) !important;
+}
+
+/* ── Glowing progress bars ── */
+@keyframes progress-flow {
+  0%   { background-position: 0%   50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0%   50%; }
+}
+progress, [class*="progress"] {
+  background-size: 200% auto;
+  animation: progress-flow 3s linear infinite;
+}
+
+/* ── Scanline CRT effect on terminal areas ── */
+@keyframes crt-scan {
+  0%   { transform: translateY(-100%); opacity: 0.03; }
+  100% { transform: translateY(100vh); opacity: 0.02; }
+}
+.font-mono, pre, code:not([class*="language"]) {
+  position: relative;
+}
+
+/* ── 3D Input fields ── */
+input, textarea, select {
+  transition: all 0.2s ease !important;
+  transform: translateZ(0);
+}
+input:focus, textarea:focus, select:focus {
+  transform: translateZ(4px) scale(1.002) !important;
+  box-shadow: 0 0 0 1px rgba(226,18,39,0.4), 0 4px 20px rgba(226,18,39,0.08), 0 0 30px rgba(226,18,39,0.04) !important;
+}
+
+/* ── Modal backdrop 3D parallax depth ── */
+@keyframes backdrop-depth {
+  0%   { backdrop-filter: blur(8px)  brightness(0.3); }
+  50%  { backdrop-filter: blur(10px) brightness(0.28); }
+  100% { backdrop-filter: blur(8px)  brightness(0.3); }
+}
+[data-state="open"] + [data-overlay] {
+  animation: backdrop-depth 4s ease-in-out infinite;
+}
+
+/* ── 3D Top navigation bar enhancement ── */
+nav, header, .topbar, [class*="topbar"] {
+  transform-style: preserve-3d;
+  perspective: 1200px;
+}
+
+/* ── Futuristic scrollbar ── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: rgba(0,0,0,0.4); }
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #e21227, #a78bfa, #00e5ff);
+  border-radius: 4px;
+  animation: rainbow-flow 6s linear infinite;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #ff3355, #c084fc, #22d3ee);
+}
+
+/* ── 3D badge & tag hover effects ── */
+[class*="badge"], [class*="tag"], [class*="chip"], [class*="pill"] {
+  transition: transform 0.18s ease, box-shadow 0.18s ease !important;
+}
+[class*="badge"]:hover, [class*="tag"]:hover {
+  transform: scale(1.06) translateZ(3px) !important;
+}
+
+/* ── Animated modal open entrance 3D ── */
+@keyframes modal-enter-3d {
+  from { opacity: 0; transform: translate(-50%,-50%) scale(0.88) rotateX(12deg) translateZ(-40px); }
+  to   { opacity: 1; transform: translate(-50%,-50%) scale(1)    rotateX(0deg)  translateZ(0px);   }
+}
+
+/* ── 3D depth on sidebar items ── */
+.CHAT-GPT-sidebar [class*="rounded"]:hover {
+  transform: translateX(3px) translateZ(4px) !important;
+  transition: transform 0.18s ease !important;
+}
+
+/* ── Pulsing Live indicators ── */
+@keyframes live-ping {
+  0%   { transform: scale(1);   opacity: 1;   }
+  70%  { transform: scale(2.2); opacity: 0;   }
+  100% { transform: scale(2.2); opacity: 0;   }
+}
+[class*="live"], [class*="online"], [class*="active-dot"] {
+  position: relative;
+}
+[class*="live"]::before, [class*="online"]::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: live-ping 2s cubic-bezier(0,0,0.2,1) infinite;
+  opacity: 0.5;
+}
+
+/* ── Holographic shimmer on primary buttons ── */
+@keyframes btn-shimmer {
+  0%   { left: -100%; }
+  50%  { left: 100%;  }
+  100% { left: 100%;  }
+}
+button[class*="primary"], button[class*="bg-primary"], [class*="btn-primary"] {
+  position: relative;
+  overflow: hidden;
+}
+button[class*="primary"]::after, [class*="btn-primary"]::after {
+  content: "";
+  position: absolute;
+  top: 0; left: -100%;
+  width: 60%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+  transform: skewX(-20deg);
+  animation: btn-shimmer 3s ease-in-out infinite 1s;
+}
+
+/* ── Deep 3D perspective on full page panels ── */
+.fixed[style*="inset-0"], .fixed[class*="inset-0"] {
+  transform-style: preserve-3d;
+  perspective: 2000px;
+}
+
+/* ── Animated grid / matrix background ── */
+@keyframes matrix-pulse {
+  0%, 100% { opacity: 0.015; }
+  50%       { opacity: 0.03;  }
+}
+.bg-background, [class*="bg-background"] {
+  position: relative;
+}
+
+/* ── Glitch effect on hover for tool buttons ── */
+@keyframes micro-glitch {
+  0%  { clip-path: none; }
+  85% { clip-path: none; }
+  86% { clip-path: inset(0 0 50% 0); transform: translate(-1px, 0); }
+  87% { clip-path: inset(50% 0 0 0); transform: translate(1px, 0);  }
+  88% { clip-path: none; transform: translate(0, 0); }
+  100%{ clip-path: none; }
+}
+.tool-btn-3d:hover {
+  animation: micro-glitch 5s linear infinite !important;
+}
+
+/* ── 3D card tilt effect on interactive panels ── */
+@keyframes tilt-breathe {
+  0%,100% { transform: rotateX(0deg) rotateY(0deg) translateZ(0px); }
+  25%     { transform: rotateX(0.5deg) rotateY(-0.5deg) translateZ(2px); }
+  75%     { transform: rotateX(-0.5deg) rotateY(0.5deg) translateZ(2px); }
+}
+[class*="cyber-card"], [class*="hud-panel"], [class*="neural-card"] {
+  animation: tilt-breathe 8s ease-in-out infinite;
+  transform-style: preserve-3d;
+}
+
+/* ── Futuristic table rows 3D ── */
+tr:hover td {
+  background: rgba(226,18,39,0.04) !important;
+  transform: translateZ(2px) !important;
+  transition: all 0.15s ease !important;
+}
+
+/* ── Icon 3D glow on hover ── */
+svg:hover {
+  filter: drop-shadow(0 0 4px currentColor) !important;
+  transition: filter 0.2s ease !important;
+}
+
+/* ── Phone-optimized 3D effects (performance friendly) ── */
+@media (max-width: 640px) {
+  button:not([disabled]):hover {
+    transform: translateY(-0.5px) !important;
+  }
+  [role="button"]:hover {
+    transform: translateY(-1px) !important;
+  }
+  ::-webkit-scrollbar { width: 2px; }
+}
+
+/* ── Neural network particle pulse on active AI state ── */
+@keyframes neural-fire {
+  0%   { box-shadow: 0 0 4px  #e21227, 0 0 8px  rgba(226,18,39,0.3); }
+  33%  { box-shadow: 0 0 8px  #00e5ff, 0 0 16px rgba(0,229,255,0.3); }
+  66%  { box-shadow: 0 0 6px  #a78bfa, 0 0 12px rgba(167,139,250,0.3); }
+  100% { box-shadow: 0 0 4px  #e21227, 0 0 8px  rgba(226,18,39,0.3); }
+}
+[class*="streaming"], [class*="thinking"], [class*="generating"] {
+  animation: neural-fire 2s linear infinite !important;
+}
+
+/* ── Enhanced chat bubble 3D on mobile ── */
+@media (max-width: 768px) {
+  .msg-bubble-user {
+    animation: neon-border-pulse 8s ease-in-out infinite !important;
+  }
+  .msg-bubble-ai {
+    animation: neon-border-pulse-ai 9s ease-in-out infinite !important;
+  }
+}
