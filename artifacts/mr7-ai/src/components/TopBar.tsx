@@ -1051,6 +1051,7 @@ function ModelSelector3D({
   const [q, setQ] = useState("");
   const btnRef = useRef<HTMLButtonElement>(null);
   const [pos, setPos] = useState({ top: 0, left: 0 });
+  const [modelOff, setModelOff] = useState(() => localStorage.getItem("mr7-model-off") === "1");
 
   function openWindow() {
     if (btnRef.current) {
@@ -1155,12 +1156,66 @@ function ModelSelector3D({
 
               {/* Header */}
               <div className="flex items-center justify-between px-4 pt-3 pb-2">
-                <div className="text-[8px] font-black tracking-[0.5em] uppercase" style={{ color: "rgba(226,18,39,0.5)" }}>AI MODEL SELECT</div>
+                <div className="flex items-center gap-2">
+                  <div className="text-[8px] font-black tracking-[0.5em] uppercase" style={{ color: "rgba(226,18,39,0.5)" }}>AI MODEL SELECT</div>
+                  {/* OFF toggle button */}
+                  <motion.button
+                    onClick={() => {
+                      const next = !modelOff;
+                      setModelOff(next);
+                      localStorage.setItem("mr7-model-off", next ? "1" : "0");
+                      toast({ description: next ? "AI Model disabled — responses paused." : "AI Model enabled." });
+                    }}
+                    className="flex items-center gap-1 px-2 py-0.5 rounded-lg text-[8px] font-black tracking-widest relative overflow-hidden"
+                    style={{
+                      background: modelOff ? "rgba(255,45,85,0.18)" : "rgba(34,197,94,0.12)",
+                      border: `1px solid ${modelOff ? "rgba(255,45,85,0.5)" : "rgba(34,197,94,0.4)"}`,
+                      color: modelOff ? "#ff2d55" : "#22c55e",
+                      boxShadow: modelOff ? "0 0 12px rgba(255,45,85,0.3), inset 0 0 8px rgba(255,45,85,0.1)" : "0 0 10px rgba(34,197,94,0.25), inset 0 0 6px rgba(34,197,94,0.08)",
+                    }}
+                    whileHover={{ scale: 1.08 }}
+                    whileTap={{ scale: 0.92 }}
+                    title={modelOff ? "Click to enable AI Model" : "Click to disable AI Model"}
+                  >
+                    {/* Power icon */}
+                    <motion.svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                      className="w-2.5 h-2.5"
+                      animate={modelOff ? { opacity: [1, 0.4, 1] } : { opacity: 1 }}
+                      transition={{ duration: 1.2, repeat: modelOff ? Infinity : 0 }}
+                    >
+                      <path d="M18.36 6.64a9 9 0 1 1-12.73 0" /><line x1="12" y1="2" x2="12" y2="12" />
+                    </motion.svg>
+                    {modelOff ? "OFF" : "ON"}
+                    {/* Shimmer sweep */}
+                    <motion.span className="absolute inset-y-0 w-6 pointer-events-none"
+                      style={{ background: `linear-gradient(90deg,transparent,${modelOff ? "rgba(255,45,85,0.3)" : "rgba(34,197,94,0.3)"},transparent)` }}
+                      animate={{ x: ["-150%", "250%"] }}
+                      transition={{ duration: 1.8, repeat: Infinity, ease: "linear" }} />
+                  </motion.button>
+                </div>
                 <motion.button onClick={() => setOpen(false)}
                   className="w-6 h-6 rounded-lg flex items-center justify-center text-[12px]"
                   style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.35)" }}
                   whileHover={{ background: "rgba(226,18,39,0.12)", color: "#e21227" }}>×</motion.button>
               </div>
+              {/* Model disabled overlay banner */}
+              {modelOff && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+                  className="mx-3 mb-2 rounded-xl flex items-center gap-2 px-3 py-2"
+                  style={{ background: "rgba(255,45,85,0.08)", border: "1px solid rgba(255,45,85,0.25)", boxShadow: "0 0 20px rgba(255,45,85,0.1)" }}
+                >
+                  <motion.div animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 0.8, repeat: Infinity }}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#ff2d55" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                      <path d="M18.36 6.64a9 9 0 1 1-12.73 0" /><line x1="12" y1="2" x2="12" y2="12" />
+                    </svg>
+                  </motion.div>
+                  <div>
+                    <p className="text-[10px] font-black tracking-widest" style={{ color: "#ff2d55" }}>AI MODEL DISABLED</p>
+                    <p className="text-[8px] text-muted-foreground/60 font-mono">All responses are paused · Click ON to resume</p>
+                  </div>
+                </motion.div>
+              )}
 
               {/* Search */}
               <div className="px-3 pb-2" style={{ borderBottom: "1px solid rgba(226,18,39,0.08)" }}>

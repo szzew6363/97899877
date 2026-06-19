@@ -577,30 +577,108 @@ body.tab-hidden canvas { animation-play-state: paused !important; }
     inset 0 1px 0 rgba(255,255,255,0.08) !important;
 }
 
+/* ── Rainbow chromatic text animation ── */
+@keyframes rainbow-flow {
+  0%   { color: #ff2d55; }
+  10%  { color: #ff6b35; }
+  20%  { color: #f7c59f; }
+  30%  { color: #ffe066; }
+  40%  { color: #06d6a0; }
+  50%  { color: #00e5ff; }
+  60%  { color: #4cc9f0; }
+  70%  { color: #7209b7; }
+  80%  { color: #a78bfa; }
+  90%  { color: #f72585; }
+  100% { color: #ff2d55; }
+}
+@keyframes rainbow-flow-slow {
+  0%   { color: #00e5ff; }
+  14%  { color: #4cc9f0; }
+  28%  { color: #a78bfa; }
+  42%  { color: #f72585; }
+  57%  { color: #ff6b35; }
+  71%  { color: #06d6a0; }
+  85%  { color: #ffe066; }
+  100% { color: #00e5ff; }
+}
+@keyframes holographic-shine {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@keyframes bubble-float {
+  0%, 100% { transform: translateY(0px) translateZ(0px); }
+  50%       { transform: translateY(-2px) translateZ(4px); }
+}
+@keyframes neon-border-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(255,45,85,0.5), 0 0 20px rgba(255,45,85,0.2), 0 4px 30px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1); }
+  25%  { box-shadow: 0 0 12px rgba(0,229,255,0.5), 0 0 30px rgba(0,229,255,0.2), 0 4px 30px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1); }
+  50%  { box-shadow: 0 0 10px rgba(167,139,250,0.5), 0 0 25px rgba(167,139,250,0.2), 0 4px 30px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1); }
+  75%  { box-shadow: 0 0 12px rgba(6,214,160,0.5), 0 0 30px rgba(6,214,160,0.2), 0 4px 30px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1); }
+}
+@keyframes neon-border-pulse-ai {
+  0%, 100% { border-left-color: rgba(255,45,85,0.6); }
+  20%  { border-left-color: rgba(0,229,255,0.6); }
+  40%  { border-left-color: rgba(167,139,250,0.7); }
+  60%  { border-left-color: rgba(6,214,160,0.6); }
+  80%  { border-left-color: rgba(247,37,133,0.6); }
+}
+
 /* ── 3D Message Bubble ── */
 .msg-bubble-user {
-  background: linear-gradient(135deg, rgba(226,18,39,0.12), rgba(40,0,8,0.95)) !important;
-  border: 1px solid rgba(226,18,39,0.25) !important;
+  background: linear-gradient(135deg, rgba(226,18,39,0.15), rgba(40,0,8,0.95)) !important;
+  border: 1px solid rgba(226,18,39,0.35) !important;
   box-shadow:
-    0 0 0 1px rgba(226,18,39,0.1),
-    0 4px 20px rgba(226,18,39,0.12),
-    inset 0 1px 0 rgba(255,255,255,0.06),
-    inset 0 -1px 0 rgba(226,18,39,0.1) !important;
+    0 0 0 1px rgba(226,18,39,0.15),
+    0 4px 24px rgba(226,18,39,0.18),
+    0 8px 40px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(255,255,255,0.1),
+    inset 0 -1px 0 rgba(226,18,39,0.15) !important;
   position: relative;
-  transition: box-shadow 0.2s ease;
+  transform-style: preserve-3d;
+  perspective: 800px;
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+  animation: neon-border-pulse 6s ease-in-out infinite, bubble-float 5s ease-in-out infinite;
 }
 .msg-bubble-user:hover {
+  transform: translateY(-2px) scale(1.01) !important;
   box-shadow:
-    0 0 0 1px rgba(226,18,39,0.3),
-    0 4px 30px rgba(226,18,39,0.2),
-    inset 0 1px 0 rgba(255,255,255,0.08) !important;
+    0 0 0 1px rgba(226,18,39,0.4),
+    0 8px 40px rgba(226,18,39,0.28),
+    0 16px 60px rgba(0,0,0,0.6),
+    inset 0 1px 0 rgba(255,255,255,0.14) !important;
+}
+/* Rainbow colored user text */
+.msg-bubble-user .prose, .msg-bubble-user p, .msg-bubble-user span:not([class*="text-"]):not([style]) {
+  animation: rainbow-flow 8s linear infinite;
 }
 .msg-bubble-ai {
-  background: linear-gradient(160deg, rgba(16,16,22,0.6), rgba(8,8,12,0.4)) !important;
-  border-left: 2px solid rgba(226,18,39,0.3) !important;
-  border-top: 1px solid rgba(255,255,255,0.04) !important;
+  background: linear-gradient(160deg, rgba(14,14,22,0.75), rgba(8,8,14,0.55)) !important;
+  border-left: 3px solid rgba(226,18,39,0.5) !important;
+  border-top: 1px solid rgba(255,255,255,0.06) !important;
+  border-right: 1px solid rgba(255,255,255,0.03) !important;
+  border-bottom: 1px solid rgba(0,229,255,0.06) !important;
   padding-left: 16px !important;
   position: relative;
+  transform-style: preserve-3d;
+  perspective: 1000px;
+  transition: all 0.3s ease;
+  animation: neon-border-pulse-ai 7s ease-in-out infinite;
+  box-shadow:
+    -4px 0 16px rgba(226,18,39,0.12),
+    0 4px 24px rgba(0,0,0,0.4),
+    inset 2px 0 8px rgba(226,18,39,0.06) !important;
+}
+.msg-bubble-ai:hover {
+  transform: translateX(2px) !important;
+  box-shadow:
+    -6px 0 24px rgba(226,18,39,0.2),
+    0 8px 32px rgba(0,0,0,0.5),
+    inset 3px 0 12px rgba(226,18,39,0.1) !important;
+}
+/* Rainbow colored AI text */
+.msg-bubble-ai .prose, .msg-bubble-ai > p, .msg-bubble-ai > div > p {
+  animation: rainbow-flow-slow 10s linear infinite;
 }
 
 /* ── Neon Button 3D ── */

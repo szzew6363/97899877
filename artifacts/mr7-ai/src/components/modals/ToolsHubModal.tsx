@@ -611,7 +611,18 @@ export function ToolsHubModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContentTop
-        className="bg-card border-border w-[98vw] max-w-3xl max-h-[92dvh] overflow-hidden flex flex-col"
+        className="bg-card border-border overflow-hidden flex flex-col"
+        style={{
+          width: "min(420px, 96vw)",
+          maxWidth: "96vw",
+          maxHeight: "88dvh",
+          top: "50%",
+          transform: "translate(-50%, -50%)",
+          boxShadow: "0 0 60px rgba(226,18,39,0.2), 0 0 120px rgba(0,229,255,0.08), 0 30px 100px rgba(0,0,0,0.95), inset 0 1px 0 rgba(255,255,255,0.06)",
+          border: "1px solid rgba(226,18,39,0.35)",
+          perspective: "1000px",
+          transformStyle: "preserve-3d",
+        } as React.CSSProperties}
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <DialogHeader>

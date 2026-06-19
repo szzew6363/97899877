@@ -1533,7 +1533,7 @@ export function ChatView({ onShare, onOpenOsintDash }: { onShare?: () => void; o
           </div>
 
           {/* ── ROW 1: Mode Pills ── */}
-          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pb-1 mb-1">
+          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pb-1 mb-1 mt-3 pt-2" style={{ borderTop: "1px solid rgba(226,18,39,0.1)" }}>
             {/* Basic modes */}
             <ModePill active={mode === "chat"} onClick={() => setMode("chat")} title={t("chat.modeChat")}>
               <MessageSquare className="w-3.5 h-3.5" />
