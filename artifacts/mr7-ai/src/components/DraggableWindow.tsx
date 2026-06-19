@@ -30,7 +30,7 @@ const EDGE_CURSORS: Record<string, string> = {
   ne: "ne-resize", nw: "nw-resize", se: "se-resize", sw: "sw-resize",
 };
 
-// ── HUD Canvas for window chrome ──────────────────────────────────────────────
+// ── 3D HUD Canvas ─────────────────────────────────────────────────────────────
 function WindowHUDCanvas({ color, active }: { color: string; active: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef    = useRef(0);
@@ -42,27 +42,22 @@ function WindowHUDCanvas({ color, active }: { color: string; active: boolean }) 
     const cv = canvasRef.current; if (!cv) return;
     const ctx = cv.getContext("2d", { alpha: true, desynchronized: true })!;
     if (!ctx) return;
-    const cvEl = cv;
-
+    const hex = color.replace("#", "").padEnd(6,"0");
+    const r = parseInt(hex.slice(0,2), 16);
+    const g = parseInt(hex.slice(2,4), 16);
+    const b = parseInt(hex.slice(4,6), 16);
+    const DPR = Math.min(window.devicePixelRatio || 1, 2);
     let W = 0, H = 0;
-    const DPR = Math.min(window.devicePixelRatio || 1, 1.5);
 
     function resize() {
-      W = cvEl.width  = cvEl.offsetWidth  * DPR;
-      H = cvEl.height = cvEl.offsetHeight * DPR;
+      W = cv!.width  = cv!.offsetWidth  * DPR;
+      H = cv!.height = cv!.offsetHeight * DPR;
     }
     resize();
     const ro = new ResizeObserver(resize);
     ro.observe(cv);
 
-    // Parse color to RGB
-    const hex = color.replace("#", "");
-    const r = parseInt(hex.slice(0,2), 16);
-    const g = parseInt(hex.slice(2,4), 16);
-    const b = parseInt(hex.slice(4,6), 16);
-
-    // Sparse data nodes
-    const nodes = Array.from({ length: 8 }, () => ({
+    const nodes = Array.from({ length: 10 }, () => ({
       x: Math.random(), y: Math.random(),
       vx: (Math.random() - 0.5) * 0.0004,
       vy: (Math.random() - 0.5) * 0.0003,
@@ -72,16 +67,16 @@ function WindowHUDCanvas({ color, active }: { color: string; active: boolean }) 
     let lastTime = 0;
     function draw(ts: number) {
       rafRef.current = requestAnimationFrame(draw);
-      if (ts - lastTime < 33) return; // cap ~30fps for chrome
+      if (ts - lastTime < 33) return;
       lastTime = ts;
-      if (W === 0 || H === 0) return;
+      if (!W || !H) return;
       tRef.current += 0.018;
       const t = tRef.current;
       const a = activeRef.current;
 
       ctx.clearRect(0, 0, W, H);
 
-      // Perspective grid lines (subtle)
+      // Perspective grid
       const gridA = a ? 0.055 : 0.025;
       ctx.save();
       ctx.setLineDash([2 * DPR, 10 * DPR]);
@@ -104,7 +99,7 @@ function WindowHUDCanvas({ color, active }: { color: string; active: boolean }) 
       sg.addColorStop(1, `rgba(${r},${g},${b},0)`);
       ctx.fillStyle = sg; ctx.fillRect(0, scanY - 12, W, 24);
 
-      // Moving nodes + connections
+      // Nodes + connections
       nodes.forEach(n => {
         n.x += n.vx; n.y += n.vy;
         if (n.x < 0) n.x += 1; if (n.x > 1) n.x -= 1;
@@ -115,8 +110,8 @@ function WindowHUDCanvas({ color, active }: { color: string; active: boolean }) 
           const dx = (nodes[i].x - nodes[j].x) * W;
           const dy = (nodes[i].y - nodes[j].y) * H;
           const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < W * 0.18) {
-            const fade = (1 - dist / (W * 0.18)) * (a ? 0.11 : 0.05);
+          if (dist < W * 0.2) {
+            const fade = (1 - dist / (W * 0.2)) * (a ? 0.11 : 0.05);
             ctx.beginPath();
             ctx.moveTo(nodes[i].x * W, nodes[i].y * H);
             ctx.lineTo(nodes[j].x * W, nodes[j].y * H);
@@ -128,12 +123,12 @@ function WindowHUDCanvas({ color, active }: { color: string; active: boolean }) 
       nodes.forEach(n => {
         const pulse = (Math.sin(t * 2.2 + n.phase) + 1) * 0.5;
         ctx.beginPath();
-        ctx.arc(n.x * W, n.y * H, 1.4 * DPR, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(${r},${g},${b},${(0.2 + pulse * 0.5) * (a ? 1 : 0.45)})`;
+        ctx.arc(n.x * W, n.y * H, (1.2 + pulse * 0.8) * DPR, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${r},${g},${b},${(0.18 + pulse * 0.55) * (a ? 1 : 0.45)})`;
         ctx.fill();
       });
 
-      // Corner brackets — glowing
+      // Corner brackets
       const bs = 14 * DPR, bw = 1.5 * DPR;
       const bA = a ? 0.8 + (Math.sin(t * 2) + 1) * 0.1 : 0.4;
       ctx.strokeStyle = `rgba(${r},${g},${b},${bA})`; ctx.lineWidth = bw;
@@ -142,7 +137,7 @@ function WindowHUDCanvas({ color, active }: { color: string; active: boolean }) 
       ctx.beginPath(); ctx.moveTo(0, H - bs); ctx.lineTo(0, H); ctx.lineTo(bs, H); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(W - bs, H); ctx.lineTo(W, H); ctx.lineTo(W, H - bs); ctx.stroke();
 
-      // Side glow when active
+      // Side glow
       if (a) {
         const gA = 0.12 + (Math.sin(t * 1.8) + 1) * 0.04;
         const lgL = ctx.createLinearGradient(0, 0, 32 * DPR, 0);
@@ -161,7 +156,19 @@ function WindowHUDCanvas({ color, active }: { color: string; active: boolean }) 
   return (
     <canvas ref={canvasRef}
       className="absolute inset-0 w-full h-full pointer-events-none"
-      style={{ opacity: 0.9, transform: "translateZ(0)" }} />
+      style={{ opacity: 0.9, transform: "translateZ(0)", zIndex: 0 }} />
+  );
+}
+
+// ── Grip dots ─────────────────────────────────────────────────────────────────
+function GripDots({ color }: { color: string }) {
+  return (
+    <div className="flex items-center gap-[3px] select-none flex-shrink-0">
+      {Array.from({ length: 8 }).map((_, i) => (
+        <div key={i} className="w-[3px] h-[3px] rounded-full"
+          style={{ background: color, opacity: 0.35 + (i % 2) * 0.3, boxShadow: `0 0 4px ${color}80` }} />
+      ))}
+    </div>
   );
 }
 
@@ -181,22 +188,26 @@ export interface DraggableWindowProps {
   statusDot?: string;
   maxWidth?: number;
   id?: string;
+  /** Start maximized (full-screen). Default: true */
+  defaultMaximized?: boolean;
 }
 
 export function DraggableWindow({
   open, onClose, title, subtitle, color = "#00e5ff",
-  width = 520, defaultPos, children, icon, badge, statusDot, minWidth = 320, maxWidth, id,
+  width = 640, defaultPos, children, icon, badge, statusDot,
+  minWidth = 360, maxWidth, id,
+  defaultMaximized = true,
 }: DraggableWindowProps) {
   const wid = useRef(id ?? `win-${Math.random().toString(36).slice(2)}`).current;
   const { bringToFront, BASE_Z } = useContext(WindowManagerContext);
 
   const [pos, setPos] = useState(() => ({
     x: defaultPos?.x ?? Math.max(40, (window.innerWidth - width) / 2),
-    y: defaultPos?.y ?? 64,
+    y: defaultPos?.y ?? 80,
   }));
-  const [size, setSize] = useState({ w: width, h: -1 }); // h=-1 = auto
+  const [size, setSize] = useState({ w: width, h: -1 });
   const [minimized, setMinimized] = useState(false);
-  const [maximized, setMaximized] = useState(false);
+  const [maximized, setMaximized] = useState(defaultMaximized);
   const [active, setActive] = useState(true);
   const [zIndex, setZIndex] = useState(BASE_Z);
 
@@ -207,17 +218,21 @@ export function DraggableWindow({
   const windowRef  = useRef<HTMLDivElement>(null);
   const savedRect  = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
 
-  // Bring to front on open or click
   useEffect(() => {
     if (open) setZIndex(bringToFront(wid));
   }, [open, bringToFront, wid]);
+
+  // Re-apply defaultMaximized when modal opens fresh
+  useEffect(() => {
+    if (open) setMaximized(defaultMaximized);
+  }, [open]); // eslint-disable-line
 
   const handleWindowClick = useCallback(() => {
     setActive(true);
     setZIndex(bringToFront(wid));
   }, [bringToFront, wid]);
 
-  // ── Drag ──
+  // ── Drag ──────────────────────────────────────────────────────────────────
   const onTitleMouseDown = useCallback((e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest("button")) return;
     if (maximized) return;
@@ -226,6 +241,8 @@ export function DraggableWindow({
     const el = windowRef.current;
     dragStart.current = { mx: e.clientX, my: e.clientY, px: pos.x, py: pos.y };
     setZIndex(bringToFront(wid));
+    document.body.style.cursor = "grabbing";
+    document.body.style.userSelect = "none";
 
     const onMove = (ev: MouseEvent) => {
       if (!dragging.current || !el) return;
@@ -239,23 +256,24 @@ export function DraggableWindow({
     const onUp = (ev: MouseEvent) => {
       if (!dragging.current) return;
       dragging.current = false;
-      const el2 = windowRef.current;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
       const dx = ev.clientX - dragStart.current.mx;
       const dy = ev.clientY - dragStart.current.my;
       setPos({
-        x: Math.max(0, Math.min(window.innerWidth - (el2?.offsetWidth ?? width), dragStart.current.px + dx)),
+        x: Math.max(0, Math.min(window.innerWidth - (windowRef.current?.offsetWidth ?? width), dragStart.current.px + dx)),
         y: Math.max(0, Math.min(window.innerHeight - 48, dragStart.current.py + dy)),
       });
       document.removeEventListener("mousemove", onMove);
       document.removeEventListener("mouseup", onUp);
     };
-    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mousemove", onMove, { passive: true });
     document.addEventListener("mouseup", onUp);
   }, [pos, width, maximized, bringToFront, wid]);
 
-  // ── Resize ──
+  // ── Resize ────────────────────────────────────────────────────────────────
   const onResizeMouseDown = useCallback((edge: ResizeEdge) => (e: React.MouseEvent) => {
-    if (maximized) return;
+    if (maximized || minimized) return;
     e.preventDefault(); e.stopPropagation();
     resizing.current = edge;
     const el = windowRef.current;
@@ -271,23 +289,15 @@ export function DraggableWindow({
       const dx = ev.clientX - resizeStart.current.mx;
       const dy = ev.clientY - resizeStart.current.my;
       const edge2 = resizing.current;
-
-      let nx = resizeStart.current.px;
-      let ny = resizeStart.current.py;
-      let nw = resizeStart.current.w;
-      let nh = resizeStart.current.h;
-
+      let nx = resizeStart.current.px, ny = resizeStart.current.py;
+      let nw = resizeStart.current.w,  nh = resizeStart.current.h;
       if (edge2.includes("e")) nw = Math.max(minWidth, nw + dx);
       if (edge2.includes("s")) nh = Math.max(200, nh + dy);
       if (edge2.includes("w")) { nw = Math.max(minWidth, nw - dx); nx = resizeStart.current.px + (resizeStart.current.w - nw); }
       if (edge2.includes("n")) { nh = Math.max(200, nh - dy);     ny = resizeStart.current.py + (resizeStart.current.h - nh); }
-
       if (maxWidth) nw = Math.min(maxWidth, nw);
-
-      el.style.left   = nx + "px";
-      el.style.top    = ny + "px";
-      el.style.width  = nw + "px";
-      el.style.height = nh + "px";
+      el.style.left = nx+"px"; el.style.top = ny+"px";
+      el.style.width = nw+"px"; el.style.height = nh+"px";
     };
     const onUp = () => {
       if (!resizing.current) return;
@@ -300,11 +310,11 @@ export function DraggableWindow({
       document.removeEventListener("mousemove", onMove);
       document.removeEventListener("mouseup", onUp);
     };
-    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mousemove", onMove, { passive: true });
     document.addEventListener("mouseup", onUp);
-  }, [pos, size, minWidth, maxWidth, maximized]);
+  }, [pos, size, minWidth, maxWidth, maximized, minimized]);
 
-  // ── Maximize toggle ──
+  // ── Maximize toggle ────────────────────────────────────────────────────────
   const toggleMaximize = useCallback(() => {
     if (!maximized) {
       const el = windowRef.current;
@@ -315,9 +325,12 @@ export function DraggableWindow({
       if (savedRect.current) {
         setPos({ x: savedRect.current.x, y: savedRect.current.y });
         setSize({ w: savedRect.current.w, h: savedRect.current.h });
+      } else {
+        setPos({ x: 40, y: 80 });
+        setSize({ w: width, h: -1 });
       }
     }
-  }, [maximized, pos, size]);
+  }, [maximized, pos, size, width]);
 
   // Escape key
   useEffect(() => {
@@ -335,89 +348,81 @@ export function DraggableWindow({
         <motion.div
           ref={windowRef}
           onClick={handleWindowClick}
-          initial={{ opacity: 0, scale: 0.88, y: -20, rotateX: 10 }}
+          initial={{ opacity: 0, scale: maximized ? 1 : 0.88, y: -20, rotateX: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0, rotateX: 0 }}
-          exit={{ opacity: 0, scale: 0.88, y: -16, rotateX: 6 }}
-          transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
+          exit={{ opacity: 0, scale: 0.9, y: -16, rotateX: 6 }}
+          transition={{ duration: 0.26, ease: [0.16, 1, 0.3, 1] }}
           style={{
             position: "fixed",
             left:   maximized ? 0   : pos.x,
             top:    maximized ? 0   : pos.y,
             width:  maximized ? "100vw" : size.w,
-            height: maximized ? "100vh" : (size.h > 0 ? size.h : undefined),
-            maxHeight: maximized ? "100vh" : "92vh",
+            height: minimized ? "auto" : maximized ? "100vh" : (size.h > 0 ? size.h : undefined),
+            maxHeight: minimized ? "auto" : maximized ? "100vh" : "94vh",
             zIndex,
-            background: `linear-gradient(160deg,
-              rgba(4,2,12,0.97) 0%,
-              rgba(2,1,8,0.97) 50%,
-              rgba(6,2,16,0.97) 100%)`,
+            background: `linear-gradient(160deg,rgba(4,2,12,0.97) 0%,rgba(2,1,8,0.97) 50%,rgba(6,2,16,0.97) 100%)`,
             border: `1px solid ${hexColor}${active ? "55" : "28"}`,
             borderRadius: maximized ? 0 : 20,
             boxShadow: active
-              ? `0 0 140px ${hexColor}22, 0 0 60px ${hexColor}0c, 0 40px 100px rgba(0,0,0,0.97), inset 0 1px 0 ${hexColor}22`
-              : `0 0 60px ${hexColor}0a, 0 24px 60px rgba(0,0,0,0.92), inset 0 1px 0 ${hexColor}10`,
-            backdropFilter: "blur(50px) saturate(180%)",
+              ? `0 0 160px ${hexColor}22,0 0 60px ${hexColor}0c,0 40px 100px rgba(0,0,0,0.97),inset 0 1px 0 ${hexColor}22`
+              : `0 0 60px ${hexColor}0a,0 24px 60px rgba(0,0,0,0.92),inset 0 1px 0 ${hexColor}10`,
+            backdropFilter: "blur(60px) saturate(200%)",
             display: "flex",
             flexDirection: "column",
             overflow: "hidden",
-            transition: maximized ? "left 0.25s ease, top 0.25s ease, width 0.25s ease, height 0.25s ease" : undefined,
+            transition: maximized ? "left 0.22s ease,top 0.22s ease,width 0.22s ease,height 0.22s ease" : undefined,
           }}
         >
-          {/* HUD background canvas */}
+          {/* 3D HUD canvas */}
           <WindowHUDCanvas color={hexColor} active={active} />
 
           {/* Top accent line */}
           <div className="absolute inset-x-0 top-0 h-[2px] z-10 pointer-events-none"
             style={{ background: `linear-gradient(90deg,transparent,${hexColor},rgba(255,255,255,0.3),${hexColor},transparent)` }} />
 
-          {/* Corner brackets */}
-          {["top-2.5 left-2.5 border-t-2 border-l-2","top-2.5 right-2.5 border-t-2 border-r-2",
-            "bottom-2.5 left-2.5 border-b-2 border-l-2","bottom-2.5 right-2.5 border-b-2 border-r-2"].map((cls, i) => (
-            <span key={i} className={`absolute w-5 h-5 pointer-events-none z-10 ${cls}`}
-              style={{ borderColor: `${hexColor}${i < 2 ? "80" : "40"}` }} />
-          ))}
-
           {/* ── Title Bar ── */}
           <div
-            className="relative flex items-center justify-between px-4 py-2.5 cursor-move select-none z-20 flex-shrink-0"
+            className="relative flex items-center justify-between px-4 py-3.5 cursor-move select-none z-20 flex-shrink-0"
             style={{
               borderBottom: `1px solid ${hexColor}18`,
-              background: `linear-gradient(90deg, ${hexColor}08 0%, transparent 40%, transparent 60%, ${hexColor}08 100%)`,
-              minHeight: 48,
+              background: `linear-gradient(90deg,${hexColor}08 0%,transparent 40%,transparent 60%,${hexColor}08 100%)`,
+              minHeight: 52,
             }}
             onMouseDown={onTitleMouseDown}
             onDoubleClick={toggleMaximize}
           >
-            {/* Left: icon + title */}
+            {/* Left: grip + icon + title */}
             <div className="flex items-center gap-3 min-w-0">
+              <GripDots color={hexColor} />
               {icon && (
                 <motion.div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{ background: `${hexColor}18`, border: `1px solid ${hexColor}35`, boxShadow: `0 0 12px ${hexColor}20` }}
-                  animate={{ boxShadow: [`0 0 8px ${hexColor}15`, `0 0 18px ${hexColor}35`, `0 0 8px ${hexColor}15`] }}
+                  style={{ background:`${hexColor}18`, border:`1px solid ${hexColor}35`, boxShadow:`0 0 12px ${hexColor}20` }}
+                  animate={{ boxShadow:[`0 0 8px ${hexColor}15`,`0 0 20px ${hexColor}38`,`0 0 8px ${hexColor}15`] }}
                   transition={{ duration: 2.5, repeat: Infinity }}>
                   {icon}
                 </motion.div>
               )}
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[12px] font-black tracking-wide text-white truncate" style={{ textShadow: `0 0 14px ${hexColor}60` }}>
+                  <span className="text-[12px] font-black tracking-wide text-white truncate"
+                    style={{ textShadow:`0 0 14px ${hexColor}60` }}>
                     {title}
                   </span>
                   {badge && (
                     <span className="text-[7px] font-black px-1.5 py-0.5 rounded font-mono flex-shrink-0"
-                      style={{ background: `${hexColor}18`, border: `1px solid ${hexColor}40`, color: hexColor, boxShadow: `0 0 8px ${hexColor}25` }}>
+                      style={{ background:`${hexColor}18`, border:`1px solid ${hexColor}40`, color:hexColor, boxShadow:`0 0 8px ${hexColor}25` }}>
                       {badge}
                     </span>
                   )}
                   {statusDot && (
                     <motion.div className="w-2 h-2 rounded-full flex-shrink-0"
-                      style={{ background: statusDot, boxShadow: `0 0 8px ${statusDot}` }}
-                      animate={{ opacity: [0.5, 1, 0.5], scale: [0.9, 1.1, 0.9] }}
-                      transition={{ duration: 1.4, repeat: Infinity }} />
+                      style={{ background:statusDot, boxShadow:`0 0 8px ${statusDot}` }}
+                      animate={{ opacity:[0.5,1,0.5], scale:[0.9,1.1,0.9] }}
+                      transition={{ duration:1.4, repeat:Infinity }} />
                   )}
                 </div>
                 {subtitle && (
-                  <div className="text-[8px] font-mono mt-0.5 truncate" style={{ color: "rgba(255,255,255,0.28)" }}>
+                  <div className="text-[8px] font-mono mt-0.5 truncate" style={{ color:"rgba(255,255,255,0.28)" }}>
                     {subtitle}
                   </div>
                 )}
@@ -425,34 +430,34 @@ export function DraggableWindow({
             </div>
 
             {/* Right: window controls */}
-            <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+            <div className="flex items-center gap-1.5 flex-shrink-0 ml-3">
               {/* Minimize */}
               <motion.button
                 onClick={e => { e.stopPropagation(); setMinimized(m => !m); }}
-                className="w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black cursor-pointer relative overflow-hidden"
-                style={{ background: "rgba(255,193,7,0.08)", border: "1px solid rgba(255,193,7,0.25)", color: "rgba(255,193,7,0.7)" }}
-                whileHover={{ background: "rgba(255,193,7,0.20)", color: "#ffc107", scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
+                className="w-7 h-7 rounded-xl flex items-center justify-center text-[10px] font-black cursor-pointer relative overflow-hidden"
+                style={{ background:"rgba(255,193,7,0.08)", border:"1px solid rgba(255,193,7,0.28)", color:"rgba(255,193,7,0.75)" }}
+                whileHover={{ background:"rgba(255,193,7,0.22)", color:"#ffc107", scale:1.12 }}
+                whileTap={{ scale:0.9 }}
                 title="تصغير">
-                <span style={{ lineHeight: 1 }}>{minimized ? "▣" : "─"}</span>
+                <span style={{ lineHeight:1 }}>{minimized ? "▣" : "─"}</span>
               </motion.button>
               {/* Maximize */}
               <motion.button
                 onClick={e => { e.stopPropagation(); toggleMaximize(); }}
-                className="w-6 h-6 rounded-lg flex items-center justify-center text-[9px] cursor-pointer"
-                style={{ background: `${hexColor}08`, border: `1px solid ${hexColor}30`, color: `${hexColor}bb` }}
-                whileHover={{ background: `${hexColor}20`, color: hexColor, scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
+                className="w-7 h-7 rounded-xl flex items-center justify-center text-[9px] cursor-pointer"
+                style={{ background:`${hexColor}08`, border:`1px solid ${hexColor}32`, color:`${hexColor}bb` }}
+                whileHover={{ background:`${hexColor}22`, color:hexColor, scale:1.12 }}
+                whileTap={{ scale:0.9 }}
                 title={maximized ? "استعادة" : "تكبير"}>
-                <span style={{ lineHeight: 1 }}>{maximized ? "❐" : "⛶"}</span>
+                <span style={{ lineHeight:1 }}>{maximized ? "❐" : "⛶"}</span>
               </motion.button>
               {/* Close */}
               <motion.button
                 onClick={e => { e.stopPropagation(); onClose(); }}
-                className="w-6 h-6 rounded-lg flex items-center justify-center text-[11px] cursor-pointer"
-                style={{ background: "rgba(255,50,50,0.08)", border: "1px solid rgba(255,50,50,0.25)", color: "rgba(255,80,80,0.7)" }}
-                whileHover={{ background: "rgba(255,50,50,0.22)", color: "#ff4444", borderColor: "rgba(255,50,50,0.6)", scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
+                className="w-7 h-7 rounded-xl flex items-center justify-center text-[12px] cursor-pointer"
+                style={{ background:"rgba(255,50,50,0.08)", border:"1px solid rgba(255,50,50,0.28)", color:"rgba(255,80,80,0.75)" }}
+                whileHover={{ background:"rgba(255,50,50,0.24)", color:"#ff4444", borderColor:"rgba(255,50,50,0.6)", scale:1.12 }}
+                whileTap={{ scale:0.9 }}
                 title="إغلاق">
                 ✕
               </motion.button>
@@ -463,42 +468,44 @@ export function DraggableWindow({
           <AnimatePresence>
             {!minimized && (
               <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
+                initial={{ height:0, opacity:0 }}
+                animate={{ height:"auto", opacity:1 }}
+                exit={{ height:0, opacity:0 }}
+                transition={{ duration:0.22, ease:"easeOut" }}
                 className="flex-1 overflow-hidden relative z-10"
-                style={{ overflowY: "auto", scrollbarWidth: "thin", scrollbarColor: `${hexColor}30 transparent` }}>
-                {children}
+                style={{ overflowY:"auto", scrollbarWidth:"thin", scrollbarColor:`${hexColor}30 transparent` }}>
+                <div className="p-4 h-full">
+                  {children}
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
 
           {/* Bottom stripe */}
-          <div className="h-px flex-shrink-0 z-10"
-            style={{ background: `linear-gradient(90deg,transparent,${hexColor}60,transparent)` }} />
+          {!minimized && (
+            <div className="h-px flex-shrink-0 z-10"
+              style={{ background:`linear-gradient(90deg,transparent,${hexColor}60,transparent)` }} />
+          )}
 
           {/* ── Resize handles (8 directions) ── */}
           {!maximized && !minimized && (
             <>
-              {/* Edges */}
               {(["n","s","e","w"] as ResizeEdge[]).map(edge => (
                 <div key={edge!} onMouseDown={onResizeMouseDown(edge)} style={{
-                  position: "absolute", zIndex: 30, cursor: EDGE_CURSORS[edge!],
-                  ...(edge === "n" ? { top: 0, left: 6, right: 6, height: 4 } :
-                      edge === "s" ? { bottom: 0, left: 6, right: 6, height: 4 } :
-                      edge === "e" ? { right: 0, top: 6, bottom: 6, width: 4 } :
-                                     { left: 0, top: 6, bottom: 6, width: 4 }),
+                  position:"absolute", zIndex:30, cursor:EDGE_CURSORS[edge!],
+                  ...(edge==="n"?{top:0,left:6,right:6,height:5}:
+                      edge==="s"?{bottom:0,left:6,right:6,height:5}:
+                      edge==="e"?{right:0,top:6,bottom:6,width:5}:
+                                 {left:0,top:6,bottom:6,width:5}),
                 }} />
               ))}
-              {/* Corners */}
               {(["ne","nw","se","sw"] as ResizeEdge[]).map(corner => (
                 <div key={corner!} onMouseDown={onResizeMouseDown(corner)} style={{
-                  position: "absolute", zIndex: 31, cursor: EDGE_CURSORS[corner!], width: 12, height: 12,
-                  ...(corner === "ne" ? { top: 0, right: 0 } :
-                      corner === "nw" ? { top: 0, left: 0 } :
-                      corner === "se" ? { bottom: 0, right: 0 } :
-                                         { bottom: 0, left: 0 }),
+                  position:"absolute", zIndex:31, cursor:EDGE_CURSORS[corner!], width:14, height:14,
+                  ...(corner==="ne"?{top:0,right:0}:
+                      corner==="nw"?{top:0,left:0}:
+                      corner==="se"?{bottom:0,right:0}:
+                                    {bottom:0,left:0}),
                 }} />
               ))}
             </>

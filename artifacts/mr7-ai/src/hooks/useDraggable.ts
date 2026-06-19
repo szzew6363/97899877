@@ -1,89 +1,141 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-const GRID = 20;
-function snap(v: number): number { return Math.round(v / GRID) * GRID; }
+const GRID = 1; // no grid snapping — pixel-perfect
 
+function clamp(v: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, v)); }
+
+/**
+ * RAF-based drag hook. Mutates DOM directly during drag for zero-jank movement.
+ * Commits React state only on mouseup/touchend for persistence.
+ */
 export function useDraggable(
   storageKey: string,
-  defaultPos: { x: number; y: number }
+  defaultPos: { x: number; y: number } = { x: 40, y: 80 }
 ) {
   const [pos, setPos] = useState<{ x: number; y: number }>(() => {
     try {
       const v = localStorage.getItem(storageKey);
-      if (v) return JSON.parse(v);
+      if (v) {
+        const p = JSON.parse(v);
+        if (typeof p.x === "number" && typeof p.y === "number") return p;
+      }
     } catch {}
     return defaultPos;
   });
 
-  const rootRef = useRef<HTMLDivElement>(null);
+  const rootRef  = useRef<HTMLDivElement>(null);
+  const rafRef   = useRef(0);
+  const activeRef = useRef(false);
+  const targetRef = useRef({ x: pos.x, y: pos.y });
+  const offsetRef = useRef({ x: 0, y: 0 });
+
+  // Sync target when pos changes externally
+  useEffect(() => {
+    targetRef.current = { x: pos.x, y: pos.y };
+  }, [pos]);
+
+  const commit = useCallback((x: number, y: number) => {
+    const el = rootRef.current;
+    if (!el) return;
+    const w  = el.offsetWidth;
+    const cx = clamp(x, 0, window.innerWidth  - w - 2);
+    const cy = clamp(y, 0, window.innerHeight - 48);
+    el.style.left = `${cx}px`;
+    el.style.top  = `${cy}px`;
+    const p = { x: cx, y: cy };
+    setPos(p);
+    try { localStorage.setItem(storageKey, JSON.stringify(p)); } catch {}
+  }, [storageKey]);
 
   const onDragMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button !== 0) return;
+    if ((e.target as HTMLElement).closest("button")) return;
     e.preventDefault();
     e.stopPropagation();
     const el = rootRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
-    const offX = e.clientX - rect.left;
-    const offY = e.clientY - rect.top;
+    offsetRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    activeRef.current = true;
+
+    // Set cursor on body during drag
+    document.body.style.cursor = "grabbing";
+    document.body.style.userSelect = "none";
 
     const move = (ev: MouseEvent) => {
-      ev.preventDefault();
-      const nx = Math.max(0, Math.min(window.innerWidth  - rect.width  - 4, ev.clientX - offX));
-      const ny = Math.max(0, Math.min(window.innerHeight - 48,              ev.clientY - offY));
-      el.style.left = `${nx}px`;
-      el.style.top  = `${ny}px`;
+      if (!activeRef.current) return;
+      const el2 = rootRef.current;
+      if (!el2) return;
+      const w  = el2.offsetWidth;
+      const nx = clamp(ev.clientX - offsetRef.current.x, 0, window.innerWidth  - w - 2);
+      const ny = clamp(ev.clientY - offsetRef.current.y, 0, window.innerHeight - 48);
+      el2.style.left = `${nx}px`;
+      el2.style.top  = `${ny}px`;
+      targetRef.current = { x: nx, y: ny };
     };
 
     const up = (ev: MouseEvent) => {
+      activeRef.current = false;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
       document.removeEventListener("mousemove", move);
       document.removeEventListener("mouseup",   up);
-      const rawX = Math.max(0, Math.min(window.innerWidth  - rect.width  - 4, ev.clientX - offX));
-      const rawY = Math.max(0, Math.min(window.innerHeight - 48,              ev.clientY - offY));
-      const nx = snap(rawX); const ny = snap(rawY);
-      el.style.left = `${nx}px`; el.style.top = `${ny}px`;
-      const newPos = { x: nx, y: ny };
-      setPos(newPos);
-      try { localStorage.setItem(storageKey, JSON.stringify(newPos)); } catch {}
+      const el2 = rootRef.current;
+      if (!el2) return;
+      const w  = el2.offsetWidth;
+      const nx = clamp(ev.clientX - offsetRef.current.x, 0, window.innerWidth  - w - 2);
+      const ny = clamp(ev.clientY - offsetRef.current.y, 0, window.innerHeight - 48);
+      commit(nx, ny);
     };
 
-    document.addEventListener("mousemove", move);
+    document.addEventListener("mousemove", move, { passive: true });
     document.addEventListener("mouseup",   up);
-  }, [storageKey]);
+  }, [commit]);
 
   const onDragTouchStart = useCallback((e: React.TouchEvent) => {
+    if ((e.target as HTMLElement).closest("button")) return;
     e.stopPropagation();
     const el = rootRef.current;
     if (!el) return;
-    const rect  = el.getBoundingClientRect();
-    const t0    = e.touches[0];
-    const offX  = t0.clientX - rect.left;
-    const offY  = t0.clientY - rect.top;
+    const rect = el.getBoundingClientRect();
+    const t0   = e.touches[0];
+    offsetRef.current = { x: t0.clientX - rect.left, y: t0.clientY - rect.top };
+    activeRef.current = true;
 
     const move = (ev: TouchEvent) => {
-      ev.preventDefault();
+      if (!activeRef.current) return;
+      const el2 = rootRef.current;
+      if (!el2) return;
       const t  = ev.touches[0];
-      const nx = Math.max(0, Math.min(window.innerWidth  - rect.width  - 4, t.clientX - offX));
-      const ny = Math.max(0, Math.min(window.innerHeight - 48,              t.clientY - offY));
-      el.style.left = `${nx}px`; el.style.top = `${ny}px`;
+      const w  = el2.offsetWidth;
+      const nx = clamp(t.clientX - offsetRef.current.x, 0, window.innerWidth  - w - 2);
+      const ny = clamp(t.clientY - offsetRef.current.y, 0, window.innerHeight - 48);
+      el2.style.left = `${nx}px`;
+      el2.style.top  = `${ny}px`;
+      targetRef.current = { x: nx, y: ny };
     };
 
     const up = (ev: TouchEvent) => {
+      activeRef.current = false;
       document.removeEventListener("touchmove",  move);
       document.removeEventListener("touchend",   up);
-      const t   = ev.changedTouches[0];
-      const rawX = Math.max(0, Math.min(window.innerWidth  - rect.width  - 4, t.clientX - offX));
-      const rawY = Math.max(0, Math.min(window.innerHeight - 48,              t.clientY - offY));
-      const nx = snap(rawX); const ny = snap(rawY);
-      el.style.left = `${nx}px`; el.style.top = `${ny}px`;
-      const newPos = { x: nx, y: ny };
-      setPos(newPos);
-      try { localStorage.setItem(storageKey, JSON.stringify(newPos)); } catch {}
+      const el2 = rootRef.current;
+      if (!el2) return;
+      const t  = ev.changedTouches[0];
+      const w  = el2.offsetWidth;
+      const nx = clamp(t.clientX - offsetRef.current.x, 0, window.innerWidth  - w - 2);
+      const ny = clamp(t.clientY - offsetRef.current.y, 0, window.innerHeight - 48);
+      commit(nx, ny);
     };
 
-    document.addEventListener("touchmove",  move, { passive: false });
+    document.addEventListener("touchmove",  move, { passive: true });
     document.addEventListener("touchend",   up);
-  }, [storageKey]);
+  }, [commit]);
+
+  // Cleanup RAF on unmount
+  useEffect(() => {
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+  }, []);
 
   return { pos, rootRef, onDragMouseDown, onDragTouchStart };
 }

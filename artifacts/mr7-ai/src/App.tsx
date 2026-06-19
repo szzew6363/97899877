@@ -49,6 +49,7 @@ import { prefetchEngine } from "./lib/prefetch-engine";
 import type { ArsenalModuleId } from "./components/modals/ArsenalHubModal";
 import type { UtilityTool } from "./components/modals/UtilityToolModal";
 import { WindowManagerProvider } from "./components/DraggableWindow";
+import { WindowChrome } from "./components/WindowChrome";
 
 // ── LAZY MODAL IMPORTS ────────────────────────────────────────────────────────
 const ApiAccessModal        = lazy(() => import("./components/modals/ApiAccessModal").then(m=>({default:m.ApiAccessModal})));
@@ -645,49 +646,117 @@ function AppContent() {
 
       {/* All lazy modals wrapped in Suspense */}
       <Suspense fallback={null}>
-        <ApiAccessModal open={modals.api} onOpenChange={(v) => mDispatch({type:'SET',id:'api',value:v})} />
-        <SettingsModal open={modals.settings} onOpenChange={(v) => mDispatch({type:'SET',id:'settings',value:v})} />
-        <AccountModal open={modals.account} onOpenChange={(v) => mDispatch({type:'SET',id:'account',value:v})} onUpgrade={() => { close('account'); open('pricing'); }} />
+        <WindowChrome open={modals.api} color="#e21227" title="API ACCESS" onClose={() => close('api')}>
+          <ApiAccessModal open={modals.api} onOpenChange={(v) => mDispatch({type:'SET',id:'api',value:v})} />
+        </WindowChrome>
+        <WindowChrome open={modals.settings} color="#e21227" title="SETTINGS" onClose={() => close('settings')}>
+          <SettingsModal open={modals.settings} onOpenChange={(v) => mDispatch({type:'SET',id:'settings',value:v})} />
+        </WindowChrome>
+        <WindowChrome open={modals.account} color="#e21227" title="ACCOUNT" onClose={() => close('account')}>
+          <AccountModal open={modals.account} onOpenChange={(v) => mDispatch({type:'SET',id:'account',value:v})} onUpgrade={() => { close('account'); open('pricing'); }} />
+        </WindowChrome>
         <ToolModal open={modals.tool} onOpenChange={(v) => mDispatch({type:'SET',id:'tool',value:v})} />
         <UtilityToolModal tool={utility} onOpenChange={(v) => { if (!v) setUtility(null); }} />
-        <ToolsHubModal open={modals.toolsHub} onOpenChange={(v) => mDispatch({type:'SET',id:'toolsHub',value:v})} onSelect={(tool) => setUtility(tool)} />
+        <WindowChrome open={modals.toolsHub} color="#e21227" title="TOOLS HUB" onClose={() => close('toolsHub')}>
+          <ToolsHubModal open={modals.toolsHub} onOpenChange={(v) => mDispatch({type:'SET',id:'toolsHub',value:v})} onSelect={(tool) => setUtility(tool)} />
+        </WindowChrome>
         <ShortcutsModal open={modals.shortcuts} onOpenChange={(v) => mDispatch({type:'SET',id:'shortcuts',value:v})} />
         <CommandPalette open={modals.palette} onOpenChange={(v) => mDispatch({type:'SET',id:'palette',value:v})} onAction={handlePaletteAction} />
-        <MemoryModal open={modals.memory} onOpenChange={(v) => mDispatch({type:'SET',id:'memory',value:v})} />
-        <BookmarksModal open={modals.bookmarks} onOpenChange={(v) => mDispatch({type:'SET',id:'bookmarks',value:v})} />
+        <WindowChrome open={modals.memory} color="#a78bfa" title="MEMORY CORE" onClose={() => close('memory')}>
+          <MemoryModal open={modals.memory} onOpenChange={(v) => mDispatch({type:'SET',id:'memory',value:v})} />
+        </WindowChrome>
+        <WindowChrome open={modals.bookmarks} color="#f59e0b" title="BOOKMARKS" onClose={() => close('bookmarks')}>
+          <BookmarksModal open={modals.bookmarks} onOpenChange={(v) => mDispatch({type:'SET',id:'bookmarks',value:v})} />
+        </WindowChrome>
         <SearchModal open={modals.search} onOpenChange={(v) => mDispatch({type:'SET',id:'search',value:v})} />
-        <PersonaEditorModal open={modals.personaEditor} onOpenChange={(v) => mDispatch({type:'SET',id:'personaEditor',value:v})} />
-        <PersonaManagerModal open={modals.personaManager} onClose={() => close('personaManager')} />
-        <LocalModelModal open={modals.localModel} onOpenChange={(v) => mDispatch({type:'SET',id:'localModel',value:v})} />
-        <ProviderSettingsModal open={modals.providerSettings} onClose={() => close('providerSettings')} />
-        <OsintDashboard open={modals.osintDash} onOpenChange={(v) => mDispatch({type:'SET',id:'osintDash',value:v})} />
-        <ChangelogModal open={modals.changelog} onOpenChange={(v) => mDispatch({type:'SET',id:'changelog',value:v})} />
-        <UseCaseLibraryModal open={modals.useCaseLib} onOpenChange={(v) => mDispatch({type:'SET',id:'useCaseLib',value:v})} />
+        <WindowChrome open={modals.personaEditor} color="#a78bfa" title="PERSONA EDITOR" onClose={() => close('personaEditor')}>
+          <PersonaEditorModal open={modals.personaEditor} onOpenChange={(v) => mDispatch({type:'SET',id:'personaEditor',value:v})} />
+        </WindowChrome>
+        <WindowChrome open={modals.personaManager} color="#a78bfa" title="PERSONA MANAGER" onClose={() => close('personaManager')}>
+          <PersonaManagerModal open={modals.personaManager} onClose={() => close('personaManager')} />
+        </WindowChrome>
+        <WindowChrome open={modals.localModel} color="#22c55e" title="LOCAL MODEL ENGINE" onClose={() => close('localModel')}>
+          <LocalModelModal open={modals.localModel} onOpenChange={(v) => mDispatch({type:'SET',id:'localModel',value:v})} />
+        </WindowChrome>
+        <WindowChrome open={modals.providerSettings} color="#00e5ff" title="PROVIDER SETTINGS" onClose={() => close('providerSettings')}>
+          <ProviderSettingsModal open={modals.providerSettings} onClose={() => close('providerSettings')} />
+        </WindowChrome>
+        <WindowChrome open={modals.osintDash} color="#22c55e" title="OSINT DASHBOARD" onClose={() => close('osintDash')}>
+          <OsintDashboard open={modals.osintDash} onOpenChange={(v) => mDispatch({type:'SET',id:'osintDash',value:v})} />
+        </WindowChrome>
+        <WindowChrome open={modals.changelog} color="#e21227" title="CHANGELOG" onClose={() => close('changelog')}>
+          <ChangelogModal open={modals.changelog} onOpenChange={(v) => mDispatch({type:'SET',id:'changelog',value:v})} />
+        </WindowChrome>
+        <WindowChrome open={modals.useCaseLib} color="#06b6d4" title="USE CASE LIBRARY" onClose={() => close('useCaseLib')}>
+          <UseCaseLibraryModal open={modals.useCaseLib} onOpenChange={(v) => mDispatch({type:'SET',id:'useCaseLib',value:v})} />
+        </WindowChrome>
         <AdminPanel open={modals.admin} onOpenChange={(v) => mDispatch({type:'SET',id:'admin',value:v})} />
         <ActivateModal open={modals.activate} onOpenChange={(v) => mDispatch({type:'SET',id:'activate',value:v})} />
         <QRSyncModal open={modals.qrSync} onClose={() => close('qrSync')} />
         <ModelCompareModal open={modals.modelCompare} onClose={() => close('modelCompare')} />
-        <NeuralMatrixModal open={modals.neuralMatrix} onOpenChange={(v) => mDispatch({type:'SET',id:'neuralMatrix',value:v})} />
-        <AgentModal open={modals.agent} onOpenChange={(v) => mDispatch({type:'SET',id:'agent',value:v})} pipelineTask={agentPipelineTask} />
-        <NexusModal open={modals.nexus} onOpenChange={(v) => mDispatch({type:'SET',id:'nexus',value:v})} />
-        <ArsenalHubModal open={modals.arsenal} onOpenChange={(v) => mDispatch({type:'SET',id:'arsenal',value:v})} onLaunch={handleArsenalLaunch} />
-        <JarvisModal open={modals.jarvis} onOpenChange={(v) => mDispatch({type:'SET',id:'jarvis',value:v})} />
-        <ParseltongueModal open={modals.parseltongue} onOpenChange={(v) => mDispatch({type:'SET',id:'parseltongue',value:v})} />
-        <RagModal open={modals.rag} onOpenChange={(v) => mDispatch({type:'SET',id:'rag',value:v})} pipelineDoc={ragPipelineDoc} />
-        <TeamAgentModal open={modals.teamAgent} onOpenChange={(v) => mDispatch({type:'SET',id:'teamAgent',value:v})} />
-        <SkillsLibraryModal open={modals.skills} onOpenChange={(v) => mDispatch({type:'SET',id:'skills',value:v})} />
-        <OpenGravityModal open={modals.openGravity} onOpenChange={(v) => mDispatch({type:'SET',id:'openGravity',value:v})} pipelineCode={idePipelineCode} />
-        <AgentOSModal open={modals.agentOS} onOpenChange={(v) => mDispatch({type:'SET',id:'agentOS',value:v})} />
-        <GeminiCLIModal open={modals.geminiCLI} onOpenChange={(v) => mDispatch({type:'SET',id:'geminiCLI',value:v})} pipelineContext={cliPipelineContext} />
-        <HermesModal open={modals.hermes} onOpenChange={(v) => mDispatch({type:'SET',id:'hermes',value:v})} />
-        <GraphifyModal open={modals.graphify} onOpenChange={(v) => mDispatch({type:'SET',id:'graphify',value:v})} />
-        <GetShitDoneModal open={modals.getShitDone} onOpenChange={(v) => mDispatch({type:'SET',id:'getShitDone',value:v})} />
-        <CCSwitchModal open={modals.ccswitch} onOpenChange={(v) => mDispatch({type:'SET',id:'ccswitch',value:v})} />
-        <UIUXProModal open={modals.uiuxpro} onOpenChange={(v) => mDispatch({type:'SET',id:'uiuxpro',value:v})} />
-        <CareerOpsModal open={modals.careerOps} onOpenChange={(v) => mDispatch({type:'SET',id:'careerOps',value:v})} />
-        <ABTopModal open={modals.abTop} onOpenChange={(v) => mDispatch({type:'SET',id:'abTop',value:v})} />
-        <AwesomeLLMModal open={modals.awesomeLLM} onOpenChange={(v) => mDispatch({type:'SET',id:'awesomeLLM',value:v})} />
-        <OsintScannerModal open={modals.osintScanner} onOpenChange={(v) => mDispatch({type:'SET',id:'osintScanner',value:v})} onChainToKali={(content) => { setAgentPipelineTask({ text: content, key: nextKey() }); open('agent'); }} />
+        <WindowChrome open={modals.neuralMatrix} color="#a78bfa" title="NEURAL MATRIX" onClose={() => close('neuralMatrix')}>
+          <NeuralMatrixModal open={modals.neuralMatrix} onOpenChange={(v) => mDispatch({type:'SET',id:'neuralMatrix',value:v})} />
+        </WindowChrome>
+        <WindowChrome open={modals.agent} color="#ff4d4d" title="KALI AGENT" onClose={() => close('agent')}>
+          <AgentModal open={modals.agent} onOpenChange={(v) => mDispatch({type:'SET',id:'agent',value:v})} pipelineTask={agentPipelineTask} />
+        </WindowChrome>
+        <WindowChrome open={modals.nexus} color="#fbbf24" title="NEXUS AGENT" onClose={() => close('nexus')}>
+          <NexusModal open={modals.nexus} onOpenChange={(v) => mDispatch({type:'SET',id:'nexus',value:v})} />
+        </WindowChrome>
+        <WindowChrome open={modals.arsenal} color="#00e5ff" title="ARSENAL HUB" onClose={() => close('arsenal')}>
+          <ArsenalHubModal open={modals.arsenal} onOpenChange={(v) => mDispatch({type:'SET',id:'arsenal',value:v})} onLaunch={handleArsenalLaunch} />
+        </WindowChrome>
+        <WindowChrome open={modals.jarvis} color="#00e5ff" title="J.A.R.V.I.S" onClose={() => close('jarvis')}>
+          <JarvisModal open={modals.jarvis} onOpenChange={(v) => mDispatch({type:'SET',id:'jarvis',value:v})} />
+        </WindowChrome>
+        <WindowChrome open={modals.parseltongue} color="#00ff41" title="PARSELTONGUE" onClose={() => close('parseltongue')}>
+          <ParseltongueModal open={modals.parseltongue} onOpenChange={(v) => mDispatch({type:'SET',id:'parseltongue',value:v})} />
+        </WindowChrome>
+        <WindowChrome open={modals.rag} color="#3b82f6" title="RAGFLOW" onClose={() => close('rag')}>
+          <RagModal open={modals.rag} onOpenChange={(v) => mDispatch({type:'SET',id:'rag',value:v})} pipelineDoc={ragPipelineDoc} />
+        </WindowChrome>
+        <WindowChrome open={modals.teamAgent} color="#f97316" title="TEAM AGENT" onClose={() => close('teamAgent')}>
+          <TeamAgentModal open={modals.teamAgent} onOpenChange={(v) => mDispatch({type:'SET',id:'teamAgent',value:v})} />
+        </WindowChrome>
+        <WindowChrome open={modals.skills} color="#10b981" title="SKILLS LIBRARY" onClose={() => close('skills')}>
+          <SkillsLibraryModal open={modals.skills} onOpenChange={(v) => mDispatch({type:'SET',id:'skills',value:v})} />
+        </WindowChrome>
+        <WindowChrome open={modals.openGravity} color="#a78bfa" title="OPENGRAVITY IDE" onClose={() => close('openGravity')}>
+          <OpenGravityModal open={modals.openGravity} onOpenChange={(v) => mDispatch({type:'SET',id:'openGravity',value:v})} pipelineCode={idePipelineCode} />
+        </WindowChrome>
+        <WindowChrome open={modals.agentOS} color="#fb923c" title="AGENT OS" onClose={() => close('agentOS')}>
+          <AgentOSModal open={modals.agentOS} onOpenChange={(v) => mDispatch({type:'SET',id:'agentOS',value:v})} />
+        </WindowChrome>
+        <WindowChrome open={modals.geminiCLI} color="#818cf8" title="GEMINI CLI" onClose={() => close('geminiCLI')}>
+          <GeminiCLIModal open={modals.geminiCLI} onOpenChange={(v) => mDispatch({type:'SET',id:'geminiCLI',value:v})} pipelineContext={cliPipelineContext} />
+        </WindowChrome>
+        <WindowChrome open={modals.hermes} color="#fbbf24" title="HERMES AGENT" onClose={() => close('hermes')}>
+          <HermesModal open={modals.hermes} onOpenChange={(v) => mDispatch({type:'SET',id:'hermes',value:v})} />
+        </WindowChrome>
+        <WindowChrome open={modals.graphify} color="#a78bfa" title="GRAPHIFY" onClose={() => close('graphify')}>
+          <GraphifyModal open={modals.graphify} onOpenChange={(v) => mDispatch({type:'SET',id:'graphify',value:v})} />
+        </WindowChrome>
+        <WindowChrome open={modals.getShitDone} color="#f97316" title="GET SHIT DONE" onClose={() => close('getShitDone')}>
+          <GetShitDoneModal open={modals.getShitDone} onOpenChange={(v) => mDispatch({type:'SET',id:'getShitDone',value:v})} />
+        </WindowChrome>
+        <WindowChrome open={modals.ccswitch} color="#6366f1" title="CC SWITCH" onClose={() => close('ccswitch')}>
+          <CCSwitchModal open={modals.ccswitch} onOpenChange={(v) => mDispatch({type:'SET',id:'ccswitch',value:v})} />
+        </WindowChrome>
+        <WindowChrome open={modals.uiuxpro} color="#ec4899" title="UI/UX PRO MAX" onClose={() => close('uiuxpro')}>
+          <UIUXProModal open={modals.uiuxpro} onOpenChange={(v) => mDispatch({type:'SET',id:'uiuxpro',value:v})} />
+        </WindowChrome>
+        <WindowChrome open={modals.careerOps} color="#0ea5e9" title="CAREER OPS" onClose={() => close('careerOps')}>
+          <CareerOpsModal open={modals.careerOps} onOpenChange={(v) => mDispatch({type:'SET',id:'careerOps',value:v})} />
+        </WindowChrome>
+        <WindowChrome open={modals.abTop} color="#e21227" title="ABTOP" onClose={() => close('abTop')}>
+          <ABTopModal open={modals.abTop} onOpenChange={(v) => mDispatch({type:'SET',id:'abTop',value:v})} />
+        </WindowChrome>
+        <WindowChrome open={modals.awesomeLLM} color="#fbbf24" title="AWESOME LLM APPS" onClose={() => close('awesomeLLM')}>
+          <AwesomeLLMModal open={modals.awesomeLLM} onOpenChange={(v) => mDispatch({type:'SET',id:'awesomeLLM',value:v})} />
+        </WindowChrome>
+        <WindowChrome open={modals.osintScanner} color="#22c55e" title="OSINT SCANNER" onClose={() => close('osintScanner')}>
+          <OsintScannerModal open={modals.osintScanner} onOpenChange={(v) => mDispatch({type:'SET',id:'osintScanner',value:v})} onChainToKali={(content) => { setAgentPipelineTask({ text: content, key: nextKey() }); open('agent'); }} />
+        </WindowChrome>
         <NanoBotModal open={modals.nanoBot} onOpenChange={(v) => mDispatch({type:'SET',id:'nanoBot',value:v})} />
         <AgentKanbanModal open={modals.agentKanban} onOpenChange={(v) => mDispatch({type:'SET',id:'agentKanban',value:v})} />
         <AutoBEModal open={modals.autoBE} onOpenChange={(v) => mDispatch({type:'SET',id:'autoBE',value:v})} />
@@ -744,26 +813,62 @@ function AppContent() {
         <HeadroomModal open={modals.headroom} onOpenChange={(v) => mDispatch({type:'SET',id:'headroom',value:v})} />
         <TokenOptimizerModal open={modals.tokenOptimizer} onOpenChange={(v) => mDispatch({type:'SET',id:'tokenOptimizer',value:v})} />
         <ClaudeCodeMemoryModal open={modals.claudeMemory} onOpenChange={(v) => mDispatch({type:'SET',id:'claudeMemory',value:v})} />
-        <ShellGeneratorModal open={modals.shellGenerator} onOpenChange={(v) => mDispatch({type:'SET',id:'shellGenerator',value:v})} onInjectToChat={(payload) => { setShellGeneratorInject(payload); }} />
-        <AnalyticsDashboard open={modals.analytics} onClose={() => close('analytics')} />
-        <SecurityKanbanModal open={modals.securityKanban} onOpenChange={(v) => mDispatch({type:'SET',id:'securityKanban',value:v})} />
-        <NetworkMonitorModal open={modals.networkMonitor} onOpenChange={(v) => mDispatch({type:'SET',id:'networkMonitor',value:v})} />
-        <DefensiveAIModal open={modals.defensiveAI} onOpenChange={(v) => mDispatch({type:'SET',id:'defensiveAI',value:v})} />
-        <OpenSkynetModal open={modals.openSkynet} onOpenChange={(v) => mDispatch({type:'SET',id:'openSkynet',value:v})} />
-        <WarRoomModal open={modals.warRoom} onOpenChange={(v) => mDispatch({type:'SET',id:'warRoom',value:v})} />
-        <RedTeamDashboard open={modals.redTeamDash} onOpenChange={(v) => mDispatch({type:'SET',id:'redTeamDash',value:v})} />
-        <ExploitChainModal open={modals.exploitChain} onOpenChange={(v) => mDispatch({type:'SET',id:'exploitChain',value:v})} />
-        <DeepSearchModal open={modals.deepSearch} onOpenChange={(v) => mDispatch({type:'SET',id:'deepSearch',value:v})} />
-        <ChainInvestigationModal open={modals.chainInvestigation} onOpenChange={(v) => mDispatch({type:'SET',id:'chainInvestigation',value:v})} />
-        <MonacoEditorModal open={modals.monaco} onClose={() => close('monaco')} initialCode={monacoInitCode} initialLang={monacoInitLang}
-          onSendToChat={(_code, _lang) => { dispatch({ type: "NEW_CHAT" }); toast({ description: "Code sent to chat." }); void _code; void _lang; }} />
-        <IntelligenceCoreModal open={modals.intelligenceCore} onOpenChange={(v) => mDispatch({type:'SET',id:'intelligenceCore',value:v})} />
-        <ThreatGlobeModal open={modals.threatGlobe} onOpenChange={(v) => mDispatch({type:'SET',id:'threatGlobe',value:v})} />
-        <VulnGraph3DModal open={modals.vulnGraph3D} onOpenChange={(v) => mDispatch({type:'SET',id:'vulnGraph3D',value:v})} />
-        <LiveCodingModal open={modals.liveCoding} onOpenChange={(v) => mDispatch({type:'SET',id:'liveCoding',value:v})} />
-        <ExploitSandboxModal open={modals.exploitSandbox} onOpenChange={(v) => mDispatch({type:'SET',id:'exploitSandbox',value:v})} />
+        <WindowChrome open={modals.shellGenerator} color="#e21227" title="SHELL GENERATOR" onClose={() => close('shellGenerator')}>
+          <ShellGeneratorModal open={modals.shellGenerator} onOpenChange={(v) => mDispatch({type:'SET',id:'shellGenerator',value:v})} onInjectToChat={(payload) => { setShellGeneratorInject(payload); }} />
+        </WindowChrome>
+        <WindowChrome open={modals.analytics} color="#06b6d4" title="ANALYTICS" onClose={() => close('analytics')}>
+          <AnalyticsDashboard open={modals.analytics} onClose={() => close('analytics')} />
+        </WindowChrome>
+        <WindowChrome open={modals.securityKanban} color="#f59e0b" title="SECURITY KANBAN" onClose={() => close('securityKanban')}>
+          <SecurityKanbanModal open={modals.securityKanban} onOpenChange={(v) => mDispatch({type:'SET',id:'securityKanban',value:v})} />
+        </WindowChrome>
+        <WindowChrome open={modals.networkMonitor} color="#00e5ff" title="NETWORK MONITOR" onClose={() => close('networkMonitor')}>
+          <NetworkMonitorModal open={modals.networkMonitor} onOpenChange={(v) => mDispatch({type:'SET',id:'networkMonitor',value:v})} />
+        </WindowChrome>
+        <WindowChrome open={modals.defensiveAI} color="#22c55e" title="DEFENSIVE AI" onClose={() => close('defensiveAI')}>
+          <DefensiveAIModal open={modals.defensiveAI} onOpenChange={(v) => mDispatch({type:'SET',id:'defensiveAI',value:v})} />
+        </WindowChrome>
+        <WindowChrome open={modals.openSkynet} color="#e21227" title="OPEN SKYNET" onClose={() => close('openSkynet')}>
+          <OpenSkynetModal open={modals.openSkynet} onOpenChange={(v) => mDispatch({type:'SET',id:'openSkynet',value:v})} />
+        </WindowChrome>
+        <WindowChrome open={modals.warRoom} color="#f97316" title="WAR ROOM" onClose={() => close('warRoom')}>
+          <WarRoomModal open={modals.warRoom} onOpenChange={(v) => mDispatch({type:'SET',id:'warRoom',value:v})} />
+        </WindowChrome>
+        <WindowChrome open={modals.redTeamDash} color="#e21227" title="RED TEAM" onClose={() => close('redTeamDash')}>
+          <RedTeamDashboard open={modals.redTeamDash} onOpenChange={(v) => mDispatch({type:'SET',id:'redTeamDash',value:v})} />
+        </WindowChrome>
+        <WindowChrome open={modals.exploitChain} color="#ff4d4d" title="EXPLOIT CHAIN" onClose={() => close('exploitChain')}>
+          <ExploitChainModal open={modals.exploitChain} onOpenChange={(v) => mDispatch({type:'SET',id:'exploitChain',value:v})} />
+        </WindowChrome>
+        <WindowChrome open={modals.deepSearch} color="#3b82f6" title="DEEP SEARCH" onClose={() => close('deepSearch')}>
+          <DeepSearchModal open={modals.deepSearch} onOpenChange={(v) => mDispatch({type:'SET',id:'deepSearch',value:v})} />
+        </WindowChrome>
+        <WindowChrome open={modals.chainInvestigation} color="#f59e0b" title="CHAIN INVESTIGATION" onClose={() => close('chainInvestigation')}>
+          <ChainInvestigationModal open={modals.chainInvestigation} onOpenChange={(v) => mDispatch({type:'SET',id:'chainInvestigation',value:v})} />
+        </WindowChrome>
+        <WindowChrome open={modals.monaco} color="#a78bfa" title="MONACO EDITOR" onClose={() => close('monaco')}>
+          <MonacoEditorModal open={modals.monaco} onClose={() => close('monaco')} initialCode={monacoInitCode} initialLang={monacoInitLang}
+            onSendToChat={(_code, _lang) => { dispatch({ type: "NEW_CHAT" }); toast({ description: "Code sent to chat." }); void _code; void _lang; }} />
+        </WindowChrome>
+        <WindowChrome open={modals.intelligenceCore} color="#00e5ff" title="INTELLIGENCE CORE" onClose={() => close('intelligenceCore')}>
+          <IntelligenceCoreModal open={modals.intelligenceCore} onOpenChange={(v) => mDispatch({type:'SET',id:'intelligenceCore',value:v})} />
+        </WindowChrome>
+        <WindowChrome open={modals.threatGlobe} color="#e21227" title="THREAT GLOBE" onClose={() => close('threatGlobe')}>
+          <ThreatGlobeModal open={modals.threatGlobe} onOpenChange={(v) => mDispatch({type:'SET',id:'threatGlobe',value:v})} />
+        </WindowChrome>
+        <WindowChrome open={modals.vulnGraph3D} color="#f97316" title="VULN GRAPH 3D" onClose={() => close('vulnGraph3D')}>
+          <VulnGraph3DModal open={modals.vulnGraph3D} onOpenChange={(v) => mDispatch({type:'SET',id:'vulnGraph3D',value:v})} />
+        </WindowChrome>
+        <WindowChrome open={modals.liveCoding} color="#22c55e" title="LIVE CODING" onClose={() => close('liveCoding')}>
+          <LiveCodingModal open={modals.liveCoding} onOpenChange={(v) => mDispatch({type:'SET',id:'liveCoding',value:v})} />
+        </WindowChrome>
+        <WindowChrome open={modals.exploitSandbox} color="#ff4d4d" title="EXPLOIT SANDBOX" onClose={() => close('exploitSandbox')}>
+          <ExploitSandboxModal open={modals.exploitSandbox} onOpenChange={(v) => mDispatch({type:'SET',id:'exploitSandbox',value:v})} />
+        </WindowChrome>
         <GestureControlModal open={modals.gestureControl} onOpenChange={(v) => mDispatch({type:'SET',id:'gestureControl',value:v})} />
-        <NeuralVoiceModal open={modals.neuralVoice} onOpenChange={(v) => mDispatch({type:'SET',id:'neuralVoice',value:v})} />
+        <WindowChrome open={modals.neuralVoice} color="#a78bfa" title="NEURAL VOICE" onClose={() => close('neuralVoice')}>
+          <NeuralVoiceModal open={modals.neuralVoice} onOpenChange={(v) => mDispatch({type:'SET',id:'neuralVoice',value:v})} />
+        </WindowChrome>
         <BlockchainAuditModal open={modals.blockchainAudit} onOpenChange={(v) => mDispatch({type:'SET',id:'blockchainAudit',value:v})} />
         <E2ESessionModal open={modals.e2eSession} onOpenChange={(v) => mDispatch({type:'SET',id:'e2eSession',value:v})} />
         <AutonomousRedTeamModal open={modals.autonomousRedTeam} onOpenChange={(v) => mDispatch({type:'SET',id:'autonomousRedTeam',value:v})} />
@@ -872,18 +977,30 @@ function AppContent() {
       <AttackGraph3DModal open={modals.attackGraph} onOpenChange={(v) => mDispatch({type:'SET',id:'attackGraph',value:v})} />
 
       {/* ── Batch 12: Enterprise ARTP + PentestLab Pro + SOC Command Center ── */}
-      <ARTPlatformModal   open={modals.artpPlatform}  onOpenChange={(v) => mDispatch({type:'SET',id:'artpPlatform',value:v})} />
-      <PentestLabProModal open={modals.pentestLabPro} onOpenChange={(v) => mDispatch({type:'SET',id:'pentestLabPro',value:v})} />
-      <SOCCommandModal    open={modals.socCommand}    onOpenChange={(v) => mDispatch({type:'SET',id:'socCommand',value:v})} />
+      <WindowChrome open={modals.artpPlatform} color="#e21227" title="ARTP PLATFORM" onClose={() => close('artpPlatform')}>
+        <ARTPlatformModal   open={modals.artpPlatform}  onOpenChange={(v) => mDispatch({type:'SET',id:'artpPlatform',value:v})} />
+      </WindowChrome>
+      <WindowChrome open={modals.pentestLabPro} color="#e21227" title="PENTEST LAB PRO" onClose={() => close('pentestLabPro')}>
+        <PentestLabProModal open={modals.pentestLabPro} onOpenChange={(v) => mDispatch({type:'SET',id:'pentestLabPro',value:v})} />
+      </WindowChrome>
+      <WindowChrome open={modals.socCommand} color="#f97316" title="SOC COMMAND" onClose={() => close('socCommand')}>
+        <SOCCommandModal    open={modals.socCommand}    onOpenChange={(v) => mDispatch({type:'SET',id:'socCommand',value:v})} />
+      </WindowChrome>
 
       {/* ── Autonomous Decision Engine — Neural AI · Adaptive Learning ── */}
-      <AutonomousDecisionEngineModal open={modals.autonomousDecisionEngine} onOpenChange={(v) => mDispatch({type:'SET',id:'autonomousDecisionEngine',value:v})} />
+      <WindowChrome open={modals.autonomousDecisionEngine} color="#a78bfa" title="AUTONOMOUS DECISION ENGINE" onClose={() => close('autonomousDecisionEngine')}>
+        <AutonomousDecisionEngineModal open={modals.autonomousDecisionEngine} onOpenChange={(v) => mDispatch({type:'SET',id:'autonomousDecisionEngine',value:v})} />
+      </WindowChrome>
 
       {/* ── JARVIS Command Center — File Control · Terminal · Project · API · Auto-Pilot ── */}
-      <JARVISCommandCenterModal open={modals.jarvisCommandCenter} onOpenChange={(v) => mDispatch({type:'SET',id:'jarvisCommandCenter',value:v})} />
+      <WindowChrome open={modals.jarvisCommandCenter} color="#00e5ff" title="JARVIS COMMAND CENTER" onClose={() => close('jarvisCommandCenter')}>
+        <JARVISCommandCenterModal open={modals.jarvisCommandCenter} onOpenChange={(v) => mDispatch({type:'SET',id:'jarvisCommandCenter',value:v})} />
+      </WindowChrome>
 
       {/* ── OMEGA AGENT — Autonomous Neural Command Center ── */}
-      <OmegaAgentModal open={modals.omegaAgent} onOpenChange={(v) => mDispatch({type:'SET',id:'omegaAgent',value:v})} />
+      <WindowChrome open={modals.omegaAgent} color="#fbbf24" title="OMEGA AGENT" onClose={() => close('omegaAgent')}>
+        <OmegaAgentModal open={modals.omegaAgent} onOpenChange={(v) => mDispatch({type:'SET',id:'omegaAgent',value:v})} />
+      </WindowChrome>
     </div>
     </>
   );
