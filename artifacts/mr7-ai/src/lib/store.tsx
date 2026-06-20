@@ -307,7 +307,7 @@ const initial: AppState = {
     activePersonaPreset: "default",
     useLocalModel: false,
     localEndpoint: "http://localhost:11434/v1",
-    localModel: "dolphin-mixtral",
+    localModel: "tinyllama",
     parseltongueCombo: false,
     parseltongueComboTechnique: "unicode",
     parseltongueComboIntensity: "medium",

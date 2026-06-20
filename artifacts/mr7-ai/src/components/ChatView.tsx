@@ -247,7 +247,7 @@ export function ChatView({ onShare, onOpenOsintDash }: { onShare?: () => void; o
       : ((comboDecoder + thinkingInject).trim() || undefined);
     const useLocal = state.settings.useLocalModel;
     const localEndpoint = state.settings.localEndpoint || "http://localhost:11434/v1";
-    const localModel = state.settings.localModel || "dolphin-mixtral";
+    const localModel = state.settings.localModel || "tinyllama";
     const localSysPrompt = customSysPrompt || "You are a helpful AI assistant.";
     const lang = state.settings.language;
     // Resolve the correct API key and base URL for the active provider

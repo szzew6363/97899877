@@ -562,7 +562,7 @@ function DragHandle3D({
 function LocalModelQuickToggle({ onOpenLocalModel }: { onOpenLocalModel: () => void }) {
   const { state, dispatch } = useStore();
   const useLocal = state.settings.useLocalModel;
-  const model    = state.settings.localModel || "dolphin-mixtral";
+  const model    = state.settings.localModel || "tinyllama";
   const endpoint = state.settings.localEndpoint || "http://localhost:11434/v1";
   const [floatOpen, setFloatOpen] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);

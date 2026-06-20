@@ -207,7 +207,7 @@ const QUICK_MODELS: {
   { id: "phi4-mini", label: "Phi-4 Mini 3.8B", tag: "FAST", group: "Phi / Small", size: "2.5GB", ctx: "128K" },
   { id: "phi3.5", label: "Phi-3.5 Mini 3.8B", tag: "FAST", group: "Phi / Small", size: "2.2GB", ctx: "128K" },
   { id: "smollm2:1.7b", label: "SmolLM2 1.7B", tag: "TINY", group: "Phi / Small", size: "1.0GB", ctx: "8K" },
-  { id: "tinyllama", label: "TinyLlama 1.1B", tag: "TINY", group: "Phi / Small", size: "638MB", ctx: "2K" },
+  { id: "tinyllama", label: "TinyLlama 1.1B", tag: "REPLIT", group: "Phi / Small", size: "638MB", ctx: "2K", hot: true },
 
   // Code Models
   { id: "codellama:7b", label: "Code Llama 7B", tag: "CODE", group: "Code Models", size: "3.8GB", ctx: "16K" },
@@ -556,7 +556,7 @@ export function LocalModelModal({ open, onOpenChange, onOpenEngineHub }: LocalMo
   const lang = state.settings.language;
 
   const [endpoint, setEndpoint] = useState(state.settings.localEndpoint || "http://localhost:11434/v1");
-  const [model, setModel] = useState(state.settings.localModel || "dolphin-mixtral");
+  const [model, setModel] = useState(state.settings.localModel || "tinyllama");
   const [testStatus, setTestStatus] = useState<TestStatus>("idle");
   const [testMsg, setTestMsg] = useState("");
   const [testLatency, setTestLatency] = useState<number | null>(null);
@@ -809,6 +809,7 @@ export function LocalModelModal({ open, onOpenChange, onOpenEngineHub }: LocalMo
       REASONING: "border-amber-500/40 text-amber-400 bg-amber-400/10",
       MULTILINGUAL: "border-emerald-500/40 text-emerald-400 bg-emerald-400/10",
       TINY: "border-slate-500/40 text-slate-400 bg-slate-400/10",
+      REPLIT: "border-orange-500/50 text-orange-400 bg-orange-400/10",
     };
     return map[tag] ?? "border-border text-muted-foreground";
   };
@@ -817,7 +818,7 @@ export function LocalModelModal({ open, onOpenChange, onOpenEngineHub }: LocalMo
     const map: Record<string, React.ElementType> = {
       UNCENSORED: Shield, FAST: Zap, POWERFUL: Brain,
       CODE: Code2, VISION: Eye, REASONING: Brain,
-      MULTILINGUAL: Globe, TINY: Cpu,
+      MULTILINGUAL: Globe, TINY: Cpu, REPLIT: Zap,
     };
     const Icon = map[tag] ?? Cpu;
     return <Icon className="w-2.5 h-2.5" />;
