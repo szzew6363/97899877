@@ -308,25 +308,13 @@ export function ChatView({ onShare, onOpenOsintDash }: { onShare?: () => void; o
           await streamLocalChatViaProxy(localEndpoint, localModel, history, localSysPrompt, onChunk, abortRef.current.signal);
         } catch (localErr) {
           if ((localErr as { name?: string })?.name === "AbortError") throw localErr;
-          const isNetworkErr = localErr instanceof TypeError || (localErr instanceof Error && (
-            localErr.message.includes("fetch") || localErr.message.includes("Failed") ||
-            localErr.message.includes("NetworkError") || localErr.message.includes("refused") ||
-            localErr.message.includes("404") || localErr.message.includes("503") ||
-            localErr.message.includes("502") || localErr.message.includes("DOCTYPE") ||
-            localErr.message.includes("proxy") || localErr.message.includes("unreachable") ||
-            localErr.message.includes("ECONNREFUSED") || localErr.message.includes("timeout")));
-          if (isNetworkErr) {
-            acc = "";
-            toast({
-              title: lang === "ar" ? "النموذج المحلي غير متاح" : "Local model unreachable",
-              description: lang === "ar"
-                ? `(${localModel}) غير متاح — تم التبديل لـ CHAT-GPT.ai لهذه الرسالة فقط. النموذج المحلي لا يزال مفعّلاً.`
-                : `(${localModel}) unreachable — using CHAT-GPT.ai for this message. Local model stays enabled.`,
-            });
-            await streamChat(cloudChatReq, onChunk, abortRef.current.signal);
-          } else {
-            throw localErr;
-          }
+          // For local models, always show the actual error — never fall back to cloud
+          // (which would fail with an API key error and show a confusing message)
+          const errMsg = localErr instanceof Error ? localErr.message : String(localErr);
+          const friendlyMsg = lang === "ar"
+            ? `النموذج المحلي (${localModel}) غير متاح. تأكد من تشغيل Ollama على ${localEndpoint}.`
+            : `Local model (${localModel}) unreachable. Make sure Ollama is running at ${localEndpoint}.`;
+          throw new Error(errMsg.includes("ollama") || errMsg.includes("ECONNREFUSED") || errMsg.includes("fetch") || errMsg.includes("502") || errMsg.includes("Failed") ? friendlyMsg : errMsg);
         }
       } else {
         // ── Provider fallback chain ────────────────────────────────────────
@@ -373,7 +361,8 @@ export function ChatView({ onShare, onOpenOsintDash }: { onShare?: () => void; o
         if (elapsed < minDisplayMs) {
           await new Promise<void>(r => setTimeout(r, minDisplayMs - elapsed));
         }
-        const is401 = message.includes("401") || message.toLowerCase().includes("api key");
+        // Only trigger API key auto-setup for cloud providers, not for local models
+        const is401 = !useLocal && (message.includes("401") || message.toLowerCase().includes("api key"));
         if (is401) {
           window.dispatchEvent(new CustomEvent("kali:trigger-auto-setup"));
           const autoMsg = "لم يتم ضبط مفتاح API — جاري الضبط التلقائي للمزود، أعد إرسال رسالتك خلال لحظات...";
