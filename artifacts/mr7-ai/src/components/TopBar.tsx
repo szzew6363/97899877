@@ -12,6 +12,7 @@ import { QuantumPersona3D } from "./QuantumPersona3D";
 import { NotificationsPanel } from "./NotificationsPanel";
 import { ThemePopover } from "./ThemePopover";
 import { TokensPopover } from "./TokensPopover";
+import { LocalAIWindow } from "./LocalAIWindow";
 import { AI_MODELS, getModel } from "@/lib/ai-config";
 import { tierAtLeast } from "@/lib/subscription";
 import {
@@ -765,8 +766,7 @@ function LocalAITopBarButton({
   onOpenHub:   () => void;
   onOpenBench: () => void;
 }) {
-  const { state, dispatch } = useStore();
-  const [open, setOpen]     = useState(false);
+  const [open, setOpen] = useState(false);
   const [engines, setEngines] = useState<{
     online: boolean; id: string; label: string; models: string[]; latencyMs: number | null;
   }[]>([]);
@@ -849,17 +849,6 @@ function LocalAITopBarButton({
     window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h);
   }, [open]);
 
-  const activateOllamaModel = (model: string) => {
-    dispatch({ type: "SET_SETTINGS", patch: { useLocalModel: true, localModel: model, localEndpoint: "http://localhost:11434/v1" } });
-    setOpen(false);
-  };
-
-  const MENU = [
-    { label: "LOCAL AI NEXUS", sub: "مركز النماذج — تحميل وإدارة", color: "#00e5ff", icon: <Server size={12} />, fn: () => { setOpen(false); onOpenNexus(); } },
-    { label: "ENGINE HUB",     sub: "إدارة 7 محركات AI محلية",    color: "#a78bfa", icon: <Cpu    size={12} />, fn: () => { setOpen(false); onOpenHub();   } },
-    { label: "BENCHMARK",      sub: "قياس السرعة والأداء",         color: "#f97316", icon: <Activity size={12}/>, fn: () => { setOpen(false); onOpenBench(); } },
-  ] as const;
-
   return (
     <div className="relative flex-shrink-0">
       {/* ── Trigger button ── */}
@@ -907,135 +896,14 @@ function LocalAITopBarButton({
         )}
       </motion.button>
 
-      {/* ── Dropdown panel ── */}
-      <AnimatePresence>
-        {open && (
-          <>
-            <motion.div className="fixed inset-0 z-[6998]"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              style={{ background: "rgba(0,0,0,0.42)", backdropFilter: "blur(4px)" }}
-              onClick={() => setOpen(false)} />
-
-            <motion.div className="absolute top-full left-0 mt-1.5 z-[6999] rounded-2xl overflow-hidden"
-              style={{
-                width: 262,
-                background: "linear-gradient(165deg,rgba(4,8,6,0.99) 0%,rgba(2,4,3,0.99) 100%)",
-                border: `1px solid ${color}26`,
-                boxShadow: `0 0 60px ${color}12,0 0 120px ${color}06,0 24px 80px rgba(0,0,0,0.95),inset 0 1px 0 ${color}14`,
-                backdropFilter: "blur(40px)",
-              }}
-              initial={{ opacity: 0, y: -10, scale: 0.94 }}
-              animate={{ opacity: 1, y: 0,  scale: 1    }}
-              exit={{   opacity: 0, y: -10, scale: 0.94 }}
-              transition={{ duration: 0.18, ease: [0.16,1,0.3,1] }}
-            >
-              {/* corner brackets */}
-              {[["top-2 left-2","border-t border-l"],["top-2 right-2","border-t border-r"],
-                ["bottom-2 left-2","border-b border-l"],["bottom-2 right-2","border-b border-r"]
-               ].map(([pos,cls],i) => (
-                <span key={i} className={`absolute ${pos} w-3 h-3 ${cls} pointer-events-none`}
-                  style={{ borderColor: color + (i < 2 ? "44" : "22") }} />
-              ))}
-
-              {/* Header */}
-              <div className="px-4 pt-3.5 pb-2.5" style={{ borderBottom: `1px solid ${color}10` }}>
-                <div className="text-[6.5px] font-black tracking-[0.35em] uppercase mb-1.5" style={{ color: `${color}50` }}>
-                  LOCAL AI ENGINE SUITE
-                </div>
-                <div className="flex items-center gap-2">
-                  <motion.div className="w-2 h-2 rounded-full flex-shrink-0"
-                    style={{ background: onlineCount > 0 ? "#22c55e" : "#ef4444", boxShadow: `0 0 8px ${onlineCount > 0 ? "#22c55e" : "#ef4444"}` }}
-                    animate={{ opacity: [0.6, 1, 0.6] }} transition={{ duration: 1.4, repeat: Infinity }} />
-                  <span className="text-[12px] font-black" style={{ color }}>
-                    {onlineCount}/{engines.length || 7} متصل
-                  </span>
-                  {onlineCount > 0 && ollamaEng?.latencyMs && (
-                    <span className="text-[7px] font-mono ml-auto" style={{ color: "#22c55e88" }}>
-                      {ollamaEng.latencyMs}ms
-                    </span>
-                  )}
-                </div>
-                {/* engine mini-bar */}
-                <div className="flex gap-1 mt-2">
-                  {(engines.length ? engines : Array.from({ length: 7 })).map((e, i) => (
-                    <motion.div key={i}
-                      className="flex-1 h-0.5 rounded-full"
-                      style={{ background: (e as { online?: boolean })?.online ? "#22c55e" : "rgba(255,255,255,0.07)" }}
-                      animate={(e as { online?: boolean })?.online ? { opacity: [0.5,1,0.5] } : {}}
-                      transition={{ duration: 1.6, repeat: Infinity, delay: i * 0.08 }}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {/* Action cards */}
-              <div className="p-2 flex flex-col gap-1">
-                {MENU.map((item, i) => (
-                  <motion.button key={item.label} onClick={item.fn}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left relative overflow-hidden"
-                    style={{ background: `${item.color}0a`, border: `1px solid ${item.color}18` }}
-                    whileHover={{ background: `${item.color}16`, scale: 1.02, x: 3 }}
-                    whileTap={{ scale: 0.97 }}
-                    initial={{ opacity: 0, x: -8 }}
-                    animate={{ opacity: 1,  x:  0 }}
-                    transition={{ delay: i * 0.05, duration: 0.18 }}
-                  >
-                    <span className="btn-shimmer-inner" style={{ background: `linear-gradient(90deg,transparent,${item.color}12,transparent)` }} />
-                    <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0"
-                      style={{ background: `${item.color}12`, border: `1px solid ${item.color}22` }}>
-                      <span style={{ color: item.color }}>{item.icon}</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[9px] font-black tracking-wider" style={{ color: item.color }}>{item.label}</div>
-                      <div className="text-[7px] text-white/25 truncate">{item.sub}</div>
-                    </div>
-                    <span className="text-white/15 text-[9px]">›</span>
-                  </motion.button>
-                ))}
-              </div>
-
-              {/* Installed Ollama models */}
-              {ollamaModels.length > 0 && (
-                <div className="px-3 pb-3" style={{ borderTop: "1px solid rgba(0,229,255,0.06)" }}>
-                  <div className="pt-2.5 pb-1.5 flex items-center gap-2">
-                    <span className="text-[6.5px] font-black tracking-[0.3em] uppercase" style={{ color: "rgba(0,229,255,0.28)" }}>
-                      نماذج Ollama ({ollamaModels.length})
-                    </span>
-                    <div className="flex-1 h-px" style={{ background: "rgba(0,229,255,0.07)" }} />
-                  </div>
-                  <div className="flex flex-col gap-1 max-h-40 overflow-y-auto scrollbar-none">
-                    {ollamaModels.map(m => {
-                      const active = state.settings.useLocalModel && state.settings.localModel === m;
-                      return (
-                        <motion.button key={m} onClick={() => activateOllamaModel(m)}
-                          className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left"
-                          style={{
-                            background: active ? "rgba(34,197,94,0.10)" : "rgba(0,229,255,0.04)",
-                            border: `1px solid ${active ? "rgba(34,197,94,0.32)" : "rgba(0,229,255,0.09)"}`,
-                          }}
-                          whileHover={{ background: "rgba(0,229,255,0.09)", x: 2 }}
-                          whileTap={{ scale: 0.97 }}
-                        >
-                          {active && (
-                            <motion.div className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                              style={{ background: "#22c55e", boxShadow: "0 0 4px #22c55e" }}
-                              animate={{ opacity: [0.6,1,0.6] }} transition={{ duration: 1, repeat: Infinity }} />
-                          )}
-                          <span className="text-[8px] font-mono truncate flex-1" style={{ color: active ? "#22c55e" : "rgba(0,229,255,0.68)" }}>{m}</span>
-                          {active && <span className="text-[6px] font-black" style={{ color: "#22c55e77" }}>ACTIVE</span>}
-                        </motion.button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* bottom glow */}
-              <div className="h-px" style={{ background: `linear-gradient(90deg,transparent,${color}30,transparent)` }} />
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+      {/* ── External floating window (portal to body) ── */}
+      <LocalAIWindow
+        open={open}
+        onClose={() => setOpen(false)}
+        onOpenNexus={onOpenNexus}
+        onOpenHub={onOpenHub}
+        onOpenBench={onOpenBench}
+      />
     </div>
   );
 }
