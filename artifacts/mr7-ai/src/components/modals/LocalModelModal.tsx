@@ -6,6 +6,7 @@ import {
   RefreshCw, Download, Search, ChevronDown, ChevronUp, Zap, Brain,
   Shield, Code2, Eye, Globe, Star, Loader2, Copy, Check, Terminal,
   HardDrive, Gauge, MemoryStick, X, Radio, Activity,
+  BarChart2, Database, PlayCircle, StopCircle, FlaskConical,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useStore } from "@/lib/store";
@@ -1048,6 +1049,99 @@ export function LocalModelModal({ open, onOpenChange, onOpenEngineHub }: LocalMo
   const [pulling, setPulling] = useState(false);
   const [deletingModel, setDeletingModel] = useState<string | null>(null);
 
+  // ── Model Health Scanner ──────────────────────────────────────────────────────
+  type ScannerStatus = "idle" | "scanning" | "ok" | "fail" | "pending";
+  interface ModelHealthResult {
+    name: string; sizeMb: number; status: ScannerStatus;
+    latencyMs: number | null; firstToken: string; error?: string;
+  }
+  const [healthResults, setHealthResults] = useState<ModelHealthResult[]>([]);
+  const [scanning, setScanning] = useState(false);
+  const [scanOpen, setScanOpen] = useState(false);
+  const scanAbortRef = useRef<AbortController | null>(null);
+
+  const runHealthScan = async () => {
+    const base = endpoint.trim().replace(/\/$/, "");
+    setScanning(true); setScanOpen(true);
+    // 1. fetch installed models
+    let names: { name: string; size: number }[] = [];
+    try {
+      const r = await fetch(`${base}/models`, {
+        headers: { Authorization: "Bearer ollama" },
+        signal: AbortSignal.timeout(5000),
+      });
+      const d = await r.json().catch(() => ({}));
+      names = (d?.data ?? []).map((m: { id: string; size?: number }) => ({ name: m.id, size: m.size ?? 0 }));
+    } catch {
+      // Try native Ollama tags endpoint
+      try {
+        const r2 = await fetch("http://localhost:11434/api/tags", { signal: AbortSignal.timeout(4000) });
+        const d2 = await r2.json().catch(() => ({}));
+        names = (d2?.models ?? []).map((m: { name: string; size: number }) => ({
+          name: m.name, size: m.size ?? 0,
+        }));
+      } catch { /* no ollama */ }
+    }
+    if (names.length === 0) {
+      setHealthResults([{ name: "—", sizeMb: 0, status: "fail", latencyMs: null, firstToken: "", error: "لا توجد نماذج مثبتة في Ollama" }]);
+      setScanning(false); return;
+    }
+
+    // 2. initialize rows
+    setHealthResults(names.map(n => ({
+      name: n.name, sizeMb: Math.round(n.size / 1e6),
+      status: "pending", latencyMs: null, firstToken: "",
+    })));
+
+    // 3. test each model sequentially
+    for (let i = 0; i < names.length; i++) {
+      const { name } = names[i];
+      setHealthResults(prev => prev.map((r, idx) => idx === i ? { ...r, status: "scanning" } : r));
+      const t0 = Date.now();
+      let firstToken = ""; let latencyMs: number | null = null; let err = "";
+      try {
+        const ac = new AbortController(); scanAbortRef.current = ac;
+        const resp = await fetch("/api/local-proxy/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: ac.signal,
+          body: JSON.stringify({
+            endpoint: base,
+            model: name,
+            messages: [{ role: "user", content: "Hi" }],
+            stream: true,
+          }),
+        });
+        if (!resp.body) throw new Error("no body");
+        const reader = resp.body.getReader(); const dec = new TextDecoder();
+        outer: for (;;) {
+          const { done, value } = await reader.read(); if (done) break;
+          for (const line of dec.decode(value).split("\n")) {
+            if (!line.startsWith("data:")) continue;
+            const chunk = line.slice(5).trim();
+            if (chunk === "[DONE]") break outer;
+            try {
+              const delta = JSON.parse(chunk)?.choices?.[0]?.delta?.content ?? "";
+              if (delta && !firstToken) { firstToken = delta.trim().slice(0, 40); latencyMs = Date.now() - t0; break outer; }
+            } catch { /* skip */ }
+          }
+        }
+        reader.cancel();
+      } catch (e) {
+        if ((e as Error).name === "AbortError") { setScanning(false); return; }
+        err = (e as Error).message.slice(0, 60);
+      }
+      setHealthResults(prev => prev.map((r, idx) => idx === i ? {
+        ...r,
+        status: firstToken ? "ok" : "fail",
+        latencyMs, firstToken, error: err || undefined,
+      } : r));
+    }
+    setScanning(false);
+  };
+
+  const stopHealthScan = () => { scanAbortRef.current?.abort(); setScanning(false); };
+
   // ── Auto-detect state ────────────────────────────────────────────────────────
   const [autoScanning, setAutoScanning] = useState(false);
   const [scanResults, setScanResults] = useState<ScanResult[]>(
@@ -1900,6 +1994,158 @@ export function LocalModelModal({ open, onOpenChange, onOpenEngineHub }: LocalMo
               {testMsg}
             </motion.div>
           )}
+        </div>
+
+        {/* ── Model Health Scanner ─────────────────────────────────────────── */}
+        <div className="rounded-2xl overflow-hidden" style={{
+          background: "linear-gradient(135deg,#030508,#060a10)",
+          border: "1px solid rgba(34,197,94,0.15)",
+        }}>
+          {/* Scanner Header */}
+          <button
+            className="w-full flex items-center justify-between px-4 py-3 transition-all"
+            style={{ background: "rgba(34,197,94,0.04)" }}
+            onClick={() => setScanOpen(v => !v)}
+          >
+            <div className="flex items-center gap-2">
+              <FlaskConical className="w-4 h-4" style={{ color: "#22c55e" }} />
+              <span className="text-[11px] font-black tracking-widest uppercase" style={{ color: "rgba(34,197,94,0.85)" }}>
+                فاحص صحة النماذج المثبتة
+              </span>
+              {healthResults.length > 0 && (
+                <span className="text-[9px] font-mono px-2 py-0.5 rounded-full" style={{
+                  background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.2)", color: "#22c55e",
+                }}>
+                  {healthResults.filter(r => r.status === "ok").length}/{healthResults.length} ✓
+                </span>
+              )}
+            </div>
+            <ChevronDown
+              className="w-3.5 h-3.5 transition-transform"
+              style={{ color: "rgba(34,197,94,0.5)", transform: scanOpen ? "rotate(180deg)" : "rotate(0deg)" }}
+            />
+          </button>
+
+          <AnimatePresence>
+            {scanOpen && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.25 }}
+                className="overflow-hidden"
+              >
+                <div className="px-4 pb-4 pt-2 space-y-3">
+                  {/* Description */}
+                  <p className="text-[9.5px] font-mono" style={{ color: "rgba(255,255,255,0.28)" }}>
+                    يكتشف جميع النماذج المثبتة في Ollama تلقائياً ويختبر استجابة كل واحد منها بإرسال رسالة &quot;Hi&quot; — يعرض وقت الاستجابة والحالة.
+                  </p>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-2">
+                    <motion.button
+                      onClick={scanning ? stopHealthScan : runHealthScan}
+                      className="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-[10px] font-black tracking-wider uppercase transition-all"
+                      style={{
+                        background: scanning ? "rgba(239,68,68,0.12)" : "rgba(34,197,94,0.12)",
+                        border: `1px solid ${scanning ? "rgba(239,68,68,0.3)" : "rgba(34,197,94,0.3)"}`,
+                        color: scanning ? "#ef4444" : "#22c55e",
+                      }}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.97 }}
+                    >
+                      {scanning ? (
+                        <><StopCircle className="w-3.5 h-3.5" /> إيقاف الفحص</>
+                      ) : (
+                        <><PlayCircle className="w-3.5 h-3.5" /> بدء الفحص</>
+                      )}
+                    </motion.button>
+                    {healthResults.length > 0 && !scanning && (
+                      <button
+                        onClick={() => setHealthResults([])}
+                        className="px-3 py-2 rounded-xl text-[9px] font-bold uppercase transition-all"
+                        style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.3)" }}
+                      >
+                        مسح
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Results Table */}
+                  {healthResults.length > 0 && (
+                    <div className="space-y-1.5 max-h-56 overflow-y-auto scrollbar-none">
+                      {/* Header row */}
+                      <div className="grid grid-cols-[1fr_auto_auto_auto] gap-2 px-2 pb-1" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                        {["النموذج", "الحجم", "زمن الرد", "الحالة"].map(h => (
+                          <span key={h} className="text-[7.5px] font-black uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.2)" }}>{h}</span>
+                        ))}
+                      </div>
+
+                      {healthResults.map((r, i) => {
+                        const statusCol = r.status === "ok" ? "#22c55e" : r.status === "fail" ? "#ef4444" : r.status === "scanning" ? "#fbbf24" : "rgba(255,255,255,0.2)";
+                        const StatusIcon = r.status === "ok" ? CheckCircle2 : r.status === "fail" ? AlertCircle : r.status === "scanning" ? Loader2 : Activity;
+                        return (
+                          <motion.div
+                            key={r.name + i}
+                            initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: i * 0.05 }}
+                            className="grid grid-cols-[1fr_auto_auto_auto] gap-2 items-center px-2 py-1.5 rounded-lg"
+                            style={{
+                              background: r.status === "scanning" ? "rgba(251,191,36,0.04)" : r.status === "ok" ? "rgba(34,197,94,0.04)" : "rgba(255,255,255,0.02)",
+                              border: `1px solid ${r.status === "scanning" ? "rgba(251,191,36,0.12)" : r.status === "ok" ? "rgba(34,197,94,0.1)" : "rgba(255,255,255,0.04)"}`,
+                            }}
+                          >
+                            {/* Model name */}
+                            <div className="min-w-0">
+                              <div className="text-[9.5px] font-mono font-semibold truncate" style={{ color: statusCol }}>
+                                {r.name}
+                              </div>
+                              {r.firstToken && (
+                                <div className="text-[8px] font-mono truncate mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
+                                  &quot;{r.firstToken}&quot;
+                                </div>
+                              )}
+                              {r.error && (
+                                <div className="text-[8px] font-mono truncate mt-0.5" style={{ color: "#ef4444" }}>
+                                  {r.error}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Size */}
+                            <span className="text-[8.5px] font-mono text-right" style={{ color: "rgba(255,255,255,0.3)" }}>
+                              {r.sizeMb > 1000 ? `${(r.sizeMb / 1000).toFixed(1)}GB` : r.sizeMb > 0 ? `${r.sizeMb}MB` : "—"}
+                            </span>
+
+                            {/* Latency */}
+                            <span className="text-[8.5px] font-mono text-right w-10" style={{
+                              color: r.latencyMs ? (r.latencyMs < 2000 ? "#22c55e" : r.latencyMs < 5000 ? "#fbbf24" : "#ef4444") : "rgba(255,255,255,0.2)",
+                            }}>
+                              {r.latencyMs ? `${r.latencyMs}ms` : "—"}
+                            </span>
+
+                            {/* Status icon */}
+                            <StatusIcon
+                              className={`w-3.5 h-3.5 flex-shrink-0 ${r.status === "scanning" ? "animate-spin" : ""}`}
+                              style={{ color: statusCol }}
+                            />
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Empty state */}
+                  {healthResults.length === 0 && !scanning && (
+                    <div className="text-center py-4 space-y-1">
+                      <FlaskConical className="w-6 h-6 mx-auto" style={{ color: "rgba(34,197,94,0.2)" }} />
+                      <div className="text-[9px] font-mono" style={{ color: "rgba(255,255,255,0.2)" }}>
+                        اضغط "بدء الفحص" لاكتشاف واختبار النماذج المثبتة
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Save Button */}
