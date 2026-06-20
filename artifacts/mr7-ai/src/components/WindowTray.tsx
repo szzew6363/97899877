@@ -6,7 +6,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createPortal } from "react-dom";
-import { Activity, Server, ChevronUp, Monitor } from "lucide-react";
+import { ChevronUp, Monitor } from "lucide-react";
 
 // ── Tray event bus ─────────────────────────────────────────────────────────
 export type TrayEvent =
@@ -137,18 +137,10 @@ function TrayChip({ item, onRestore, onClose }: { item: TrayItem; onRestore: () 
   );
 }
 
-// ── Main WindowTray ────────────────────────────────────────────────────────
-interface WindowTrayProps {
-  onOpenLocalEngineHub?: () => void;
-  onOpenBenchmark?: () => void;
-  onOpenLocalAINexus?: () => void;
-}
-
-export function WindowTray({ onOpenLocalEngineHub, onOpenBenchmark, onOpenLocalAINexus }: WindowTrayProps) {
-  const [items, setItems]       = useState<TrayItem[]>([]);
+// ── Main WindowTray — minimized windows only ───────────────────────────────
+export function WindowTray() {
+  const [items, setItems]         = useState<TrayItem[]>([]);
   const [collapsed, setCollapsed] = useState(false);
-  const [engineCount, setEngineCount] = useState(0);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     const unsub = trayBus.on(e => {
@@ -164,31 +156,10 @@ export function WindowTray({ onOpenLocalEngineHub, onOpenBenchmark, onOpenLocalA
     return unsub;
   }, []);
 
-  // Poll online engine count
-  useEffect(() => {
-    const poll = async () => {
-      try {
-        const r = await fetch("/api/local-engines/status");
-        if (r.ok) {
-          const d = await r.json() as { engines: { online: boolean }[] };
-          setEngineCount((d.engines ?? []).filter(e => e.online).length);
-        }
-      } catch { /* ignore */ }
-    };
-    poll();
-    pollRef.current = setInterval(poll, 10000);
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  }, []);
+  const restore   = useCallback((id: string) => { trayBus.emit({ type: "RESTORE", id }); }, []);
+  const closeItem = useCallback((id: string) => { trayBus.emit({ type: "CLOSE",   id }); }, []);
 
-  const restore = useCallback((id: string) => {
-    trayBus.emit({ type: "RESTORE", id });
-  }, []);
-
-  const closeItem = useCallback((id: string) => {
-    trayBus.emit({ type: "CLOSE", id });
-  }, []);
-
-  if (items.length === 0 && !onOpenLocalEngineHub && !onOpenBenchmark && !onOpenLocalAINexus) return null;
+  if (items.length === 0) return null;
 
   return createPortal(
     <motion.div
@@ -196,14 +167,8 @@ export function WindowTray({ onOpenLocalEngineHub, onOpenBenchmark, onOpenLocalA
       animate={{ y: collapsed ? 48 : 0 }}
       transition={{ type: "spring", stiffness: 300, damping: 28 }}
       style={{
-        position: "fixed",
-        bottom: 0,
-        left: "50%",
-        transform: "translateX(-50%)",
-        zIndex: 8888,
-        maxWidth: "calc(100vw - 32px)",
-        width: "auto",
-        minWidth: 200,
+        position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)",
+        zIndex: 8888, maxWidth: "calc(100vw - 32px)", width: "auto", minWidth: 160,
       }}
     >
       <div
@@ -230,44 +195,6 @@ export function WindowTray({ onOpenLocalEngineHub, onOpenBenchmark, onOpenLocalA
         </button>
 
         <div className="relative flex items-center gap-2 flex-wrap">
-
-          {/* Status chip */}
-          <div
-            className="flex items-center gap-1.5 px-2 py-1 rounded-lg shrink-0"
-            style={{ background: "rgba(0,229,255,0.06)", border: "1px solid rgba(0,229,255,0.12)" }}
-          >
-            <motion.div
-              className="w-1.5 h-1.5 rounded-full"
-              style={{ background: engineCount > 0 ? "#22c55e" : "#ef4444" }}
-              animate={{ opacity: [0.5, 1, 0.5] }}
-              transition={{ duration: 2, repeat: Infinity }}
-            />
-            <span className="text-[9px] font-mono text-white/40">{engineCount}/7</span>
-          </div>
-
-          {/* Quick action buttons */}
-          {onOpenLocalEngineHub && (
-            <button
-              onClick={onOpenLocalEngineHub}
-              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-bold transition-all hover:scale-105 shrink-0"
-              style={{ background: "rgba(0,229,255,0.08)", color: "#00e5ff", border: "1px solid rgba(0,229,255,0.2)" }}
-              title="Local Engine Hub"
-            >
-              <Server size={9} /> Hub
-            </button>
-          )}
-
-          {onOpenBenchmark && (
-            <button
-              onClick={onOpenBenchmark}
-              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-bold transition-all hover:scale-105 shrink-0"
-              style={{ background: "rgba(167,139,250,0.08)", color: "#a78bfa", border: "1px solid rgba(167,139,250,0.2)" }}
-              title="Benchmark"
-            >
-              <Activity size={9} /> Bench
-            </button>
-          )}
-
           {/* Minimized window chips */}
           <AnimatePresence mode="popLayout">
             {items.map(item => (
@@ -280,19 +207,11 @@ export function WindowTray({ onOpenLocalEngineHub, onOpenBenchmark, onOpenLocalA
             ))}
           </AnimatePresence>
 
-          {items.length === 0 && (
-            <span className="text-[9px] text-white/15 font-mono italic">
-              Minimized windows appear here
-            </span>
-          )}
-
           {/* Window count badge */}
-          {items.length > 0 && (
-            <div className="ml-auto flex items-center gap-1 shrink-0">
-              <Monitor size={9} className="text-white/20" />
-              <span className="text-[9px] text-white/25 font-mono">{items.length}</span>
-            </div>
-          )}
+          <div className="ml-auto flex items-center gap-1 shrink-0">
+            <Monitor size={9} className="text-white/20" />
+            <span className="text-[9px] text-white/25 font-mono">{items.length}</span>
+          </div>
         </div>
       </div>
     </motion.div>,

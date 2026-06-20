@@ -204,7 +204,7 @@ const AutonomousDecisionEngineModal = lazy(() => import("./components/modals/Aut
 const JARVISCommandCenterModal      = lazy(() => import("./components/modals/JARVISCommandCenterModal").then(m=>({default:m.JARVISCommandCenterModal})));
 const OmegaAgentModal               = lazy(() => import("./components/modals/OmegaAgentModal").then(m=>({default:m.OmegaAgentModal})));
 const OllamaHub3D                   = lazy(() => import("./components/OllamaHub3D").then(m=>({default:m.OllamaHub3D})));
-import { LocalAIModelNexus, LocalAIFAB } from "./components/LocalAIModelNexus";
+import { LocalAIModelNexus } from "./components/LocalAIModelNexus";
 
 // ── MODAL STATE REDUCER ───────────────────────────────────────────────────────
 const MODAL_IDS = [
@@ -634,6 +634,9 @@ function AppContent() {
           onOpenOllamaHub={() => open('ollamaHub')}
           onOpenMultiModelRace={() => open('multiModelRace')}
           onOpenLocalBenchmark={() => open('localBenchmark')}
+          onOpenLocalAINexus={() => open('localAINexus')}
+          onOpenLocalEngineHub={() => open('localEngineHub')}
+          onOpenBenchmark={() => open('localBenchmark')}
         />
         <ChatView onOpenOsintDash={() => open('osintDash')} />
         {modals.compare && <CompareView onClose={() => close('compare')} />}
@@ -1036,18 +1039,8 @@ function AppContent() {
       {/* ── LOCAL AI MODEL NEXUS — Full-screen modal ── */}
       <LocalAIModelNexus open={modals.localAINexus} onClose={() => close('localAINexus')} />
 
-      {/* ── LOCAL AI FAB — floating action button ── */}
-      {!modals.localAINexus && (
-        <div style={{ position: "fixed", bottom: 72, right: 18, zIndex: 8100 }}>
-          <LocalAIFAB onOpen={() => open('localAINexus')} onlineCount={0} />
-        </div>
-      )}
-
-      {/* Global Window Tray — bottom taskbar for minimized windows */}
-      <WindowTray
-        onOpenLocalEngineHub={() => open('localEngineHub')}
-        onOpenBenchmark={() => open('localBenchmark')}
-      />
+      {/* Global Window Tray — minimized windows only */}
+      <WindowTray />
     </div>
     </>
   );

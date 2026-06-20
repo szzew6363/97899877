@@ -16,7 +16,7 @@ import { AI_MODELS, getModel } from "@/lib/ai-config";
 import { tierAtLeast } from "@/lib/subscription";
 import {
   Menu, Sparkles, Coins, LayoutGrid, HelpCircle, Search, Zap, Server, Bot,
-  Hexagon, Shield, Columns3, Crosshair, BarChart2, ChevronLeft, ChevronRight,
+  Hexagon, Shield, Columns3, Crosshair, BarChart2, ChevronDown, ChevronLeft, ChevronRight,
   Target, GitBranch, Bug, Activity, DollarSign, GitMerge, ShieldAlert, ShieldCheck,
   BrainCircuit, Gauge, Globe, AlertTriangle, Network, Cpu, Lock,
   Flame, Share2, PanelLeftClose, PanelLeftOpen,
@@ -70,6 +70,9 @@ interface TopBarProps {
   onOpenJARVISCommandCenter?: () => void;
   onOpenOmegaAgent?: () => void;
   onOpenOllamaHub?: () => void;
+  onOpenLocalAINexus?: () => void;
+  onOpenLocalEngineHub?: () => void;
+  onOpenBenchmark?: () => void;
   hudsVisible?: boolean;
   sidebarCollapsed?: boolean;
   onToggleSidebar?: () => void;
@@ -749,6 +752,291 @@ function LocalModelQuickToggle({ onOpenLocalModel }: { onOpenLocalModel: () => v
       </AnimatePresence>
       , document.body)}
     </>
+  );
+}
+
+// ── LOCAL AI TopBar Button — 3D dropdown (Nexus + Hub + Bench + Ollama models) ─
+function LocalAITopBarButton({
+  onOpenNexus,
+  onOpenHub,
+  onOpenBench,
+}: {
+  onOpenNexus: () => void;
+  onOpenHub:   () => void;
+  onOpenBench: () => void;
+}) {
+  const { state, dispatch } = useStore();
+  const [open, setOpen]     = useState(false);
+  const [engines, setEngines] = useState<{
+    online: boolean; id: string; label: string; models: string[]; latencyMs: number | null;
+  }[]>([]);
+
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const rafRef    = useRef(0);
+  const frameRef  = useRef(0);
+  const pollRef   = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const onlineCount  = engines.filter(e => e.online).length;
+  const ollamaEng    = engines.find(e => e.id === "ollama");
+  const ollamaModels = ollamaEng?.models ?? [];
+  const color        = onlineCount > 0 ? "#22c55e" : "#00e5ff";
+
+  // ── Poll engine status every 10 s ──────────────────────────────────────────
+  useEffect(() => {
+    const poll = async () => {
+      try {
+        const r = await fetch("/api/local-engines/status");
+        if (r.ok) {
+          const d = await r.json() as { engines: typeof engines };
+          setEngines(d.engines ?? []);
+        }
+      } catch { /* ignore */ }
+    };
+    poll();
+    pollRef.current = setInterval(poll, 10000);
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, []);
+
+  // ── Canvas HUD animation ────────────────────────────────────────────────────
+  useEffect(() => {
+    const cv = canvasRef.current; if (!cv) return;
+    const ctx = cv.getContext("2d")!;
+    const resize = () => {
+      cv.width  = cv.offsetWidth  * devicePixelRatio;
+      cv.height = cv.offsetHeight * devicePixelRatio;
+      ctx.scale(devicePixelRatio, devicePixelRatio);
+    };
+    resize();
+    const ro = new ResizeObserver(resize); ro.observe(cv);
+
+    const draw = () => {
+      frameRef.current++;
+      const f = frameRef.current;
+      const W = cv.offsetWidth, H = cv.offsetHeight;
+      ctx.clearRect(0, 0, W, H);
+
+      // Vertical scan grid
+      ctx.lineWidth = 0.4;
+      for (let x = 0; x < W; x += 7) {
+        ctx.strokeStyle = `rgba(0,229,255,${0.022 + Math.sin(f * 0.025 + x * 0.4) * 0.014})`;
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+      }
+      // Horizontal scanline
+      const sy = ((f * 1.8) % (H + 6)) - 3;
+      const sg = ctx.createLinearGradient(0, sy, 0, sy + 4);
+      sg.addColorStop(0,   "transparent");
+      sg.addColorStop(0.5, onlineCount > 0 ? "rgba(34,197,94,0.20)" : "rgba(0,229,255,0.16)");
+      sg.addColorStop(1,   "transparent");
+      ctx.fillStyle = sg;
+      ctx.fillRect(0, sy, W, 4);
+      // Corner dots
+      const c6 = onlineCount > 0 ? "rgba(34,197,94,0.55)" : "rgba(0,229,255,0.45)";
+      ctx.fillStyle = c6;
+      [[1,1],[W-2,1],[1,H-2],[W-2,H-2]].forEach(([x,y]) => {
+        ctx.beginPath(); ctx.arc(x, y, 1.5, 0, Math.PI*2); ctx.fill();
+      });
+
+      rafRef.current = requestAnimationFrame(draw);
+    };
+    rafRef.current = requestAnimationFrame(draw);
+    return () => { cancelAnimationFrame(rafRef.current); ro.disconnect(); };
+  }, [onlineCount]);
+
+  // Esc closes
+  useEffect(() => {
+    if (!open) return;
+    const h = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h);
+  }, [open]);
+
+  const activateOllamaModel = (model: string) => {
+    dispatch({ type: "SET_SETTINGS", patch: { useLocalModel: true, localModel: model, localEndpoint: "http://localhost:11434/v1" } });
+    setOpen(false);
+  };
+
+  const MENU = [
+    { label: "LOCAL AI NEXUS", sub: "مركز النماذج — تحميل وإدارة", color: "#00e5ff", icon: <Server size={12} />, fn: () => { setOpen(false); onOpenNexus(); } },
+    { label: "ENGINE HUB",     sub: "إدارة 7 محركات AI محلية",    color: "#a78bfa", icon: <Cpu    size={12} />, fn: () => { setOpen(false); onOpenHub();   } },
+    { label: "BENCHMARK",      sub: "قياس السرعة والأداء",         color: "#f97316", icon: <Activity size={12}/>, fn: () => { setOpen(false); onOpenBench(); } },
+  ] as const;
+
+  return (
+    <div className="relative flex-shrink-0">
+      {/* ── Trigger button ── */}
+      <motion.button
+        onClick={() => setOpen(o => !o)}
+        className="relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl overflow-hidden"
+        style={{
+          background: `linear-gradient(135deg,${color}0d 0%,rgba(0,0,0,0.72) 100%)`,
+          border: `1px solid ${color}${open ? "55" : "28"}`,
+          boxShadow: open
+            ? `0 0 22px ${color}20,0 0 50px ${color}09,inset 0 0 12px ${color}08`
+            : `0 0 8px ${color}10`,
+          color, minWidth: 72,
+        }}
+        whileHover={{ scale: 1.05, y: -0.5, boxShadow: `0 0 22px ${color}25,inset 0 0 10px ${color}08` }}
+        whileTap={{ scale: 0.93 }}
+        aria-label="LOCAL AI"
+      >
+        <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none" style={{ borderRadius: "inherit" }} />
+        {onlineCount > 0 && (
+          <motion.span className="absolute inset-0 rounded-xl pointer-events-none"
+            style={{ border: `1px solid ${color}` }}
+            animate={{ scale: [1, 1.06, 1], opacity: [0.32, 0, 0.32] }}
+            transition={{ duration: 1.8, repeat: Infinity }} />
+        )}
+        <div className="relative flex items-center gap-1.5">
+          <div style={{ filter: `drop-shadow(0 0 5px ${color}99)` }}>
+            <Server className="w-3.5 h-3.5" />
+          </div>
+          <div className="hidden sm:flex flex-col items-start leading-none gap-[1px]">
+            <span className="text-[5.5px] font-black tracking-[0.35em] uppercase" style={{ color: `${color}77` }}>LOCAL AI</span>
+            <span className="text-[8.5px] font-black tracking-wide font-mono">{onlineCount}/{engines.length || 7}</span>
+          </div>
+          <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.18 }} style={{ color: `${color}66` }}>
+            <ChevronDown className="w-3 h-3" />
+          </motion.div>
+        </div>
+        {onlineCount > 0 && (
+          <motion.span
+            className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full flex items-center justify-center text-[7px] font-black z-10"
+            style={{ background: "#22c55e", color: "#000", boxShadow: "0 0 8px #22c55e70", border: "1px solid #22c55e44" }}
+            animate={{ scale: [0.85, 1.12, 0.85] }} transition={{ duration: 1.6, repeat: Infinity }}>
+            {onlineCount}
+          </motion.span>
+        )}
+      </motion.button>
+
+      {/* ── Dropdown panel ── */}
+      <AnimatePresence>
+        {open && (
+          <>
+            <motion.div className="fixed inset-0 z-[6998]"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              style={{ background: "rgba(0,0,0,0.42)", backdropFilter: "blur(4px)" }}
+              onClick={() => setOpen(false)} />
+
+            <motion.div className="absolute top-full left-0 mt-1.5 z-[6999] rounded-2xl overflow-hidden"
+              style={{
+                width: 262,
+                background: "linear-gradient(165deg,rgba(4,8,6,0.99) 0%,rgba(2,4,3,0.99) 100%)",
+                border: `1px solid ${color}26`,
+                boxShadow: `0 0 60px ${color}12,0 0 120px ${color}06,0 24px 80px rgba(0,0,0,0.95),inset 0 1px 0 ${color}14`,
+                backdropFilter: "blur(40px)",
+              }}
+              initial={{ opacity: 0, y: -10, scale: 0.94 }}
+              animate={{ opacity: 1, y: 0,  scale: 1    }}
+              exit={{   opacity: 0, y: -10, scale: 0.94 }}
+              transition={{ duration: 0.18, ease: [0.16,1,0.3,1] }}
+            >
+              {/* corner brackets */}
+              {[["top-2 left-2","border-t border-l"],["top-2 right-2","border-t border-r"],
+                ["bottom-2 left-2","border-b border-l"],["bottom-2 right-2","border-b border-r"]
+               ].map(([pos,cls],i) => (
+                <span key={i} className={`absolute ${pos} w-3 h-3 ${cls} pointer-events-none`}
+                  style={{ borderColor: color + (i < 2 ? "44" : "22") }} />
+              ))}
+
+              {/* Header */}
+              <div className="px-4 pt-3.5 pb-2.5" style={{ borderBottom: `1px solid ${color}10` }}>
+                <div className="text-[6.5px] font-black tracking-[0.35em] uppercase mb-1.5" style={{ color: `${color}50` }}>
+                  LOCAL AI ENGINE SUITE
+                </div>
+                <div className="flex items-center gap-2">
+                  <motion.div className="w-2 h-2 rounded-full flex-shrink-0"
+                    style={{ background: onlineCount > 0 ? "#22c55e" : "#ef4444", boxShadow: `0 0 8px ${onlineCount > 0 ? "#22c55e" : "#ef4444"}` }}
+                    animate={{ opacity: [0.6, 1, 0.6] }} transition={{ duration: 1.4, repeat: Infinity }} />
+                  <span className="text-[12px] font-black" style={{ color }}>
+                    {onlineCount}/{engines.length || 7} متصل
+                  </span>
+                  {onlineCount > 0 && ollamaEng?.latencyMs && (
+                    <span className="text-[7px] font-mono ml-auto" style={{ color: "#22c55e88" }}>
+                      {ollamaEng.latencyMs}ms
+                    </span>
+                  )}
+                </div>
+                {/* engine mini-bar */}
+                <div className="flex gap-1 mt-2">
+                  {(engines.length ? engines : Array.from({ length: 7 })).map((e, i) => (
+                    <motion.div key={i}
+                      className="flex-1 h-0.5 rounded-full"
+                      style={{ background: (e as { online?: boolean })?.online ? "#22c55e" : "rgba(255,255,255,0.07)" }}
+                      animate={(e as { online?: boolean })?.online ? { opacity: [0.5,1,0.5] } : {}}
+                      transition={{ duration: 1.6, repeat: Infinity, delay: i * 0.08 }}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Action cards */}
+              <div className="p-2 flex flex-col gap-1">
+                {MENU.map((item, i) => (
+                  <motion.button key={item.label} onClick={item.fn}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left relative overflow-hidden"
+                    style={{ background: `${item.color}0a`, border: `1px solid ${item.color}18` }}
+                    whileHover={{ background: `${item.color}16`, scale: 1.02, x: 3 }}
+                    whileTap={{ scale: 0.97 }}
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1,  x:  0 }}
+                    transition={{ delay: i * 0.05, duration: 0.18 }}
+                  >
+                    <span className="btn-shimmer-inner" style={{ background: `linear-gradient(90deg,transparent,${item.color}12,transparent)` }} />
+                    <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{ background: `${item.color}12`, border: `1px solid ${item.color}22` }}>
+                      <span style={{ color: item.color }}>{item.icon}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[9px] font-black tracking-wider" style={{ color: item.color }}>{item.label}</div>
+                      <div className="text-[7px] text-white/25 truncate">{item.sub}</div>
+                    </div>
+                    <span className="text-white/15 text-[9px]">›</span>
+                  </motion.button>
+                ))}
+              </div>
+
+              {/* Installed Ollama models */}
+              {ollamaModels.length > 0 && (
+                <div className="px-3 pb-3" style={{ borderTop: "1px solid rgba(0,229,255,0.06)" }}>
+                  <div className="pt-2.5 pb-1.5 flex items-center gap-2">
+                    <span className="text-[6.5px] font-black tracking-[0.3em] uppercase" style={{ color: "rgba(0,229,255,0.28)" }}>
+                      نماذج Ollama ({ollamaModels.length})
+                    </span>
+                    <div className="flex-1 h-px" style={{ background: "rgba(0,229,255,0.07)" }} />
+                  </div>
+                  <div className="flex flex-col gap-1 max-h-40 overflow-y-auto scrollbar-none">
+                    {ollamaModels.map(m => {
+                      const active = state.settings.useLocalModel && state.settings.localModel === m;
+                      return (
+                        <motion.button key={m} onClick={() => activateOllamaModel(m)}
+                          className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left"
+                          style={{
+                            background: active ? "rgba(34,197,94,0.10)" : "rgba(0,229,255,0.04)",
+                            border: `1px solid ${active ? "rgba(34,197,94,0.32)" : "rgba(0,229,255,0.09)"}`,
+                          }}
+                          whileHover={{ background: "rgba(0,229,255,0.09)", x: 2 }}
+                          whileTap={{ scale: 0.97 }}
+                        >
+                          {active && (
+                            <motion.div className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                              style={{ background: "#22c55e", boxShadow: "0 0 4px #22c55e" }}
+                              animate={{ opacity: [0.6,1,0.6] }} transition={{ duration: 1, repeat: Infinity }} />
+                          )}
+                          <span className="text-[8px] font-mono truncate flex-1" style={{ color: active ? "#22c55e" : "rgba(0,229,255,0.68)" }}>{m}</span>
+                          {active && <span className="text-[6px] font-black" style={{ color: "#22c55e77" }}>ACTIVE</span>}
+                        </motion.button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* bottom glow */}
+              <div className="h-px" style={{ background: `linear-gradient(90deg,transparent,${color}30,transparent)` }} />
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 
@@ -1546,6 +1834,9 @@ export function TopBar({
   onOpenJARVISCommandCenter,
   onOpenOmegaAgent,
   onOpenOllamaHub,
+  onOpenLocalAINexus,
+  onOpenLocalEngineHub,
+  onOpenBenchmark,
   hudsVisible,
   sidebarCollapsed,
   onToggleSidebar,
@@ -1805,6 +2096,13 @@ export function TopBar({
         )}
 
         <LocalModelQuickToggle onOpenLocalModel={onOpenLocalModel} />
+
+        {/* ── LOCAL AI TopBar Button ── */}
+        <LocalAITopBarButton
+          onOpenNexus={onOpenLocalAINexus ?? (() => {})}
+          onOpenHub={onOpenLocalEngineHub   ?? (() => {})}
+          onOpenBench={onOpenBenchmark      ?? (() => {})}
+        />
 
         {/* ── 3D POWER BUTTON ── */}
         <motion.button
