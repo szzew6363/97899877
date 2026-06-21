@@ -74,6 +74,8 @@ interface TopBarProps {
   onOpenLocalAINexus?: () => void;
   onOpenLocalEngineHub?: () => void;
   onOpenBenchmark?: () => void;
+  onOpenMultiModelRace?: () => void;
+  onOpenLocalBenchmark?: () => void;
   hudsVisible?: boolean;
   sidebarCollapsed?: boolean;
   onToggleSidebar?: () => void;

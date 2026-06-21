@@ -8,8 +8,9 @@ import {
   Network, Layers, Atom,
   BarChart3, Wifi, Shield, FlaskConical, GitCompare,
   Gauge, Trophy, Timer, TrendingUp, Copy, Check, AlertTriangle,
-  Bolt,
+  Bolt, History, Plus,
 } from "lucide-react";
+import { BenchmarkHistory3D, saveBenchEntry } from "./BenchmarkHistory3D";
 
 /* ══════════════════════════════════════════════════════════════════════
    OLLAMA NEURAL HUB — MAXIMUM EDITION
@@ -29,15 +30,36 @@ interface OllamaStatus {
   binExists?: boolean; dlLog?: string | null;
 }
 
-/* ── 7 optimised models for Replit CPU (no GPU needed) ────────────── */
+/* ── 22 optimised models for Replit CPU — sorted by size ─────────── */
 const REPLIT_MODELS = [
-  { name: "qwen2.5:0.5b",      label: "Qwen 0.5B",      size: "395MB", ram: "~1GB",  speed: "ULTRA", color: "#10b981", geo: "sphere",       tag: "ALI",   ok: true  },
-  { name: "tinyllama",          label: "TinyLlama",       size: "637MB", ram: "~1GB",  speed: "ULTRA", color: "#f59e0b", geo: "tetrahedron",   tag: "TL",    ok: true  },
-  { name: "deepseek-r1:1.5b",  label: "DeepSeek R1 1.5B",size: "1.1GB", ram: "~2GB",  speed: "FAST",  color: "#0ea5e9", geo: "icosahedron",   tag: "DS",    ok: true  },
-  { name: "llama3.2:1b",       label: "Llama 3.2 1B",    size: "1.3GB", ram: "~2GB",  speed: "FAST",  color: "#8b5cf6", geo: "dodecahedron",  tag: "META",  ok: true  },
-  { name: "gemma2:2b",         label: "Gemma 2 2B",      size: "1.6GB", ram: "~3GB",  speed: "MED",   color: "#ec4899", geo: "octahedron",    tag: "GOO",   ok: true  },
-  { name: "phi3:mini",         label: "Phi-3 Mini",      size: "2.2GB", ram: "~4GB",  speed: "MED",   color: "#06b6d4", geo: "torus",         tag: "MS",    ok: true  },
-  { name: "mistral:7b-q4_0",   label: "Mistral 7B Q4",   size: "4.1GB", ram: "~6GB",  speed: "SLOW",  color: "#f97316", geo: "sphere",        tag: "MIS",   ok: false },
+  /* ULTRA — sub-1GB, instant */
+  { name: "smollm:135m",        label: "SmolLM 135M",     size: "83MB",  ram: "~0.5GB", speed: "ULTRA", color: "#22d3ee", geo: "tetrahedron",  tag: "HF",    ok: true,  cat: "tiny"   },
+  { name: "qwen2.5:0.5b",       label: "Qwen 2.5 0.5B",   size: "395MB", ram: "~1GB",   speed: "ULTRA", color: "#10b981", geo: "sphere",        tag: "ALI",   ok: true,  cat: "tiny"   },
+  { name: "tinyllama",           label: "TinyLlama 1.1B",  size: "637MB", ram: "~1GB",   speed: "ULTRA", color: "#f59e0b", geo: "tetrahedron",   tag: "TL",    ok: true,  cat: "tiny"   },
+  /* FAST — 1-2GB */
+  { name: "smollm:1.7b",        label: "SmolLM 1.7B",     size: "1.0GB", ram: "~1.5GB", speed: "FAST",  color: "#34d399", geo: "octahedron",    tag: "HF",    ok: true,  cat: "small"  },
+  { name: "qwen2.5:1.5b",       label: "Qwen 2.5 1.5B",   size: "986MB", ram: "~1.5GB", speed: "FAST",  color: "#a3e635", geo: "icosahedron",   tag: "ALI",   ok: true,  cat: "small"  },
+  { name: "deepseek-r1:1.5b",   label: "DeepSeek R1 1.5B",size: "1.1GB", ram: "~2GB",   speed: "FAST",  color: "#0ea5e9", geo: "icosahedron",   tag: "DS",    ok: true,  cat: "reason" },
+  { name: "llama3.2:1b",        label: "Llama 3.2 1B",    size: "1.3GB", ram: "~2GB",   speed: "FAST",  color: "#8b5cf6", geo: "dodecahedron",  tag: "META",  ok: true,  cat: "small"  },
+  { name: "stablelm2:1.6b",     label: "StableLM 2 1.6B", size: "974MB", ram: "~1.5GB", speed: "FAST",  color: "#facc15", geo: "sphere",        tag: "STAB",  ok: true,  cat: "small"  },
+  /* MED — 2-3GB */
+  { name: "qwen2.5:3b",         label: "Qwen 2.5 3B",     size: "1.9GB", ram: "~3GB",   speed: "MED",   color: "#4ade80", geo: "sphere",        tag: "ALI",   ok: true,  cat: "mid"    },
+  { name: "gemma2:2b",          label: "Gemma 2 2B",      size: "1.6GB", ram: "~3GB",   speed: "MED",   color: "#ec4899", geo: "octahedron",    tag: "GOO",   ok: true,  cat: "mid"    },
+  { name: "llama3.2:3b",        label: "Llama 3.2 3B",    size: "2.0GB", ram: "~3GB",   speed: "MED",   color: "#c084fc", geo: "dodecahedron",  tag: "META",  ok: true,  cat: "mid"    },
+  { name: "orca-mini:3b",       label: "Orca Mini 3B",    size: "1.9GB", ram: "~3GB",   speed: "MED",   color: "#fb923c", geo: "sphere",        tag: "MSFT",  ok: true,  cat: "mid"    },
+  { name: "phi3:mini",          label: "Phi-3 Mini 3.8B", size: "2.2GB", ram: "~4GB",   speed: "MED",   color: "#06b6d4", geo: "torus",         tag: "MS",    ok: true,  cat: "mid"    },
+  { name: "phi3.5:mini",        label: "Phi-3.5 Mini",    size: "2.2GB", ram: "~4GB",   speed: "MED",   color: "#67e8f9", geo: "torus",         tag: "MS",    ok: true,  cat: "mid"    },
+  /* CODE — 1-4GB */
+  { name: "qwen2.5-coder:1.5b", label: "Qwen Coder 1.5B", size: "986MB", ram: "~1.5GB", speed: "FAST",  color: "#38bdf8", geo: "icosahedron",   tag: "CODE",  ok: true,  cat: "code"   },
+  { name: "qwen2.5-coder:3b",   label: "Qwen Coder 3B",   size: "1.9GB", ram: "~3GB",   speed: "MED",   color: "#7dd3fc", geo: "dodecahedron",  tag: "CODE",  ok: true,  cat: "code"   },
+  { name: "codegemma:2b",       label: "CodeGemma 2B",    size: "1.6GB", ram: "~3GB",   speed: "MED",   color: "#f9a8d4", geo: "octahedron",    tag: "CODE",  ok: true,  cat: "code"   },
+  /* EMBED — tiny utility models */
+  { name: "all-minilm",         label: "All-MiniLM Embed",size: "46MB",  ram: "~0.5GB", speed: "ULTRA", color: "#a78bfa", geo: "sphere",        tag: "EMBD",  ok: true,  cat: "embed"  },
+  { name: "nomic-embed-text",   label: "Nomic Embed Text",size: "274MB", ram: "~0.5GB", speed: "ULTRA", color: "#818cf8", geo: "sphere",        tag: "EMBD",  ok: true,  cat: "embed"  },
+  /* HEAVY — 4-8GB (needs 8GB+ RAM) */
+  { name: "mistral:7b-q4_0",   label: "Mistral 7B Q4",   size: "4.1GB", ram: "~6GB",   speed: "SLOW",  color: "#f97316", geo: "sphere",        tag: "MIS",   ok: false, cat: "large"  },
+  { name: "deepseek-r1:7b",    label: "DeepSeek R1 7B",  size: "4.7GB", ram: "~8GB",   speed: "SLOW",  color: "#0284c7", geo: "icosahedron",   tag: "DS",    ok: false, cat: "large"  },
+  { name: "llama3.1:8b-q4_0",  label: "Llama 3.1 8B Q4", size: "4.7GB", ram: "~8GB",   speed: "SLOW",  color: "#6d28d9", geo: "sphere",        tag: "META",  ok: false, cat: "large"  },
 ] as const;
 
 const MODEL_COLORS = REPLIT_MODELS.map(m => m.color);
@@ -303,7 +325,7 @@ function useNeuralScene(
       if (linesRef.current) {
         const attr = linesRef.current.geometry.attributes.position as THREE.BufferAttribute;
         for (let k = 0; k < linePos.length; k++) (attr.array as Float32Array)[k] = linePos[k];
-        attr.count = li / 3;
+        linesRef.current.geometry.setDrawRange(0, li / 3);
         attr.needsUpdate = true;
         (linesRef.current.material as THREE.LineBasicMaterial).opacity =
           0.12 + Math.sin(t * 2) * 0.06;
@@ -406,7 +428,7 @@ interface BenchModelResult {
 /* ══════════════════════════════════════════════════════════════════════
    MAIN COMPONENT
 ══════════════════════════════════════════════════════════════════════ */
-type Tab = "dashboard" | "library" | "chat" | "hf" | "groq" | "bench" | "compare";
+type Tab = "dashboard" | "library" | "chat" | "hf" | "groq" | "bench" | "compare" | "history";
 
 export function OllamaHub3D({ open, onClose }: OllamaHubProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -470,6 +492,10 @@ export function OllamaHub3D({ open, onClose }: OllamaHubProps) {
   const [cmpLoadA,   setCmpLoadA]   = useState(false);
   const [cmpLoadB,   setCmpLoadB]   = useState(false);
   const [cmpCopied,  setCmpCopied]  = useState<"A"|"B"|null>(null);
+
+  /* ── Custom model pull ───────────────────────────────── */
+  const [customModelName, setCustomModelName] = useState("");
+  const [customPulling,   setCustomPulling]   = useState(false);
 
   /* ── Auto-pull queue ─────────────────────────────────── */
   const [autoPullActive,  setAutoPullActive]  = useState(false);
@@ -618,6 +644,20 @@ export function OllamaHub3D({ open, onClose }: OllamaHubProps) {
     }
     setBenchProgress("");
     setBenchRunning(false);
+    // ── Save to history ──────────────────────────────────────────
+    if (results.length > 0) {
+      saveBenchEntry({
+        ts: Date.now(),
+        prompt: benchPrompt,
+        results: results.map(r => ({
+          name:    r.name,
+          avgTps:  r.avgTps,
+          avgTtft: r.avgTtft,
+          minTps:  r.minTps,
+          maxTps:  r.maxTps,
+        })),
+      });
+    }
   }, [status.running, benchModels, benchRuns, benchPrompt]);
 
   /* ── Feature 9: Side-by-side compare ────────────────── */
@@ -732,6 +772,17 @@ export function OllamaHub3D({ open, onClose }: OllamaHubProps) {
       await fetchStatus();
     }
   };
+
+  /* ── Custom model pull (any model name the user types) ── */
+  const handleCustomPull = useCallback(async () => {
+    const name = customModelName.trim();
+    if (!name || !status.running) return;
+    setCustomPulling(true);
+    await handlePull(name);
+    setCustomModelName("");
+    setCustomPulling(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customModelName, status.running]);
 
   /* ── Auto-pull all recommended models sequentially ──── */
   const handleAutoPullAll = useCallback(async () => {
@@ -903,7 +954,7 @@ export function OllamaHub3D({ open, onClose }: OllamaHubProps) {
             </div>
           )}
           <div className="px-2.5 py-1 rounded-full border border-violet-700/30 bg-violet-950/30 text-[9px] font-mono text-violet-400">
-            {status.models.length}/7 MODELS · {running.length} ACTIVE
+            {status.models.length}/{REPLIT_MODELS.filter(m=>m.ok).length} MODELS · {running.length} ACTIVE
           </div>
           {/* ── Feature 8: Test Connection button ── */}
           <button onClick={handleTestConnection} disabled={testConn.testing}
@@ -939,7 +990,7 @@ export function OllamaHub3D({ open, onClose }: OllamaHubProps) {
       ══════════════════════════════════════════════════ */}
       <div className="relative z-10 flex items-center gap-1 px-5 pt-2 pb-0 flex-shrink-0"
         style={{ borderBottom: "1px solid rgba(124,58,237,0.15)" }}>
-        {(["dashboard","library","chat","hf","groq","bench","compare"] as Tab[]).map(t => {
+        {(["dashboard","library","chat","hf","groq","bench","compare","history"] as Tab[]).map(t => {
           const icons: Record<Tab, React.ReactNode> = {
             dashboard: <Network   className="w-3 h-3" />,
             library:   <Layers    className="w-3 h-3" />,
@@ -948,6 +999,7 @@ export function OllamaHub3D({ open, onClose }: OllamaHubProps) {
             groq:      <Bolt      className="w-3 h-3" />,
             bench:     <BarChart3 className="w-3 h-3" />,
             compare:   <GitCompare className="w-3 h-3" />,
+            history:   <History   className="w-3 h-3" />,
           };
           const labels: Record<Tab, string> = {
             dashboard: "NEURAL CORE",
@@ -957,6 +1009,7 @@ export function OllamaHub3D({ open, onClose }: OllamaHubProps) {
             groq:      "GROQ ARENA",
             bench:     "BENCHMARK",
             compare:   "COMPARE",
+            history:   "HISTORY",
           };
           return (
             <button key={t} onClick={() => setTab(t)}
@@ -1188,9 +1241,32 @@ export function OllamaHub3D({ open, onClose }: OllamaHubProps) {
                   <span className="text-[10px] font-bold text-amber-300 tracking-widest">REPLIT-OPTIMISED — CPU ONLY, NO GPU</span>
                 </div>
                 <p className="text-[9px] text-amber-500/60 font-mono">
-                  All 7 models run without GPU. Start with qwen2.5:0.5b (395MB) for instant speed.
-                  Ollama must be running before pulling models.
+                  22 models — from 83MB to 4.7GB. ابدأ بـ SmolLM 135M (83MB) لأقصى سرعة أو qwen2.5:0.5b (395MB) للجودة.
+                  Ollama يجب أن يعمل قبل تحميل النماذج.
                 </p>
+
+                {/* ── Custom model name input ── */}
+                <div className="mt-3 flex items-center gap-2">
+                  <div className="flex-1 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border"
+                    style={{ background: "rgba(0,0,0,0.4)", borderColor: "rgba(0,229,255,0.2)" }}>
+                    <Plus className="w-3 h-3 text-cyan-600 shrink-0" />
+                    <input
+                      value={customModelName}
+                      onChange={e => setCustomModelName(e.target.value)}
+                      onKeyDown={e => e.key === "Enter" && handleCustomPull()}
+                      placeholder="اسم نموذج مخصص — مثل: llava:7b أو codellama:13b"
+                      className="flex-1 bg-transparent text-[10px] font-mono text-cyan-300 placeholder-cyan-800 outline-none"
+                    />
+                  </div>
+                  <button
+                    onClick={handleCustomPull}
+                    disabled={!customModelName.trim() || !status.running || customPulling}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all disabled:opacity-40 shrink-0"
+                    style={{ background: customPulling ? "rgba(0,229,255,0.06)" : "rgba(0,229,255,0.14)", color: "#00e5ff", border: "1px solid rgba(0,229,255,0.3)" }}>
+                    {customPulling ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
+                    {customPulling ? "PULLING..." : "PULL"}
+                  </button>
+                </div>
 
                 {/* Auto-pull Queue */}
                 <div className="mt-3 flex items-center gap-2 flex-wrap">
@@ -2059,6 +2135,11 @@ export function OllamaHub3D({ open, onClose }: OllamaHubProps) {
                 </div>
               )}
             </div>
+          )}
+
+          {/* ═══ HISTORY TAB ═══ */}
+          {tab === "history" && (
+            <BenchmarkHistory3D className="flex-1" />
           )}
         </div>
       </div>

@@ -63,7 +63,7 @@ export function OdysseusCompareModal({ open, onOpenChange }: OdysseusCompareModa
   async function runCompare() {
     if (!prompt.trim() || running) return;
     setRunning(true); setOutputA(""); setOutputB(""); setRevealed(false); setWinner(null);
-    pipeline.emit({ source: "Odysseus Compare", label: `Compare: ${prompt.slice(0, 30)}`, sourceColor: "#a78bfa" });
+    pipeline.push({ source: "Odysseus Compare", label: `Compare: ${prompt.slice(0, 30)}`, content: "", sourceColor: "#a78bfa" });
 
     try {
       await Promise.all([

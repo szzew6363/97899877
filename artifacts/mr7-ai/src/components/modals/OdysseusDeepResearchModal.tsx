@@ -89,7 +89,7 @@ export function OdysseusDeepResearchModal({ open, onOpenChange }: OdysseusDeepRe
   async function runResearch() {
     if (!query.trim() || running) return;
     setRunning(true); setOutput(""); setPhase(0);
-    pipeline.emit({ source: "Odysseus Deep Research", label: `Research: ${query.slice(0, 40)}`, sourceColor: "#00e5cc" });
+    pipeline.push({ source: "Odysseus Deep Research", label: `Research: ${query.slice(0, 40)}`, content: "", sourceColor: "#00e5cc" });
 
     for (let i = 0; i < selectedDepth.phases; i++) {
       setPhase(i + 1);
@@ -136,8 +136,7 @@ Make the report comprehensive, analytically rigorous, and practically useful.`;
 
     setOutput("");
     try {
-      await readChatText({ messages: [{ role: "user", content: prompt }], model: "claude-sonnet-4-5", persona: null, customInstructions: "", language: "en", memory: [] },
-        chunk => setOutput(prev => prev + chunk));
+      await streamOdysseus(prompt, chunk => setOutput(chunk));
     } catch {
       setOutput("Research pipeline encountered an error. Please try again.");
     }

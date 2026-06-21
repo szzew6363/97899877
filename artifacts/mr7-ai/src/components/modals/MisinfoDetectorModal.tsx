@@ -35,7 +35,7 @@ export function MisinfoDetectorModal({ open, onOpenChange }: Props) {
   return (
     <AnimatePresence>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.93)", backdropFilter: "blur(18px)" }}>
-        <motion.div initial={{ scale: 0.92, y: 30 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} transition={{ type: "spring", stiffness: 280, damping: 26 }} className="relative w-full h-full max-w-[1400px] max-h-[90dvh] flex flex-col overflow-hidden" style={{ background: "linear-gradient(135deg, #030208 0%, #020310 50%, #030208 100%)", border: "1px solid rgba(99,102,241,0.25)", borderRadius: 16, boxShadow: "0 0 120px rgba(99,102,241,0.1)" }}>
+        <motion.div initial={{ scale: 0.92, y: 30 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} transition={{ type: "spring", stiffness: 280, damping: 26 }} className="relative w-full h-full w-full h-full flex flex-col overflow-hidden" style={{ background: "linear-gradient(135deg, #030208 0%, #020310 50%, #030208 100%)", border: "1px solid rgba(99,102,241,0.25)", borderRadius: 16, boxShadow: "0 0 120px rgba(99,102,241,0.1)" }}>
           <div className="relative z-10 flex items-center gap-4 px-6 py-4 border-b" style={{ borderColor: "rgba(99,102,241,0.15)", background: "rgba(99,102,241,0.04)" }}>
             <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "rgba(99,102,241,0.15)", border: "1px solid rgba(99,102,241,0.4)", boxShadow: "0 0 20px rgba(99,102,241,0.3)" }}>
               <Globe className="w-5 h-5" style={{ color: "#6366f1" }} />

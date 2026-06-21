@@ -153,7 +153,7 @@ export function WindowTray() {
         setItems(prev => prev.filter(i => i.id !== e.id));
       }
     });
-    return unsub;
+    return () => { unsub(); };
   }, []);
 
   const restore   = useCallback((id: string) => { trayBus.emit({ type: "RESTORE", id }); }, []);

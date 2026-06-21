@@ -68,7 +68,7 @@ export function OdysseusTaskCalendarModal({ open, onOpenChange }: OdysseusTaskCa
   async function runAI(q: string) {
     if (!q.trim() || running) return;
     setRunning(true); setAiOutput(""); setView("ai");
-    pipeline.emit({ source: "Odysseus Tasks", label: `AI Tasks: ${q.slice(0, 30)}`, sourceColor: "#f59e0b" });
+    pipeline.push({ source: "Odysseus Tasks", label: `AI Tasks: ${q.slice(0, 30)}`, content: "", sourceColor: "#f59e0b" });
     const prompt = `You are an AI task management and productivity expert integrated into Odysseus workspace.
 
 User request: "${q}"

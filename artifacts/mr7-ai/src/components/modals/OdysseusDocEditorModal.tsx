@@ -60,7 +60,7 @@ export function OdysseusDocEditorModal({ open, onOpenChange }: OdysseusDocEditor
     if (!action && !customInstruction) return;
     const targetText = content || "Write a creative piece about technology and humanity.";
     setRunning(true); setAiOutput("");
-    pipeline.emit({ source: "Odysseus Doc Editor", label: `AI: ${action?.label ?? "Custom"}`, sourceColor: "#6366f1" });
+    pipeline.push({ source: "Odysseus Doc Editor", label: `AI: ${action?.label ?? "Custom"}`, content: "", sourceColor: "#6366f1" });
     const prompt = customInstruction ? `${customInstruction}\n\n---\n\n${targetText}` : `${action!.prompt}\n\n---\n\n${targetText}`;
     try {
       await streamOdysseus(prompt, full => setAiOutput(prev => full));

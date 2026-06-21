@@ -155,7 +155,7 @@ export function BlockchainAuditModal({ open, onOpenChange }: BlockchainAuditModa
           onClick={e => e.target === e.currentTarget && onOpenChange(false)}>
           <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="relative w-[95vw] max-w-[1250px] h-[88vh] flex flex-col rounded-2xl overflow-hidden border border-[#1a1a1a]"
+            className="relative w-full h-full flex flex-col rounded-2xl overflow-hidden border border-[#1a1a1a]"
             style={{ background: "#050808" }}>
 
             <div className="flex items-center justify-between px-5 py-3 border-b border-[#111] shrink-0"

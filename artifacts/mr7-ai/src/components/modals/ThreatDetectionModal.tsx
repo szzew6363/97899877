@@ -196,7 +196,7 @@ export function ThreatDetectionModal({ open, onOpenChange }: Props) {
           animate={{ scale: 1, y: 0 }}
           exit={{ scale: 0.92, y: 30 }}
           transition={{ type: "spring", stiffness: 300, damping: 28 }}
-          className="relative w-full h-full max-w-[1400px] max-h-[90dvh] flex flex-col overflow-hidden"
+          className="relative w-full h-full w-full h-full flex flex-col overflow-hidden"
           style={{
             background: "linear-gradient(135deg, #0a0002 0%, #080000 50%, #0a0205 100%)",
             border: "1px solid rgba(255,0,64,0.25)",

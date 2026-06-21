@@ -67,7 +67,7 @@ export function OdysseusEmailAIModal({ open, onOpenChange }: OdysseusEmailAIModa
 
   async function generateReply(email: Email) {
     setRunning(true); setRunningAction("reply"); setAiReply("");
-    pipeline.emit({ source: "Odysseus Email AI", label: `Draft reply to ${email.from}`, sourceColor: "#3b82f6" });
+    pipeline.push({ source: "Odysseus Email AI", label: `Draft reply to ${email.from}`, content: "", sourceColor: "#3b82f6" });
     const prompt = `You are an expert email assistant. Draft a professional, concise reply to this email.
 
 From: ${email.from}

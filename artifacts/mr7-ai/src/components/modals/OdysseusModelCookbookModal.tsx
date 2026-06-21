@@ -77,7 +77,7 @@ export function OdysseusModelCookbookModal({ open, onOpenChange }: OdysseusModel
   async function getAIAdvice() {
     if (running) return;
     setRunning(true); setAiAdvice("");
-    pipeline.emit({ source: "Odysseus Cookbook", label: `Model advice: ${profile.label}`, sourceColor: "#10b981" });
+    pipeline.push({ source: "Odysseus Cookbook", label: `Model advice: ${profile.label}`, content: "", sourceColor: "#10b981" });
     const prompt = `You are an expert AI model deployment consultant for the Odysseus platform.
 
 Hardware Profile: ${profile.label}

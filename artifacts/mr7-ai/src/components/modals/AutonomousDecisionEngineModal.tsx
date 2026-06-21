@@ -543,7 +543,7 @@ export function AutonomousDecisionEngineModal({ open, onOpenChange }: Props) {
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.96, opacity: 0 }}
           transition={{ type: "spring", stiffness: 280, damping: 28 }}
-          className="relative w-full max-w-[1440px] flex flex-col m-3 rounded-2xl overflow-hidden"
+          className="relative w-full h-full flex flex-col overflow-hidden"
           style={{ border: "1px solid rgba(226,18,39,0.25)", background: "rgba(6,6,10,0.97)" }}
         >
           {/* ── Scanline overlay ── */}

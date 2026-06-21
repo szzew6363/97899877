@@ -42,7 +42,7 @@ export function CyberConsciousnessModal({ open, onOpenChange }: Props) {
   return (
     <AnimatePresence>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.94)", backdropFilter: "blur(20px)" }}>
-        <motion.div initial={{ scale: 0.92, y: 30 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} transition={{ type: "spring", stiffness: 280, damping: 26 }} className="relative w-full h-full max-w-[1400px] max-h-[90dvh] flex flex-col overflow-hidden" style={{ background: "linear-gradient(135deg, #020a10 0%, #030812 100%)", border: "1px solid rgba(0,229,255,0.2)", borderRadius: 16, boxShadow: "0 0 120px rgba(0,229,255,0.08), 0 0 400px rgba(0,180,255,0.04)" }}>
+        <motion.div initial={{ scale: 0.92, y: 30 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} transition={{ type: "spring", stiffness: 280, damping: 26 }} className="relative w-full h-full w-full h-full flex flex-col overflow-hidden" style={{ background: "linear-gradient(135deg, #020a10 0%, #030812 100%)", border: "1px solid rgba(0,229,255,0.2)", borderRadius: 16, boxShadow: "0 0 120px rgba(0,229,255,0.08), 0 0 400px rgba(0,180,255,0.04)" }}>
           {/* Pulsing organism effect */}
           <motion.div className="absolute inset-0 rounded-2xl pointer-events-none" style={{ border: "1px solid rgba(0,229,255,0.1)" }} animate={{ opacity: [0.3, 0.8, 0.3], scale: [1, 1.001, 1] }} transition={{ duration: 2, repeat: Infinity }} />
 

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Dialog, DialogContentTop, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ModalShell } from "@/components/ModalShell";
 import {
   Shield, Lock, Check, Copy, RefreshCw, Crown, Users, Zap, AlertCircle,
   CreditCard, Save, ChevronDown, ChevronUp,
@@ -119,16 +119,15 @@ export function AdminPanel({ open, onOpenChange }: AdminPanelProps) {
   );
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContentTop className="bg-[#0a0a0a] border border-primary/30 w-[98vw] max-w-lg max-h-[92dvh] overflow-y-auto shadow-[0_0_40px_rgba(226,18,39,0.15)]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-base">
-            <Shield className="w-5 h-5 text-primary" />
-            <span>Owner Admin Panel</span>
-            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-primary/20 text-primary border border-primary/30 ml-1">PRIVATE</span>
-          </DialogTitle>
-        </DialogHeader>
-
+    <ModalShell
+      open={open}
+      onClose={() => handleClose(false)}
+      title="Owner Admin Panel"
+      subtitle="PRIVATE — Master access required"
+      iconColor="#e21227"
+      icon={<Shield className="w-4.5 h-4.5 text-primary" />}
+    >
+      <div className="p-4 space-y-4">
         {!authed ? (
           <div className="space-y-4">
             <div className="text-center space-y-2">
@@ -347,7 +346,7 @@ export function AdminPanel({ open, onOpenChange }: AdminPanelProps) {
             </div>
           </div>
         )}
-      </DialogContentTop>
-    </Dialog>
+      </div>
+    </ModalShell>
   );
 }

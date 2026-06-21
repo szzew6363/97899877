@@ -35,7 +35,7 @@ export function FullSpectrumAIModal({ open, onOpenChange }: Props) {
   return (
     <AnimatePresence>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.96)", backdropFilter: "blur(20px)" }}>
-        <motion.div initial={{ scale: 0.92, y: 30 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} transition={{ type: "spring", stiffness: 280, damping: 26 }} className="relative w-full h-full max-w-[1400px] max-h-[90dvh] flex flex-col overflow-hidden" style={{ background: "linear-gradient(135deg, #030208 0%, #050210 50%, #030208 100%)", border: "1px solid rgba(167,139,250,0.25)", borderRadius: 16, boxShadow: "0 0 150px rgba(167,139,250,0.12), 0 0 400px rgba(99,102,241,0.06)" }}>
+        <motion.div initial={{ scale: 0.92, y: 30 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} transition={{ type: "spring", stiffness: 280, damping: 26 }} className="relative w-full h-full w-full h-full flex flex-col overflow-hidden" style={{ background: "linear-gradient(135deg, #030208 0%, #050210 50%, #030208 100%)", border: "1px solid rgba(167,139,250,0.25)", borderRadius: 16, boxShadow: "0 0 150px rgba(167,139,250,0.12), 0 0 400px rgba(99,102,241,0.06)" }}>
           {/* Omniscient glow effect */}
           <motion.div className="absolute inset-0 rounded-2xl pointer-events-none" style={{ background: "radial-gradient(ellipse at 50% 50%, rgba(167,139,250,0.06), transparent 70%)" }} animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 4, repeat: Infinity }} />
 
