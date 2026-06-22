@@ -104,6 +104,32 @@ async function virusTotalLookup(target: string, type: "ip" | "domain" | "url", a
   } catch (e) { return { error: String(e) }; }
 }
 
+// ── Censys ────────────────────────────────────────────────────────
+async function censysLookup(target: string, apiId?: string, apiSecret?: string): Promise<unknown> {
+  if (!apiId || !apiSecret) {
+    return {
+      simulated: true,
+      query: target,
+      message: "Censys API credentials required (CENSYS_API_ID + CENSYS_API_SECRET).",
+      results: [
+        { ip: target.match(/^\d+\.\d+\.\d+\.\d+$/) ? target : "محاكاة", protocols: ["443/https", "80/http", "22/ssh"], location: { country: "محاكاة" }, autonomous_system: { name: "ISP محاكاة" } },
+      ],
+    };
+  }
+  try {
+    const isIp = /^\d+\.\d+\.\d+\.\d+$/.test(target);
+    const endpoint = isIp
+      ? `https://search.censys.io/api/v2/hosts/${encodeURIComponent(target)}`
+      : `https://search.censys.io/api/v2/hosts/search?q=${encodeURIComponent(target)}&per_page=5`;
+    const r = await fetch(endpoint, {
+      headers: { Authorization: `Basic ${Buffer.from(`${apiId}:${apiSecret}`).toString("base64")}` },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!r.ok) return { error: `Censys HTTP ${r.status}` };
+    return await r.json();
+  } catch (e) { return { error: String(e) }; }
+}
+
 // ── Shodan IP lookup ──────────────────────────────────────────────
 async function shodanLookup(ip: string, apiKey?: string): Promise<unknown> {
   if (!apiKey) {
@@ -236,6 +262,16 @@ router.post("/scan/stream", async (req: Request, res: Response): Promise<void> =
   if (modules.includes("geo")) {
     const ip = target.match(/^\d+\.\d+\.\d+\.\d+$/) ? target : null;
     if (ip) tasks.push({ id: "geo", fn: () => geoLookup(ip) });
+  }
+  if (modules.includes("censys")) {
+    tasks.push({
+      id: "censys",
+      fn: () => censysLookup(
+        target,
+        apiKeys["censys_id"] || process.env["CENSYS_API_ID"],
+        apiKeys["censys_secret"] || process.env["CENSYS_API_SECRET"]
+      ),
+    });
   }
 
   // Run all tasks in parallel, stream each result as it arrives

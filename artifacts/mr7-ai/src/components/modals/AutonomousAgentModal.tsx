@@ -5,7 +5,8 @@ import {
   X, Play, Pause, SkipForward, StopCircle, Brain, Cpu, Database,
   Globe, Terminal, Upload, Download, RefreshCw, CheckCircle2, XCircle,
   AlertTriangle, Clock, Zap, Shield, Eye, ChevronRight, ChevronDown,
-  History, Activity, Lock, Unlock, FileText, Search,
+  History, Activity, Lock, Unlock, FileText, Search, Network, Map,
+  Hash, Wifi, Key, Server, Layers,
 } from "lucide-react";
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -15,7 +16,9 @@ import {
 
 export type AgentTool =
   | "shell" | "web_search" | "file_read" | "file_write"
-  | "api_call" | "rag_query" | "rag_write" | "code_run";
+  | "api_call" | "rag_query" | "rag_write" | "code_run"
+  | "dns_lookup" | "whois_rdap" | "ip_geo" | "vuln_search"
+  | "hash_analyze" | "port_probe" | "ssl_check" | "header_check";
 
 export type StepStatus = "pending" | "running" | "done" | "failed" | "skipped" | "waiting_approval";
 
@@ -65,19 +68,37 @@ interface AuditEntry {
 const TOOL_ICONS: Record<AgentTool, React.FC<{size?: number; className?: string}>> = {
   shell: Terminal, web_search: Globe, file_read: FileText, file_write: Upload,
   api_call: Zap, rag_query: Search, rag_write: Database, code_run: Cpu,
+  dns_lookup: Network, whois_rdap: Key, ip_geo: Map, vuln_search: AlertTriangle,
+  hash_analyze: Hash, port_probe: Wifi, ssl_check: Lock, header_check: Server,
 };
 
 const TOOL_COLORS: Record<AgentTool, string> = {
   shell: "#e21227", web_search: "#3b82f6", file_read: "#10b981", file_write: "#f59e0b",
   api_call: "#a78bfa", rag_query: "#06b6d4", rag_write: "#ec4899", code_run: "#f97316",
+  dns_lookup: "#22d3ee", whois_rdap: "#fbbf24", ip_geo: "#34d399", vuln_search: "#f87171",
+  hash_analyze: "#c084fc", port_probe: "#fb7185", ssl_check: "#4ade80", header_check: "#60a5fa",
 };
 
 const TOOL_LABELS: Record<AgentTool, string> = {
   shell: "Shell", web_search: "Web Search", file_read: "File Read", file_write: "File Write",
   api_call: "API Call", rag_query: "RAG Query", rag_write: "RAG Write", code_run: "Code Run",
+  dns_lookup: "DNS Lookup", whois_rdap: "WHOIS/RDAP", ip_geo: "IP Geo", vuln_search: "CVE Search",
+  hash_analyze: "Hash Analyze", port_probe: "Port Probe", ssl_check: "SSL Check", header_check: "HTTP Headers",
 };
 
-const ALLOWED_OPS = ["web_search", "file_read", "rag_query", "api_call", "code_run"];
+const TOOL_CATEGORIES: Record<string, AgentTool[]> = {
+  "استخبارات": ["web_search", "vuln_search", "rag_query"],
+  "استطلاع": ["dns_lookup", "whois_rdap", "ip_geo", "ssl_check", "header_check", "port_probe"],
+  "تشفير": ["hash_analyze"],
+  "تنفيذ": ["code_run", "shell", "api_call"],
+  "ملفات/ذاكرة": ["file_read", "file_write", "rag_write"],
+};
+
+const ALLOWED_OPS = [
+  "web_search", "file_read", "rag_query", "api_call", "code_run",
+  "dns_lookup", "whois_rdap", "ip_geo", "vuln_search",
+  "hash_analyze", "port_probe", "ssl_check", "header_check",
+];
 const BLOCKED_OPS_PATTERN = /rm\s+-rf|sudo|passwd|\/etc\/shadow|format|mkfs/i;
 
 const LONG_TERM_MEMORY_KEY = "mr7-autonomous-agent-ltm";
@@ -393,7 +414,7 @@ export function AutonomousAgentModal({ open, onOpenChange }: Props) {
   const [goalInput, setGoalInput] = useState("");
   const [task, setTask] = useState<AgentTask | null>(null);
   const [activeStep, setActiveStep] = useState(0);
-  const [tab, setTab] = useState<"agent" | "history" | "memory" | "audit">("agent");
+  const [tab, setTab] = useState<"agent" | "history" | "memory" | "audit" | "tools">("agent");
   const [requireApproval, setRequireApproval] = useState(false);
   const [longTermMemory, setLongTermMemory] = useState<string[]>(loadLTM);
   const [taskHistory, setTaskHistory] = useState<AgentTask[]>(loadTaskHistory);
@@ -457,57 +478,109 @@ export function AutonomousAgentModal({ open, onOpenChange }: Props) {
   }
 
   async function buildPlan(goal: string): Promise<AgentPlan> {
-    const ltm = longTermMemory.slice(-5).join("\n");
-    const prompt = `أنت وكيل ذكاء اصطناعي مستقل. الهدف: "${goal}"
-${ltm ? `الذاكرة طويلة المدى:\n${ltm}` : ""}
-
-ضع خطة تنفيذ تفصيلية بصيغة JSON فقط:
-{
-  "goal": "وصف الهدف",
-  "reasoning": "سبب اختيار هذه الخطة",
-  "estimatedDuration": "وقت التنفيذ المتوقع",
-  "steps": [
-    {
-      "title": "عنوان الخطوة",
-      "description": "وصف تفصيلي",
-      "tool": "web_search|shell|file_read|file_write|api_call|rag_query|rag_write|code_run",
-      "toolInput": "المدخل الكامل للأداة"
-    }
-  ]
-}
-استخدم 3-7 خطوات. الخطوات يجب أن تكون منطقية ومرتبة.`;
-
-    const raw = await callAI([{ role: "user", content: prompt }]);
+    // Use streaming /plan/stream endpoint
     try {
-      const jsonMatch = raw.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error("no json");
-      const parsed = JSON.parse(jsonMatch[0]) as Partial<AgentPlan>;
-      return {
-        goal: parsed.goal ?? goal,
-        reasoning: parsed.reasoning ?? "خطة تلقائية",
-        estimatedDuration: parsed.estimatedDuration ?? "2-5 دقائق",
-        steps: (parsed.steps ?? []).map((s: Partial<AgentStep>, i: number) => ({
-          id: createStepId(),
-          index: i,
-          title: s.title ?? `خطوة ${i + 1}`,
-          description: s.description ?? "",
-          tool: (s.tool as AgentTool) ?? "web_search",
-          toolInput: s.toolInput ?? "",
-          status: "pending" as StepStatus,
-        })),
-      };
+      const res = await fetch("/api/autonomous-agent/plan/stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ goal, longTermMemory: longTermMemory.slice(-5) }),
+      });
+      if (!res.body) throw new Error("No stream");
+      const reader = res.body.getReader(); const decoder = new TextDecoder();
+      let buf = "";
+      let planData: Partial<AgentPlan> | null = null;
+
+      while (true) {
+        const { done, value } = await reader.read(); if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const chunks = buf.split("\n\n"); buf = chunks.pop() ?? "";
+        for (const chunk of chunks) {
+          const eventLine = chunk.match(/^event:\s*(.+)/m)?.[1]?.trim();
+          const dataLine = chunk.match(/^data:\s*(.+)/m)?.[1]?.trim();
+          if (!dataLine) continue;
+          try {
+            const payload = JSON.parse(dataLine) as Record<string, unknown>;
+            if (eventLine === "plan") {
+              planData = payload.plan as Partial<AgentPlan>;
+            }
+          } catch { /* skip */ }
+        }
+      }
+
+      if (planData?.steps?.length) {
+        return {
+          goal: planData.goal ?? goal,
+          reasoning: planData.reasoning ?? "خطة ذكاء اصطناعي",
+          estimatedDuration: (planData as Record<string, unknown>).estimatedDuration as string ?? "2-5 دقائق",
+          steps: (planData.steps ?? []).map((s: Partial<AgentStep>, i: number) => ({
+            id: createStepId(), index: i,
+            title: s.title ?? `خطوة ${i + 1}`,
+            description: s.description ?? "",
+            tool: (s.tool as AgentTool) ?? "web_search",
+            toolInput: s.toolInput ?? "",
+            status: "pending" as StepStatus,
+          })),
+        };
+      }
+      throw new Error("Empty plan");
     } catch {
-      return {
-        goal,
-        reasoning: "خطة افتراضية",
-        estimatedDuration: "2-5 دقائق",
-        steps: [
-          { id: createStepId(), index: 0, title: "بحث في المعلومات", description: `البحث عن "${goal}"`, tool: "web_search", toolInput: goal, status: "pending" },
-          { id: createStepId(), index: 1, title: "تحليل النتائج", description: "تحليل البيانات المجمعة", tool: "code_run", toolInput: `analyze("${goal}")`, status: "pending" },
-          { id: createStepId(), index: 2, title: "إعداد التقرير", description: "كتابة تقرير شامل", tool: "file_write", toolInput: `report_${Date.now()}.md`, status: "pending" },
-        ],
-      };
+      // Fallback to /think endpoint
+      const raw = await callAI([{ role: "user", content: `ضع خطة JSON لتنفيذ: "${goal}" تشمل 3-5 خطوات بالأدوات المناسبة. JSON فقط بلا نص آخر.` }]);
+      try {
+        const jsonMatch = raw.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) throw new Error("no json");
+        const parsed = JSON.parse(jsonMatch[0]) as Partial<AgentPlan>;
+        return {
+          goal: parsed.goal ?? goal,
+          reasoning: parsed.reasoning ?? "خطة تلقائية",
+          estimatedDuration: (parsed as Record<string, unknown>).estimatedDuration as string ?? "2-5 دقائق",
+          steps: (parsed.steps ?? []).map((s: Partial<AgentStep>, i: number) => ({
+            id: createStepId(), index: i,
+            title: s.title ?? `خطوة ${i + 1}`,
+            description: s.description ?? "",
+            tool: (s.tool as AgentTool) ?? "web_search",
+            toolInput: s.toolInput ?? "",
+            status: "pending" as StepStatus,
+          })),
+        };
+      } catch {
+        return {
+          goal, reasoning: "خطة افتراضية", estimatedDuration: "2-5 دقائق",
+          steps: [
+            { id: createStepId(), index: 0, title: "بحث في المعلومات", description: `البحث عن "${goal}"`, tool: "web_search", toolInput: goal, status: "pending" },
+            { id: createStepId(), index: 1, title: "تحليل النتائج", description: "تحليل البيانات", tool: "code_run", toolInput: `analyze("${goal}")`, status: "pending" },
+            { id: createStepId(), index: 2, title: "إعداد التقرير", description: "كتابة تقرير شامل", tool: "rag_write", toolInput: `تقرير: ${goal}`, status: "pending" },
+          ],
+        };
+      }
     }
+  }
+
+  async function callReflect(stepTitle: string, tool: string, toolInput: string, toolOutput: string, goalContext: string): Promise<string> {
+    try {
+      const res = await fetch("/api/autonomous-agent/reflect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stepTitle, tool, toolInput, toolOutput, goalContext }),
+      });
+      const data = await res.json() as { reflection?: string };
+      return data.reflection ?? "";
+    } catch { return ""; }
+  }
+
+  async function callSynthesize(goal: string, steps: AgentStep[]): Promise<string> {
+    try {
+      const res = await fetch("/api/autonomous-agent/synthesize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          goal,
+          steps: steps.map(s => ({ title: s.title, toolOutput: s.toolOutput?.slice(0, 200), reflection: s.reflection })),
+        }),
+      });
+      const data = await res.json() as { result?: string };
+      return data.result ?? "";
+    } catch { return ""; }
   }
 
   async function startTask() {
@@ -580,10 +653,13 @@ ${ltm ? `الذاكرة طويلة المدى:\n${ltm}` : ""}
         newTask.auditLog.push({ ts: Date.now(), action: `TOOL:${plan.steps[i].tool.toUpperCase()}`, detail: plan.steps[i].toolInput.slice(0, 100), allowed });
         plan.steps[i].toolOutput = output;
 
-        const reflection = await callAI([{
-          role: "user",
-          content: `نتيجة الخطوة "${plan.steps[i].title}":\n${output}\n\nهل النتيجة جيدة؟ هل يجب تعديل الخطة؟ أجب في جملة واحدة.`,
-        }]);
+        const reflection = await callReflect(
+          plan.steps[i].title,
+          plan.steps[i].tool,
+          plan.steps[i].toolInput,
+          output,
+          newTask.goal
+        );
         plan.steps[i].reflection = reflection;
         plan.steps[i].status = allowed ? "done" : "failed";
         plan.steps[i].endedAt = Date.now();
@@ -595,11 +671,8 @@ ${ltm ? `الذاكرة طويلة المدى:\n${ltm}` : ""}
       }
 
       if (!abortRef.current) {
-        const finalResult = await callAI([{
-          role: "user",
-          content: `لقد أنجزت المهمة: "${newTask.goal}"\nملخص ما تم:\n${newTask.shortTermMemory.join("\n")}\n\nأكتب تقرير إنجاز مختصر في 2-3 جمل.`,
-        }]);
-        newTask.result = finalResult;
+        const finalResult = await callSynthesize(newTask.goal, plan.steps);
+        newTask.result = finalResult || `تم إنجاز المهمة: ${newTask.goal}. خطوات منجزة: ${plan.steps.filter(s => s.status === "done").length}/${plan.steps.length}`;
         newTask.status = "done";
         newTask.endedAt = Date.now();
 
@@ -673,16 +746,16 @@ ${ltm ? `الذاكرة طويلة المدى:\n${ltm}` : ""}
             <p className="text-[10px] text-white/40">الوكيل المستقل · تخطيط ذاتي · ذاكرة · أدوات · انعكاس</p>
           </div>
 
-          <div className="flex items-center gap-2 mx-auto">
-            {(["agent", "history", "memory", "audit"] as const).map(t => (
+          <div className="flex items-center gap-1 mx-auto">
+            {(["agent", "tools", "history", "memory", "audit"] as const).map(t => (
               <button key={t} onClick={() => setTab(t)}
-                className="px-3 py-1 text-[10px] uppercase tracking-widest rounded-lg transition-all font-medium"
+                className="px-2.5 py-1 text-[9px] uppercase tracking-widest rounded-lg transition-all font-medium"
                 style={{
                   background: tab === t ? "rgba(162,78,246,0.2)" : "transparent",
                   border: `1px solid ${tab === t ? "rgba(162,78,246,0.4)" : "transparent"}`,
                   color: tab === t ? "#c084fc" : "rgba(255,255,255,0.4)",
                 }}>
-                {t === "agent" ? "الوكيل" : t === "history" ? "السجل" : t === "memory" ? "الذاكرة" : "التدقيق"}
+                {t === "agent" ? "الوكيل" : t === "tools" ? "الأدوات" : t === "history" ? "السجل" : t === "memory" ? "الذاكرة" : "التدقيق"}
               </button>
             ))}
           </div>
@@ -850,6 +923,70 @@ ${ltm ? `الذاكرة طويلة المدى:\n${ltm}` : ""}
                     <p className="text-[9px] text-white/20 italic">فارغة</p>
                   )}
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── TOOLS TAB ── */}
+        {tab === "tools" && (
+          <div className="flex-1 overflow-y-auto p-5">
+            <h2 className="text-sm font-bold text-white flex items-center gap-2 mb-4">
+              <Layers size={15} className="text-violet-400" /> مكتبة الأدوات — 16 أداة متاحة
+            </h2>
+            <div className="space-y-4">
+              {Object.entries(TOOL_CATEGORIES).map(([cat, tools]) => (
+                <div key={cat}>
+                  <div className="text-[9px] uppercase tracking-widest text-white/30 mb-2">{cat}</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {tools.map(toolId => {
+                      const Icon = TOOL_ICONS[toolId];
+                      const color = TOOL_COLORS[toolId];
+                      const label = TOOL_LABELS[toolId];
+                      const isAllowed = ALLOWED_OPS.includes(toolId);
+                      return (
+                        <div key={toolId}
+                          className="flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer hover:scale-[1.01]"
+                          style={{ borderColor: color + "30", background: color + "08" }}
+                          onClick={() => { setGoalInput(prev => prev || `استخدم ${label} لـ `); setTab("agent"); }}>
+                          <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: color + "20", color }}>
+                            <Icon size={14} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[10px] font-semibold text-white/80">{label}</div>
+                            <div className="text-[8px] font-mono text-white/30">{toolId}</div>
+                          </div>
+                          <div className="flex-shrink-0">
+                            {isAllowed
+                              ? <span className="text-[8px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">مفتوح</span>
+                              : <span className="text-[8px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20">محمي</span>
+                            }
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Quick start examples */}
+            <div className="mt-6">
+              <div className="text-[9px] uppercase tracking-widest text-white/30 mb-3">أمثلة جاهزة</div>
+              <div className="space-y-1.5">
+                {[
+                  "ابحث عن أحدث ثغرات CVE في Apache HTTP Server 2024",
+                  "حلل النطاق example.com: DNS، شهادات SSL، الرؤوس الأمنية",
+                  "ابحث عن تسريبات الأمن المتعلقة بـ PHP 8.x وأعد تقريراً",
+                  "افحص عنوان IP 8.8.8.8: الموقع، الشبكة، الخدمات",
+                  "اكتب كود Python لاختبار SQL injection وشرح آليته",
+                ].map((ex, i) => (
+                  <button key={i} onClick={() => { setGoalInput(ex); setTab("agent"); }}
+                    className="w-full text-right text-[10px] text-white/50 hover:text-white/80 p-2.5 rounded-lg border border-white/6 hover:border-violet-500/30 hover:bg-violet-500/5 transition-all flex items-center gap-2">
+                    <Zap size={9} className="text-violet-400 flex-shrink-0" />
+                    {ex}
+                  </button>
+                ))}
               </div>
             </div>
           </div>

@@ -348,66 +348,6 @@ export function OsintPlatformModal({ open, onOpenChange }: Props) {
     setEnabled(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
   }, []);
 
-  async function startScan() {
-    if (!target.trim() || scanning) return;
-    abortRef.current?.abort();
-    abortRef.current = new AbortController();
-    setScanning(true);
-    setReport("");
-    setTab("scan");
-
-    const initial: ScanResult = {
-      target: target.trim(),
-      modules: Object.fromEntries(MODULES.map(m => [m.id, { status: enabled.has(m.id) ? "running" : "idle" as ModuleStatus }])) as ScanResult["modules"],
-      done: false,
-      startedAt: Date.now(),
-    };
-    setResult(initial);
-
-    try {
-      const res = await fetch("/api/osint-advanced/scan/stream", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ target: target.trim(), modules: [...enabled], apiKeys }),
-        signal: abortRef.current.signal,
-      });
-
-      if (!res.body) throw new Error("No stream body");
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buf = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buf += decoder.decode(value, { stream: true });
-        const lines = buf.split("\n");
-        buf = lines.pop() ?? "";
-        for (const line of lines) {
-          if (!line.startsWith("data:")) continue;
-          try {
-            const payload = JSON.parse(line.slice(5).trim()) as Record<string, unknown>;
-            const event = (line.match(/^event:\s*(.+)/) ? null : null); void event;
-            // Parse event from preceding "event:" line — use different approach
-            handleSsePayload(payload);
-          } catch { /* skip */ }
-        }
-
-        // Re-parse with proper event tracking
-        const evLines = (decoder.decode(value, { stream: false }) + "").split("\n");
-        void evLines;
-      }
-    } catch (err) {
-      if ((err as Error).name !== "AbortError") {
-        console.error("OSINT scan error:", err);
-      }
-    } finally {
-      setScanning(false);
-      setResult(prev => prev ? { ...prev, done: true, endedAt: Date.now() } : null);
-    }
-  }
-
-  // Re-implement with proper SSE event parsing
   async function startScanFixed() {
     if (!target.trim() || scanning) return;
     abortRef.current?.abort();
