@@ -82,6 +82,33 @@ router.post("/notifications", jwtAuth, requireAuth, async (req: Request, res: Re
   }
 });
 
+/* ── GET /api/notifications/preferences ── get user notification preferences */
+router.get("/notifications/preferences", jwtAuth, requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { rows } = await pool.query(
+      "SELECT notification_preferences FROM users WHERE id=$1",
+      [req.authUser!.id]
+    );
+    const prefs = rows[0]?.notification_preferences ?? {
+      email: true, push: false, sms: false,
+      categories: { security: true, billing: true, system: true, ai: true, collab: true }
+    };
+    res.json({ preferences: prefs });
+  } catch { res.status(500).json({ error: "Failed" }); }
+});
+
+/* ── POST /api/notifications/preferences ── update user notification preferences */
+router.post("/notifications/preferences", jwtAuth, requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const prefs = req.body;
+    await pool.query(
+      "UPDATE users SET notification_preferences=$1, updated_at=NOW() WHERE id=$2",
+      [JSON.stringify(prefs), req.authUser!.id]
+    );
+    res.json({ ok: true, preferences: prefs });
+  } catch { res.status(500).json({ error: "Failed to save preferences" }); }
+});
+
 /* ── POST /api/notifications/push-subscribe ── Web Push */
 router.post("/notifications/push-subscribe", jwtAuth, requireAuth, async (req: Request, res: Response): Promise<void> => {
   // Store push subscription in DB for future use

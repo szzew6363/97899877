@@ -240,4 +240,18 @@ router.delete("/plugins/:id", jwtAuth, async (req: Request, res: Response): Prom
   }
 });
 
+/* ── POST /api/plugins/:id/uninstall ── alias for DELETE */
+router.post("/plugins/:id/uninstall", jwtAuth, async (req: Request, res: Response): Promise<void> => {
+  if (!req.authUser) { res.status(401).json({ error: "Auth required" }); return; }
+  try {
+    await pool.query(
+      "UPDATE user_plugins SET is_active = false WHERE user_id = $1 AND plugin_id = $2",
+      [req.authUser.id, req.params.id],
+    );
+    res.json({ ok: true });
+  } catch {
+    res.status(500).json({ error: "Failed to uninstall plugin" });
+  }
+});
+
 export default router;

@@ -1,4 +1,51 @@
+import { Router, type Request, type Response } from "express";
+import { jwtAuth } from "../middlewares/jwtAuth";
 import { WebSocket } from "ws";
+
+/* ─── REST router for collab rooms ──────────────────────────────────────── */
+const router = Router();
+
+const restRooms = new Map<string, { id: string; name: string; createdBy: string; createdAt: number }>();
+
+router.get("/collab/rooms", jwtAuth, (_req: Request, res: Response): void => {
+  const list = Array.from(restRooms.values());
+  res.json({ rooms: list, total: list.length });
+});
+
+router.post("/collab/rooms", jwtAuth, (req: Request, res: Response): void => {
+  const user = (req as Request & { user?: { id: string; username?: string } }).user;
+  const id = Math.random().toString(36).slice(2, 11);
+  const room = { id, name: req.body.name ?? `غرفة ${id}`, createdBy: user?.id ?? "anon", createdAt: Date.now() };
+  restRooms.set(id, room);
+  res.status(201).json(room);
+});
+
+router.get("/collab/rooms/:id/messages", jwtAuth, (req: Request, res: Response): void => {
+  const msgs = history.get(req.params.id) ?? [];
+  res.json({ messages: msgs, total: msgs.length });
+});
+
+router.post("/collab/rooms/:id/messages", jwtAuth, (req: Request, res: Response): void => {
+  const user = (req as Request & { user?: { id: string; username?: string } }).user;
+  const msg: CollabMessage = {
+    id: Math.random().toString(36).slice(2, 11),
+    userId: user?.id ?? "anon",
+    userName: user?.username ?? "مستخدم",
+    color: req.body.color ?? "#e21227",
+    content: String(req.body.content ?? "").slice(0, 4000),
+    timestamp: Date.now(),
+    type: "message",
+  };
+  addHistory(req.params.id, msg);
+  broadcastAll(req.params.id, { type: "message", message: msg });
+  res.status(201).json(msg);
+});
+
+router.post("/collab/rooms/:id/join", jwtAuth, (req: Request, res: Response): void => {
+  res.json({ ok: true, roomId: req.params.id });
+});
+
+export { router as collabRouter };
 
 /* ─── Types ──────────────────────────────────────────────────────────────── */
 type UserId = string;

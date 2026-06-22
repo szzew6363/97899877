@@ -8,8 +8,8 @@ import { jwtAuth, requireAuth } from "../middlewares/jwtAuth";
 
 const router = Router();
 
-// ── GET /api/security/audit-log ───────────────────────────────────────────────
-router.get("/security/audit-log", jwtAuth, requireAuth, async (req: Request, res: Response): Promise<void> => {
+// ── GET /api/security/audit-log (alias: /security/events) ────────────────────
+async function getSecurityEvents(req: Request, res: Response): Promise<void> {
   try {
     const limit = Math.min(parseInt(req.query["limit"] as string) || 100, 500);
     const { rows } = await pool.query(
@@ -20,7 +20,9 @@ router.get("/security/audit-log", jwtAuth, requireAuth, async (req: Request, res
     );
     res.json({ events: rows, count: rows.length });
   } catch { res.status(500).json({ error: "Failed" }); }
-});
+}
+router.get("/security/audit-log", jwtAuth, requireAuth, getSecurityEvents);
+router.get("/security/events", jwtAuth, requireAuth, getSecurityEvents);
 
 // ── GET /api/security/threat-score ───────────────────────────────────────────
 router.get("/security/threat-score", jwtAuth, requireAuth, async (req: Request, res: Response): Promise<void> => {

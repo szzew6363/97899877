@@ -331,6 +331,20 @@ export async function ensureAuthTables() {
       ALTER TABLE error_logs ADD COLUMN IF NOT EXISTS component VARCHAR;
       ALTER TABLE error_logs ADD COLUMN IF NOT EXISTS severity VARCHAR NOT NULL DEFAULT 'error';
       ALTER TABLE error_logs ADD COLUMN IF NOT EXISTS environment VARCHAR NOT NULL DEFAULT 'production';
+
+      CREATE TABLE IF NOT EXISTS context_rules (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid()::varchar,
+        user_id VARCHAR NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        content TEXT NOT NULL,
+        type VARCHAR(20) NOT NULL DEFAULT 'system',
+        priority INTEGER NOT NULL DEFAULT 5,
+        active BOOLEAN NOT NULL DEFAULT true,
+        triggers TEXT[] DEFAULT '{}',
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_context_rules_user ON context_rules(user_id, active);
     `);
 
     // Idempotent column additions for tables that may already exist
@@ -347,6 +361,7 @@ export async function ensureAuthTables() {
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_expires TIMESTAMP`,
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_secret VARCHAR`,
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_enabled BOOLEAN NOT NULL DEFAULT false`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS notification_preferences JSONB DEFAULT '{"email":true,"push":false,"sms":false,"categories":{"security":true,"billing":true,"system":true,"ai":true,"collab":true}}'::jsonb`,
       `ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS daily_limit INTEGER NOT NULL DEFAULT 500`,
       `ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS requests_today INTEGER NOT NULL DEFAULT 0`,
       `ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS last_used_ip VARCHAR`,

@@ -252,4 +252,30 @@ router.delete("/rag/session/:id", jwtAuth, (req: Request, res: Response): void =
   res.json({ ok: true });
 });
 
+/* ── GET /api/rag/knowledge ── list all embedded docs in user's session */
+router.get("/rag/knowledge", jwtAuth, (req: Request, res: Response): void => {
+  const sessionId = (req as Request & { user?: { id: string } }).user?.id ?? "anon";
+  const store = sessionStores.get(sessionId) ?? [];
+  const seen = new Set<string>();
+  const docs: { id: string; name: string; chunks: number }[] = [];
+  for (const entry of store) {
+    if (!seen.has(entry.docName)) {
+      seen.add(entry.docName);
+      const chunks = store.filter(e => e.docName === entry.docName).length;
+      docs.push({ id: entry.id, name: entry.docName, chunks });
+    }
+  }
+  res.json({ documents: docs, total: docs.length, sessionId });
+});
+
+/* ── DELETE /api/rag/knowledge/:name ── remove a document from session */
+router.delete("/rag/knowledge/:name", jwtAuth, (req: Request, res: Response): void => {
+  const sessionId = (req as Request & { user?: { id: string } }).user?.id ?? "anon";
+  const store = sessionStores.get(sessionId) ?? [];
+  const before = store.length;
+  const filtered = store.filter(e => e.docName !== req.params.name);
+  sessionStores.set(sessionId, filtered);
+  res.json({ ok: true, removed: before - filtered.length });
+});
+
 export default router;

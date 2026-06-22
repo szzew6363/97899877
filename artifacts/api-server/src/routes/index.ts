@@ -33,13 +33,15 @@ import pluginsRouter from "./plugins";
 import ragRouter from "./rag";
 import adminRouter from "./admin";
 import subscriptionsRouter from "./subscriptions";
-// ── New systems #8 #10 #13 #15 #18 #20 ───────────────────────────────────────
+// ── New systems #4 #8 #10 #13 #15 #16 #17 #18 #20 ───────────────────────────
+import memoryRouter from "./memory";
 import organizationsRouter from "./organizations";
 import billingRouter from "./billing";
 import monitoringRouter from "./monitoring";
 import trainingRouter from "./training";
 import analyticsRouter from "./analytics";
 import securityComplianceRouter from "./security-compliance";
+import { collabRouter } from "./collab";
 
 const router: IRouter = Router();
 
@@ -78,11 +80,13 @@ router.use(ragRouter);
 router.use(adminRouter);
 router.use(subscriptionsRouter);
 // ── New systems ───────────────────────────────────────────────────────────────
+router.use(memoryRouter);
 router.use(organizationsRouter);
 router.use(billingRouter);
 router.use(monitoringRouter);
 router.use(trainingRouter);
 router.use(analyticsRouter);
 router.use(securityComplianceRouter);
+router.use(collabRouter);
 
 export default router;
