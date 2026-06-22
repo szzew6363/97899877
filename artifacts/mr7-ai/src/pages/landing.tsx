@@ -241,6 +241,176 @@ function GridBackground() {
   );
 }
 
+/* ── Live Neural Network Canvas — hero background ── */
+function NeuralNetCanvas() {
+  const ref = useRef<HTMLCanvasElement>(null);
+  const frameRef = useRef<number>(0);
+
+  useEffect(() => {
+    const cv = ref.current; if (!cv) return;
+    const ctx = cv.getContext("2d")!;
+    let W = window.innerWidth, H = window.innerHeight;
+    cv.width = W; cv.height = H;
+
+    const onResize = () => {
+      W = window.innerWidth; H = window.innerHeight;
+      cv.width = W; cv.height = H;
+    };
+    window.addEventListener("resize", onResize);
+
+    // Nodes
+    const NODE_COUNT = Math.min(55, Math.floor(W * H / 18000));
+    interface Node { x: number; y: number; vx: number; vy: number; r: number; pulse: number; phase: number }
+    const nodes: Node[] = Array.from({ length: NODE_COUNT }, () => ({
+      x: Math.random() * W, y: Math.random() * H,
+      vx: (Math.random() - 0.5) * 0.35,
+      vy: (Math.random() - 0.5) * 0.35,
+      r: 1.5 + Math.random() * 2.5,
+      pulse: Math.random() * Math.PI * 2,
+      phase: Math.random() * Math.PI * 2,
+    }));
+
+    let t = 0;
+    const draw = () => {
+      frameRef.current = requestAnimationFrame(draw);
+      t += 0.012;
+      ctx.clearRect(0, 0, W, H);
+
+      // Update node positions
+      nodes.forEach(n => {
+        n.x += n.vx; n.y += n.vy; n.pulse += 0.04;
+        if (n.x < 0 || n.x > W) n.vx *= -1;
+        if (n.y < 0 || n.y > H) n.vy *= -1;
+      });
+
+      // Draw connections
+      for (let i = 0; i < nodes.length; i++) {
+        for (let j = i + 1; j < nodes.length; j++) {
+          const dx = nodes[i].x - nodes[j].x;
+          const dy = nodes[i].y - nodes[j].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const maxDist = 180;
+          if (dist < maxDist) {
+            const alpha = (1 - dist / maxDist) * 0.18;
+            // Pulse along connection
+            const pulseAlpha = alpha * (0.5 + Math.sin(t * 3 + nodes[i].phase) * 0.5);
+            ctx.beginPath();
+            ctx.moveTo(nodes[i].x, nodes[i].y);
+            ctx.lineTo(nodes[j].x, nodes[j].y);
+
+            const g = ctx.createLinearGradient(nodes[i].x, nodes[i].y, nodes[j].x, nodes[j].y);
+            g.addColorStop(0, `rgba(226,18,39,${pulseAlpha * 1.2})`);
+            g.addColorStop(0.5, `rgba(255,100,50,${pulseAlpha * 0.6})`);
+            g.addColorStop(1, `rgba(226,18,39,${pulseAlpha * 1.2})`);
+            ctx.strokeStyle = g;
+            ctx.lineWidth = 0.8;
+            ctx.stroke();
+
+            // Moving data packet along connection
+            if (Math.sin(t * 4 + nodes[i].phase + nodes[j].phase) > 0.7) {
+              const progress = (Math.sin(t * 5 + nodes[i].phase) * 0.5 + 0.5);
+              const px = nodes[i].x + (nodes[j].x - nodes[i].x) * progress;
+              const py = nodes[i].y + (nodes[j].y - nodes[i].y) * progress;
+              ctx.beginPath(); ctx.arc(px, py, 1.5, 0, Math.PI * 2);
+              ctx.fillStyle = `rgba(255,80,40,${0.8 * (0.5 + Math.sin(t * 8) * 0.4)})`;
+              ctx.fill();
+            }
+          }
+        }
+      }
+
+      // Draw nodes
+      nodes.forEach((n, i) => {
+        const glow = 0.4 + Math.sin(n.pulse) * 0.4;
+        const isActive = Math.sin(t * 2 + n.phase) > 0.5;
+
+        // Outer halo
+        const halo = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r * 5);
+        halo.addColorStop(0, `rgba(226,18,39,${glow * 0.25})`);
+        halo.addColorStop(1, "transparent");
+        ctx.beginPath(); ctx.arc(n.x, n.y, n.r * 5, 0, Math.PI * 2);
+        ctx.fillStyle = halo; ctx.fill();
+
+        // Core
+        ctx.beginPath(); ctx.arc(n.x, n.y, n.r * (isActive ? 1.4 : 1), 0, Math.PI * 2);
+        ctx.fillStyle = isActive ? `rgba(255,80,40,${glow * 0.9})` : `rgba(226,18,39,${glow * 0.7})`;
+        ctx.shadowColor = "#e21227"; ctx.shadowBlur = isActive ? 12 : 6;
+        ctx.fill(); ctx.shadowBlur = 0;
+
+        // Ring on active nodes
+        if (isActive && i % 4 === 0) {
+          const ringR = n.r * 3 + Math.sin(t * 6 + n.phase) * 2;
+          ctx.beginPath(); ctx.arc(n.x, n.y, ringR, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(226,18,39,${glow * 0.3})`;
+          ctx.lineWidth = 0.8; ctx.stroke();
+        }
+      });
+    };
+    draw();
+    return () => { cancelAnimationFrame(frameRef.current); window.removeEventListener("resize", onResize); };
+  }, []);
+
+  return (
+    <canvas ref={ref} style={{
+      position: "fixed", inset: 0,
+      width: "100%", height: "100%",
+      pointerEvents: "none", zIndex: 0, opacity: 0.55,
+    }} />
+  );
+}
+
+/* ── Live Neural Status Bar — shows below hero badge ── */
+function NeuralStatusBar() {
+  const [vals, setVals] = useState({ tps: 0, conn: 0, nodes: 0, sec: 0 });
+  const t = useRef(0);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      t.current += 0.08;
+      setVals({
+        tps: Math.round(18 + Math.sin(t.current * 1.3) * 8 + Math.random() * 4),
+        conn: Math.round(247 + Math.sin(t.current * 0.7) * 40),
+        nodes: Math.round(55 + Math.sin(t.current * 0.4) * 12),
+        sec: Math.round(99.1 + Math.sin(t.current * 0.2) * 0.8),
+      });
+    }, 120);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <div style={{
+      display: "flex",
+      alignItems: "center",
+      gap: 16,
+      padding: "7px 18px",
+      borderRadius: 100,
+      background: "rgba(0,0,0,0.55)",
+      border: "1px solid rgba(226,18,39,0.2)",
+      backdropFilter: "blur(12px)",
+      marginBottom: 20,
+      fontSize: 9,
+      fontFamily: "monospace",
+      color: "rgba(255,255,255,0.4)",
+      letterSpacing: "0.5px",
+    }}>
+      <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 8px #22c55e", display: "inline-block", animation: "neonFlicker 1.5s infinite" }} />
+      <span>NEURAL CORE ONLINE</span>
+      {[
+        { label: "TPS", value: vals.tps, color: "#e21227" },
+        { label: "CONN", value: vals.conn, color: "#00e5ff" },
+        { label: "NODES", value: vals.nodes, color: "#a78bfa" },
+        { label: "SEC", value: `${vals.sec.toFixed(1)}%`, color: "#22c55e" },
+      ].map(s => (
+        <span key={s.label} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <span style={{ opacity: 0.35 }}>·</span>
+          <span style={{ color: s.color, fontWeight: 800 }}>{s.value}</span>
+          <span style={{ opacity: 0.35, fontSize: 7 }}>{s.label}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function ScanLine() {
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 1 }}>
@@ -435,6 +605,7 @@ export default function LandingPage() {
       `}</style>
 
       <ParticleCanvas />
+      <NeuralNetCanvas />
       {/* DATA STREAMS background */}
       <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0, overflow: "hidden" }}>
         {[...Array(8)].map((_, i) => (
@@ -602,6 +773,9 @@ export default function LandingPage() {
           background: "radial-gradient(ellipse at center, rgba(226,18,39,0.12) 0%, rgba(226,18,39,0.04) 40%, transparent 70%)",
           pointerEvents: "none",
         }} />
+
+        {/* Live Neural Status Bar */}
+        <NeuralStatusBar />
 
         {/* Badge */}
         <div style={{

@@ -18,6 +18,7 @@ import { NeuralPulseBackground } from "./NeuralPulseBackground";
 import { FuturisticBackground3D } from "./FuturisticBackground3D";
 import { QuantumVoidBackground3D } from "./QuantumVoidBackground3D";
 import { NeuralStreamHUD } from "./NeuralStreamHUD";
+import { useStreamMetrics } from "@/hooks/useStreamMetrics";
 import { FloatingNetworkPanel } from "./FloatingNetworkPanel";
 import { parseOrchestratorCommands, executeOrchestratorCommand, type OrchestratorCmd } from "@/lib/agent-orchestrator";
 import { streamChat, streamLocalChatViaProxy, streamCouncil, streamGodmode, autoTune, generateTitle, translateText, enhancePrompt, estimateTokens, streamAgent, compressContext, analyzeOsintFile, type ChatMessage, type AgentEvent } from "@/lib/chat-client";
@@ -70,8 +71,9 @@ export function ChatView({ onShare, onOpenOsintDash }: { onShare?: () => void; o
   const [whatsNewOpen, setWhatsNewOpen] = useState(() => useWhatsNewShouldShow());
   const [reactionPickerMsgId, setReactionPickerMsgId] = useState<string | null>(null);
   const [streamTps, setStreamTps] = useState<number | null>(null);
-  const [liveTps, setLiveTps] = useState(0);
-  const [liveTokens, setLiveTokens] = useState(0);
+  const sm = useStreamMetrics();
+  const liveTps    = sm.metrics.tps;
+  const liveTokens = sm.metrics.tokenCount;
 
   const abortRef = useRef<AbortController | null>(null);
   const liveAccRef = useRef("");
@@ -195,9 +197,9 @@ export function ChatView({ onShare, onOpenOsintDash }: { onShare?: () => void; o
     };
 
     liveAccRef.current = "";
-    setLiveTps(0); setLiveTokens(0);
     streamBufRef.current = "";
     streamLastRef.current = "";
+    sm.startStream();
     if (flushTimerRef.current) { cancelAnimationFrame(flushTimerRef.current); flushTimerRef.current = null; }
 
     const streamLoop = () => {
@@ -206,15 +208,16 @@ export function ChatView({ onShare, onOpenOsintDash }: { onShare?: () => void; o
         streamLastRef.current = buf;
         const out = activeStmCount(stmCfg) > 0 ? applyStm(buf, stmCfg) : buf;
         dispatch({ type: "PATCH_MSG", chatId, msgId: aId, patch: { content: out } });
-        const elSec = (Date.now() - streamStart) / 1000;
-        const estimatedToks = Math.round(buf.length / 4);
-        setLiveTokens(estimatedToks);
-        if (elSec > 0.3) setLiveTps(Math.round(estimatedToks / elSec));
       }
       flushTimerRef.current = requestAnimationFrame(streamLoop);
     };
     flushTimerRef.current = requestAnimationFrame(streamLoop);
-    const onChunk = (chunk: string) => { acc += chunk; liveAccRef.current = acc; streamBufRef.current = acc; };
+    const onChunk = (chunk: string) => {
+      acc += chunk;
+      liveAccRef.current = acc;
+      streamBufRef.current = acc;
+      sm.recordChunk(chunk);
+    };
 
     try {
       if (useLocal) {
@@ -282,6 +285,7 @@ export function ChatView({ onShare, onOpenOsintDash }: { onShare?: () => void; o
         const elapsedSec = (Date.now() - streamStart) / 1000;
         if (elapsedSec > 0.5) setStreamTps(Math.round((acc.length / 4) / elapsedSec));
       }
+      sm.stopStream();
       setStreaming(false);
       if (mode === "orchestrator" && acc) {
         const cmds = parseOrchestratorCommands(acc);
@@ -606,7 +610,16 @@ export function ChatView({ onShare, onOpenOsintDash }: { onShare?: () => void; o
       />
 
       <div className="flex-1 relative overflow-hidden flex flex-col">
-        <NeuralStreamHUD streaming={streaming} tps={liveTps} tokenCount={liveTokens} mode={mode} />
+        <NeuralStreamHUD
+          streaming={streaming}
+          tps={liveTps}
+          tokenCount={liveTokens}
+          peakTps={sm.metrics.peakTps}
+          ttft={sm.metrics.ttft}
+          quality={sm.metrics.quality}
+          mode={mode}
+          agentMode={agentOn}
+        />
 
         <ChatScrollArea
           scrollRef={scrollRef as React.RefObject<HTMLDivElement>}
