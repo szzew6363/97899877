@@ -164,6 +164,7 @@ interface SidebarProps {
   onOpenKgHelpCenter?: () => void;
   onOpenKgReports?: () => void;
   onOpenKgRateLimit?: () => void;
+  onOpenKgSystemsHub?: () => void;
 }
 
 const ADDITIONAL_TOOLS: { icon: React.ElementType; label: UtilityTool; color?: string }[] = [
@@ -286,7 +287,7 @@ const ADDITIONAL_TOOLS: { icon: React.ElementType; label: UtilityTool; color?: s
   { icon: DbIcon, label: "Kali SQLi Guide", color: "text-blue-400" },
 ];
 
-export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapsed, onOpenPricing, onOpenApi, onOpenTool, onOpenSettings, onOpenAccount, onOpenLogin, onOpenUtility, onOpenToolsHub, onOpenMemory, onOpenBookmarks, onOpenSearch, onOpenCompare, onOpenQRSync, onOpenChangelog, onOpenOsint, onOpenUseCaseLib, onOpenOmegaAgent, onOpenLocalEngineHub, onOpenMultiModelRace, onOpenLocalBenchmark, onOpenKgAdmin, onOpenKgPayment, onOpenKgRAG, onOpenKgMemory, onOpenKgNotifications, onOpenKgMultiAgent, onOpenKgOrganizations, onOpenKgMarketplace, onOpenKgAnalytics, onOpenKgFinetune, onOpenKgAPIKeys, onOpenKgMonitoring, onOpenKgSemanticSearch, onOpenKgCollaboration, onOpenKgContext, onOpenKgPentestLab, onOpenKgSecurity, onOpenKgHelpCenter, onOpenKgReports, onOpenKgRateLimit }: SidebarProps) {
+export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapsed, onOpenPricing, onOpenApi, onOpenTool, onOpenSettings, onOpenAccount, onOpenLogin, onOpenUtility, onOpenToolsHub, onOpenMemory, onOpenBookmarks, onOpenSearch, onOpenCompare, onOpenQRSync, onOpenChangelog, onOpenOsint, onOpenUseCaseLib, onOpenOmegaAgent, onOpenLocalEngineHub, onOpenMultiModelRace, onOpenLocalBenchmark, onOpenKgAdmin, onOpenKgPayment, onOpenKgRAG, onOpenKgMemory, onOpenKgNotifications, onOpenKgMultiAgent, onOpenKgOrganizations, onOpenKgMarketplace, onOpenKgAnalytics, onOpenKgFinetune, onOpenKgAPIKeys, onOpenKgMonitoring, onOpenKgSemanticSearch, onOpenKgCollaboration, onOpenKgContext, onOpenKgPentestLab, onOpenKgSecurity, onOpenKgHelpCenter, onOpenKgReports, onOpenKgRateLimit, onOpenKgSystemsHub }: SidebarProps) {
   const { toast } = useToast();
   const { state, dispatch } = useStore();
   const { t } = useT();
@@ -1198,6 +1199,13 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapsed, onOpenP
                 <button onClick={onOpenKgHelpCenter} title="Help Center" className="flex flex-col items-center gap-0.5 p-1.5 rounded-lg bg-[#e21227]/10 hover:bg-[#e21227]/20 border border-[#e21227]/20 hover:border-[#e21227]/40 transition-all group">
                   <BookOpenCheck className="w-3.5 h-3.5 text-red-400/70 group-hover:text-red-400" />
                   <span className="text-[8px] text-gray-500 group-hover:text-gray-300">Help</span>
+                </button>
+              )}
+              {onOpenKgSystemsHub && (
+                <button onClick={onOpenKgSystemsHub} title="Systems Hub 3D — 38 نظام" className="flex flex-col items-center gap-0.5 p-1.5 rounded-lg bg-[#e21227]/15 hover:bg-[#e21227]/30 border border-[#e21227]/30 hover:border-[#e21227]/60 transition-all group relative">
+                  <div className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-green-500 border border-black animate-pulse" />
+                  <Activity className="w-3.5 h-3.5 text-red-400/80 group-hover:text-red-400" />
+                  <span className="text-[8px] text-gray-500 group-hover:text-gray-300">38 Hub</span>
                 </button>
               )}
             </div>

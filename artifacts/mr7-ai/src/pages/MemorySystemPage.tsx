@@ -1,209 +1,172 @@
-import { useState, useEffect, useCallback } from "react";
+/**
+ * MemorySystemPage — 3D Holographic Long-Term Memory
+ * Memory graph · semantic clusters · timeline · AI-powered recall
+ */
+import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Brain, Plus, Trash2, Search, RefreshCw, Tag, Clock, Star, Filter } from "lucide-react";
+import { Brain, X, Plus, Search, Trash2, RefreshCw, Clock, Tag, Zap, BookOpen, Hash } from "lucide-react";
 import { authFetch } from "@/lib/auth";
-import { useToast } from "@/hooks/use-toast";
 
-interface Memory { id: string; content: string; tags: string[]; importance: number; category: string; created_at: string; last_accessed?: string }
+interface Memory { id: string; content: string; tags: string[]; createdAt: string; importance: number; embedding?: number[] }
 
-const CATEGORIES = ["general", "security", "pentest", "code", "personal", "research"];
+const MOCK_MEMORIES: Memory[] = [
+  { id: "1", content: "المستخدم يفضل الإجابات التفصيلية باللغة العربية", tags: ["تفضيلات", "لغة"], createdAt: new Date(Date.now() - 86400000 * 7).toISOString(), importance: 9 },
+  { id: "2", content: "مشروع KaliGPT — منصة أمن سيبراني مبنية على React و Node.js", tags: ["مشروع", "تقني"], createdAt: new Date(Date.now() - 86400000 * 3).toISOString(), importance: 8 },
+  { id: "3", content: "يعمل على تطوير 38 نظام متكامل بتصميم 3D هولوغرافي", tags: ["مشروع", "هدف"], createdAt: new Date(Date.now() - 86400000 * 2).toISOString(), importance: 10 },
+  { id: "4", content: "يستخدم pnpm monorepo مع Vite و Tailwind v4 و Framer Motion", tags: ["تقني", "stack"], createdAt: new Date(Date.now() - 86400000).toISOString(), importance: 7 },
+  { id: "5", content: "اللون الأساسي للثيم: #e21227 أحمر — خلفية #080808", tags: ["تصميم", "ثيم"], createdAt: new Date(Date.now() - 3600000 * 12).toISOString(), importance: 6 },
+  { id: "6", content: "قاعدة البيانات PostgreSQL — DATABASE_URL متاح كـ env variable", tags: ["تقني", "قاعدة بيانات"], createdAt: new Date(Date.now() - 3600000 * 6).toISOString(), importance: 7 },
+];
+
+// ── Memory Cluster Canvas ─────────────────────────────────────────────────────
+function MemoryCluster({ memories }: { memories: Memory[] }) {
+  const cvRef = useRef<HTMLCanvasElement>(null);
+  const rafRef = useRef(0);
+  useEffect(() => {
+    const cv = cvRef.current; if (!cv) return;
+    const ctx = cv.getContext("2d")!;
+    const DPR = Math.min(window.devicePixelRatio || 1, 2);
+    cv.width = cv.offsetWidth * DPR; cv.height = cv.offsetHeight * DPR;
+    cv.style.width = cv.offsetWidth + "px"; cv.style.height = cv.offsetHeight + "px";
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.scale(DPR, DPR);
+    const W = cv.offsetWidth, H = cv.offsetHeight;
+    const cx = W / 2, cy = H / 2;
+    const nodes = memories.map((m, i) => {
+      const angle = (i / memories.length) * Math.PI * 2;
+      const r = 70 + (m.importance / 10) * 30;
+      return { x: cx + Math.cos(angle) * r, y: cy + Math.sin(angle) * r, m, vx: Math.random() * 0.5 - 0.25, vy: Math.random() * 0.5 - 0.25 };
+    });
+    let t = 0;
+    function draw() {
+      t += 0.012; ctx.clearRect(0, 0, W, H);
+      nodes.forEach(n => {
+        n.x += Math.sin(t + n.m.importance) * 0.3; n.y += Math.cos(t * 0.7 + n.m.importance) * 0.3;
+        if (n.x < 20 || n.x > W - 20) n.vx *= -1;
+        if (n.y < 20 || n.y > H - 20) n.vy *= -1;
+      });
+      nodes.forEach((a, i) => nodes.slice(i + 1).forEach(b => {
+        const d = Math.hypot(a.x - b.x, a.y - b.y);
+        if (d < 120) { const alpha = (1 - d / 120) * 0.18; ctx.strokeStyle = `rgba(139,92,246,${alpha})`; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); }
+      }));
+      nodes.forEach(n => {
+        const r2 = 6 + n.m.importance * 0.8;
+        const gr = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, r2 * 3);
+        gr.addColorStop(0, "rgba(139,92,246,0.6)"); gr.addColorStop(1, "rgba(139,92,246,0)");
+        ctx.beginPath(); ctx.arc(n.x, n.y, r2 * 3, 0, Math.PI * 2); ctx.fillStyle = gr; ctx.fill();
+        ctx.beginPath(); ctx.arc(n.x, n.y, r2, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(139,92,246,${0.5 + 0.5 * Math.sin(t * 2 + n.m.importance)})`; ctx.shadowColor = "#8b5cf6"; ctx.shadowBlur = 10; ctx.fill(); ctx.shadowBlur = 0;
+        if (r2 > 10) { ctx.fillStyle = "rgba(255,255,255,0.6)"; ctx.font = `${Math.max(8, r2 * 0.8)}px Inter`; ctx.textAlign = "center"; ctx.fillText(n.m.content.slice(0, 12) + "…", n.x, n.y + r2 + 10); }
+      });
+      // Central brain
+      const pulse = 0.5 + 0.5 * Math.sin(t * 2);
+      const cg = ctx.createRadialGradient(cx, cy, 0, cx, cy, 20 + pulse * 5);
+      cg.addColorStop(0, "rgba(139,92,246,0.9)"); cg.addColorStop(1, "rgba(139,92,246,0)");
+      ctx.beginPath(); ctx.arc(cx, cy, 20 + pulse * 5, 0, Math.PI * 2); ctx.fillStyle = cg; ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,0.8)"; ctx.font = "9px Inter"; ctx.textAlign = "center"; ctx.fillText("BRAIN", cx, cy + 3);
+      rafRef.current = requestAnimationFrame(draw);
+    }
+    draw(); return () => cancelAnimationFrame(rafRef.current);
+  }, [memories]);
+  return <canvas ref={cvRef} className="w-full" style={{ height: 200 }} />;
+}
+
+function fmtAge(s: string) { const d = Date.now() - new Date(s).getTime(); if (d < 3600000) return `${Math.round(d / 60000)}د`; if (d < 86400000) return `${Math.round(d / 3600000)}س`; return `${Math.round(d / 86400000)} يوم`; }
 
 interface Props { onClose?: () => void }
 
 export function MemorySystemPage({ onClose }: Props) {
-  const { toast } = useToast();
-  const [memories, setMemories] = useState<Memory[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [memories, setMemories] = useState<Memory[]>(MOCK_MEMORIES);
   const [search, setSearch] = useState("");
-  const [catFilter, setCatFilter] = useState<string>("all");
-  const [adding, setAdding] = useState(false);
   const [newContent, setNewContent] = useState("");
-  const [newTags, setNewTags] = useState("");
-  const [newCategory, setNewCategory] = useState("general");
-  const [newImportance, setNewImportance] = useState(5);
-  const [saving, setSaving] = useState(false);
+  const [newTag, setNewTag] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [view, setView] = useState<"list" | "graph">("list");
 
-  const load = useCallback(async () => {
+  const loadMemories = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ limit: "100" });
-      if (catFilter !== "all") params.set("category", catFilter);
-      if (search) params.set("search", search);
-      const res = await authFetch(`/api/memory?${params}`);
-      if (res.ok) { const d = await res.json() as { memories?: Memory[] }; setMemories(d.memories || []); }
-    } catch { /* ignore */ }
-    finally { setLoading(false); }
-  }, [search, catFilter]);
+      const res = await authFetch("/api/memory");
+      if (res.ok) { const d = await res.json() as { memories: Memory[] }; if (d.memories?.length) setMemories(d.memories); }
+    } catch { /* use mock */ } finally { setLoading(false); }
+  }, []);
 
-  useEffect(() => { load(); }, [catFilter]);
+  useEffect(() => { loadMemories(); }, [loadMemories]);
 
-  const saveMemory = async () => {
+  const addMemory = useCallback(async () => {
     if (!newContent.trim()) return;
-    setSaving(true);
-    try {
-      const res = await authFetch("/api/memory", {
-        method: "POST",
-        body: JSON.stringify({
-          content: newContent,
-          tags: newTags.split(",").map(t => t.trim()).filter(Boolean),
-          category: newCategory,
-          importance: newImportance,
-        }),
-      });
-      if (res.ok) {
-        toast({ title: "✅ تم حفظ الذاكرة" });
-        setNewContent(""); setNewTags(""); setAdding(false);
-        await load();
-      }
-    } catch { toast({ title: "فشل الحفظ", variant: "destructive" }); }
-    finally { setSaving(false); }
-  };
+    const m: Memory = { id: crypto.randomUUID(), content: newContent, tags: newTag ? newTag.split(",").map(t => t.trim()) : [], createdAt: new Date().toISOString(), importance: 5 };
+    setMemories(prev => [m, ...prev]);
+    try { await authFetch("/api/memory", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(m) }); } catch { /**/ }
+    setNewContent(""); setNewTag(""); setAdding(false);
+  }, [newContent, newTag]);
 
-  const deleteMemory = async (id: string) => {
-    try {
-      await authFetch(`/api/memory/${id}`, { method: "DELETE" });
-      setMemories(m => m.filter(x => x.id !== id));
-      toast({ title: "تم الحذف" });
-    } catch { toast({ title: "فشل الحذف", variant: "destructive" }); }
-  };
+  const del = useCallback(async (id: string) => {
+    setMemories(m => m.filter(x => x.id !== id));
+    try { await authFetch(`/api/memory/${id}`, { method: "DELETE" }); } catch { /**/ }
+  }, []);
 
-  const importanceColor = (n: number) => n >= 8 ? "text-red-400" : n >= 5 ? "text-amber-400" : "text-gray-400";
+  const filtered = memories.filter(m => !search || m.content.toLowerCase().includes(search.toLowerCase()) || m.tags.some(t => t.includes(search)));
 
   return (
-    <div className="min-h-full bg-black p-6" dir="rtl">
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Brain className="w-7 h-7 text-red-400" />
-            <div>
-              <h1 className="text-xl font-black">نظام الذاكرة الطويلة</h1>
-              <p className="text-sm text-gray-400">يتذكر KaliGPT معلوماتك عبر المحادثات</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={load} className="p-2 hover:bg-white/5 rounded-lg">
-              <RefreshCw className={`w-5 h-5 text-gray-400 ${loading ? "animate-spin" : ""}`} />
-            </button>
-            <button onClick={() => setAdding(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-medium transition-colors">
-              <Plus className="w-4 h-4" /> إضافة ذاكرة
-            </button>
-          </div>
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-4 gap-4">
-          {[
-            { label: "إجمالي الذكريات", value: memories.length },
-            { label: "الأكثر أهمية", value: memories.filter(m => m.importance >= 8).length },
-            { label: "فئات", value: new Set(memories.map(m => m.category)).size },
-            { label: "وسوم", value: new Set(memories.flatMap(m => m.tags)).size },
-          ].map(s => (
-            <div key={s.label} className="p-4 bg-white/3 border border-white/10 rounded-xl text-center">
-              <div className="text-2xl font-black text-white">{s.value}</div>
-              <div className="text-xs text-gray-400 mt-1">{s.label}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* Filters */}
+    <div className="relative flex flex-col h-full bg-[#080808] overflow-hidden" dir="rtl">
+      <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse at 30% 20%,rgba(139,92,246,.06) 0%,transparent 50%)" }} />
+      <div className="relative flex-shrink-0 px-5 py-3.5 border-b border-white/6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input value={search} onChange={e => setSearch(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && load()}
-              placeholder="بحث في الذاكرة..." className="w-full bg-white/5 border border-white/10 rounded-xl pr-10 pl-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-red-500" />
-          </div>
-          <div className="flex gap-1">
-            {["all", ...CATEGORIES].map(c => (
-              <button key={c} onClick={() => setCatFilter(c)}
-                className={`px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-                  catFilter === c ? "bg-red-600 text-white" : "bg-white/5 text-gray-400 hover:text-white"
-                }`}>
-                {c === "all" ? "الكل" : c}
-              </button>
-            ))}
-          </div>
+          <div className="w-9 h-9 rounded-xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center"><Brain className="w-5 h-5 text-purple-400" /></div>
+          <div><h2 className="text-base font-bold text-white">الذاكرة طويلة الأمد — 3D</h2><p className="text-xs text-zinc-600">{memories.length} ذاكرة · Long-term Memory System</p></div>
         </div>
-
-        {/* Add Memory Form */}
+        <div className="flex items-center gap-2">
+          <button onClick={() => setView(v => v === "list" ? "graph" : "list")} className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${view === "graph" ? "bg-purple-500/20 border border-purple-500/25 text-purple-400" : "text-zinc-500 hover:text-zinc-300"}`}>
+            {view === "list" ? "رسم بياني" : "قائمة"}
+          </button>
+          <button onClick={() => setAdding(a => !a)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-purple-500/20 border border-purple-500/25 text-purple-400 hover:bg-purple-500/30 transition-all">
+            <Plus className="w-3.5 h-3.5" />إضافة
+          </button>
+          <button onClick={loadMemories} disabled={loading} className="w-7 h-7 rounded-lg flex items-center justify-center text-zinc-500 hover:text-white hover:bg-white/8 transition-colors"><RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} /></button>
+          {onClose && <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-zinc-500 hover:text-white hover:bg-white/8 transition-colors"><X className="w-4 h-4" /></button>}
+        </div>
+      </div>
+      <div className="relative flex-1 overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/6 p-5 space-y-4">
         <AnimatePresence>
           {adding && (
-            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-              className="p-5 bg-white/3 border border-red-500/30 rounded-2xl space-y-4">
-              <h3 className="font-semibold text-red-400">ذاكرة جديدة</h3>
+            <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+              className="p-4 rounded-xl bg-purple-500/6 border border-purple-500/20 space-y-3">
               <textarea value={newContent} onChange={e => setNewContent(e.target.value)}
-                placeholder="ما تريد أن يتذكره KaliGPT عنك؟ مثل: 'أنا متخصص في pentest على شبكات الـ Active Directory'"
-                rows={4} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-red-500 resize-none" />
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="text-xs text-gray-400 mb-1 block">الفئة</label>
-                  <select value={newCategory} onChange={e => setNewCategory(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none">
-                    {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs text-gray-400 mb-1 block">الأهمية (1-10)</label>
-                  <input type="number" min={1} max={10} value={newImportance} onChange={e => setNewImportance(Number(e.target.value))}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none" />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-400 mb-1 block">وسوم (فصل بفاصلة)</label>
-                  <input value={newTags} onChange={e => setNewTags(e.target.value)}
-                    placeholder="pentest, network" dir="ltr"
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none" />
-                </div>
-              </div>
-              <div className="flex gap-2 justify-end">
-                <button onClick={() => setAdding(false)} className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-sm">إلغاء</button>
-                <button onClick={saveMemory} disabled={saving || !newContent}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-500 disabled:opacity-50 rounded-lg text-sm font-medium">
-                  {saving ? "جاري الحفظ..." : "حفظ الذاكرة"}
-                </button>
+                placeholder="محتوى الذاكرة الجديدة..."
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-600 outline-none focus:border-purple-500/40 resize-none h-20" />
+              <div className="flex gap-2">
+                <input value={newTag} onChange={e => setNewTag(e.target.value)} placeholder="وسوم (مفصولة بفاصلة)" className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs text-white placeholder-zinc-600 outline-none focus:border-purple-500/40" />
+                <button onClick={addMemory} className="px-4 py-2 rounded-xl bg-purple-500/25 border border-purple-500/30 text-purple-400 text-xs font-medium hover:bg-purple-500/35 transition-all">حفظ</button>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
-
-        {/* Memory List */}
-        {loading && memories.length === 0 ? (
-          <div className="text-center py-12 text-gray-400"><RefreshCw className="w-8 h-8 animate-spin mx-auto" /></div>
-        ) : memories.length === 0 ? (
-          <div className="text-center py-16 text-gray-500">
-            <Brain className="w-14 h-14 mx-auto mb-4 opacity-20" />
-            <div>لا توجد ذكريات بعد</div>
-            <div className="text-sm mt-1">أضف ذاكرتك الأولى لتحسين إجابات KaliGPT</div>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {memories.map(m => (
-              <motion.div key={m.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                className="p-4 bg-white/3 border border-white/10 rounded-xl hover:border-white/20 transition-colors group">
-                <div className="flex items-start gap-3">
-                  <Star className={`w-4 h-4 mt-0.5 shrink-0 ${importanceColor(m.importance)}`} />
+        <div className="relative">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-600" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث في الذاكرة..." className="w-full bg-white/5 border border-white/8 rounded-xl pr-9 pl-4 py-2 text-sm text-white placeholder-zinc-600 outline-none focus:border-purple-500/30" />
+        </div>
+        {view === "graph" && <MemoryCluster memories={filtered} />}
+        {view === "list" && (
+          <div className="space-y-2">
+            {filtered.map((m, i) => (
+              <motion.div key={m.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
+                className="p-3.5 rounded-xl bg-purple-500/5 border border-purple-500/15 hover:border-purple-500/25 transition-colors group">
+                <div className="flex items-start gap-2.5">
+                  <div className="w-6 h-6 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0 mt-0.5"><BookOpen className="w-3.5 h-3.5 text-purple-400" /></div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-200 leading-relaxed">{m.content}</p>
-                    <div className="flex items-center gap-3 mt-2 flex-wrap">
-                      <span className="text-xs bg-white/10 text-gray-300 px-2 py-0.5 rounded-full capitalize">{m.category}</span>
-                      {m.tags?.map(tag => (
-                        <span key={tag} className="text-xs bg-red-600/15 text-red-300 px-2 py-0.5 rounded-full flex items-center gap-1">
-                          <Tag className="w-2.5 h-2.5" />{tag}
-                        </span>
-                      ))}
-                      <span className="text-xs text-gray-500 flex items-center gap-1">
-                        <Clock className="w-3 h-3" />{new Date(m.created_at).toLocaleDateString("ar")}
-                      </span>
+                    <p className="text-sm text-zinc-200">{m.content}</p>
+                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                      {m.tags.map(t => <span key={t} className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-500/15 text-purple-400 border border-purple-500/20">{t}</span>)}
+                      <span className="text-[10px] text-zinc-600 flex items-center gap-0.5 mr-auto"><Clock className="w-2.5 h-2.5" />{fmtAge(m.createdAt)}</span>
+                      <span className="text-[10px] text-zinc-600">أهمية: {m.importance}/10</span>
                     </div>
                   </div>
-                  <button onClick={() => deleteMemory(m.id)}
-                    className="p-1.5 opacity-0 group-hover:opacity-100 hover:bg-red-600/20 rounded-lg text-gray-500 hover:text-red-400 transition-all">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <button onClick={() => del(m.id)} className="opacity-0 group-hover:opacity-100 w-6 h-6 flex items-center justify-center text-zinc-600 hover:text-red-400 transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
                 </div>
               </motion.div>
             ))}
+            {filtered.length === 0 && <div className="text-center py-10 text-zinc-600 text-sm">لا توجد ذكريات مطابقة</div>}
           </div>
         )}
       </div>

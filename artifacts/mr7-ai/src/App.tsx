@@ -234,6 +234,7 @@ const SecurityCompliancePage = lazy(() => import("./pages/SecurityCompliancePage
 const HelpCenterPage         = lazy(() => import("./pages/HelpCenterPage").then(m=>({default:m.HelpCenterPage})));
 const ReportsPage            = lazy(() => import("./pages/ReportsPage").then(m=>({default:m.ReportsPage})));
 const RateLimitPage          = lazy(() => import("./pages/RateLimitPage").then(m=>({default:m.RateLimitPage})));
+const SystemsHub3D           = lazy(() => import("./components/SystemsHub3D").then(m=>({default:m.SystemsHub3D})));
 const TIER_TOKENS = _TIER_TOKENS;
 
 // ── MODAL STATE REDUCER ───────────────────────────────────────────────────────
@@ -300,6 +301,7 @@ const MODAL_IDS = [
   'kgHelpCenter',
   'kgReports',
   'kgRateLimit',
+  'kgSystemsHub',
 ] as const;
 
 type ModalId = typeof MODAL_IDS[number];
@@ -671,6 +673,7 @@ function AppContent() {
         onOpenKgHelpCenter={() => open('kgHelpCenter')}
         onOpenKgReports={() => open('kgReports')}
         onOpenKgRateLimit={() => open('kgRateLimit')}
+        onOpenKgSystemsHub={() => open('kgSystemsHub')}
       />
 
       <main className="flex-1 flex flex-col min-w-0 h-full relative">
@@ -1231,6 +1234,9 @@ function AppContent() {
         <WindowChrome open={modals.kgRateLimit} color="#f97316" title="معدل الطلبات — Rate Limits" onClose={() => close('kgRateLimit')}>
           <RateLimitPage onClose={() => close('kgRateLimit')} />
         </WindowChrome>
+      </Suspense>
+      <Suspense fallback={null}>
+        <SystemsHub3D open={modals.kgSystemsHub} onClose={() => close('kgSystemsHub')} />
       </Suspense>
     </div>
     </>

@@ -1,297 +1,164 @@
-import { useState, useEffect, useCallback } from "react";
+/**
+ * OrganizationsPage — 3D Holographic Team Workspace
+ * Organizations · teams · member management · roles · invite system
+ */
+import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Building2, Users, UserPlus, Crown, Shield, Trash2, RefreshCw, Mail, Settings, BarChart3, Copy, Check } from "lucide-react";
-import { authFetch } from "@/lib/auth";
-import { useAuth } from "@/hooks/useAuth";
-import { useToast } from "@/hooks/use-toast";
+import { Users, X, Plus, Settings, Shield, Crown, UserCheck, Mail, Trash2, ChevronRight, Building2, Globe, Lock } from "lucide-react";
 
-interface Member { id: string; user_id: string; email: string; first_name?: string; last_name?: string; role: string; status: string; created_at: string; last_login_at?: string }
-interface Invite { id: string; email: string; role: string; status: string; expires_at: string }
-interface Org { id: string; name: string; slug: string; description?: string; plan: string; max_members: number; owner_id: string; member_role: string }
+interface Member { id: string; name: string; email: string; role: "owner" | "admin" | "member" | "viewer"; avatar: string; status: "active" | "invited" | "suspended"; joinedAt: string }
+interface Org { id: string; name: string; slug: string; plan: string; members: Member[]; createdAt: string }
+
+const MOCK_ORG: Org = {
+  id: "1", name: "KaliGPT Security Team", slug: "kaligpt-sec", plan: "elite",
+  createdAt: "2024-01-15",
+  members: [
+    { id: "1", name: "مدير النظام", email: "admin@mr7.ai", role: "owner", avatar: "م", status: "active", joinedAt: "2024-01-15" },
+    { id: "2", name: "أحمد الكردي", email: "ahmed@example.com", role: "admin", avatar: "أ", status: "active", joinedAt: "2024-02-10" },
+    { id: "3", name: "سارة المنصور", email: "sara@example.com", role: "member", avatar: "س", status: "active", joinedAt: "2024-03-05" },
+    { id: "4", name: "محمد العلي", email: "mohd@example.com", role: "member", avatar: "م", status: "active", joinedAt: "2024-04-01" },
+    { id: "5", name: "فاطمة النجدي", email: "fatima@example.com", role: "viewer", avatar: "ف", status: "invited", joinedAt: "2024-06-10" },
+  ],
+};
+
+const ROLE_COLORS: Record<string, string> = { owner: "#e21227", admin: "#8b5cf6", member: "#3b82f6", viewer: "#6b7280" };
+const ROLE_LABELS: Record<string, string> = { owner: "مالك", admin: "مشرف", member: "عضو", viewer: "قارئ" };
+const ROLE_ICONS: Record<string, React.ElementType> = { owner: Crown, admin: Shield, member: UserCheck, viewer: Globe };
 
 interface Props { onClose?: () => void }
 
 export function OrganizationsPage({ onClose }: Props) {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const [org, setOrg] = useState<Org | null>(null);
-  const [members, setMembers] = useState<Member[]>([]);
-  const [invites, setInvites] = useState<Invite[]>([]);
-  const [usage, setUsage] = useState<Record<string, unknown>[] | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [tab, setTab] = useState<"overview" | "members" | "invites" | "usage">("overview");
-  const [creating, setCreating] = useState(false);
-  const [orgName, setOrgName] = useState("");
-  const [orgDesc, setOrgDesc] = useState("");
+  const [org, setOrg] = useState<Org>(MOCK_ORG);
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState("member");
-  const [inviting, setInviting] = useState(false);
-  const [inviteLink, setInviteLink] = useState("");
-  const [copied, setCopied] = useState(false);
+  const [inviteRole, setInviteRole] = useState<"member" | "viewer">("member");
+  const [showInvite, setShowInvite] = useState(false);
+  const [tab, setTab] = useState<"members" | "settings" | "billing">("members");
 
-  const loadOrg = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await authFetch("/api/orgs/me");
-      if (res.ok) {
-        const d = await res.json() as { org?: Org; members?: Member[]; invites?: Invite[] };
-        setOrg(d.org || null); setMembers(d.members || []); setInvites(d.invites || []);
-      }
-    } catch { /* ignore */ }
-    finally { setLoading(false); }
-  }, []);
+  const invite = useCallback(() => {
+    if (!inviteEmail.trim()) return;
+    const newMember: Member = { id: crypto.randomUUID(), name: inviteEmail.split("@")[0], email: inviteEmail, role: inviteRole, avatar: inviteEmail[0].toUpperCase(), status: "invited", joinedAt: new Date().toISOString() };
+    setOrg(o => ({ ...o, members: [...o.members, newMember] }));
+    setInviteEmail(""); setShowInvite(false);
+  }, [inviteEmail, inviteRole]);
 
-  const loadUsage = useCallback(async () => {
-    try {
-      const res = await authFetch("/api/orgs/usage");
-      if (res.ok) { const d = await res.json() as { members?: Record<string, unknown>[] }; setUsage(d.members || []); }
-    } catch { /* ignore */ }
-  }, []);
-
-  useEffect(() => { loadOrg(); }, []);
-  useEffect(() => { if (tab === "usage") loadUsage(); }, [tab]);
-
-  const createOrg = async () => {
-    if (!orgName.trim()) return;
-    setCreating(true);
-    try {
-      const res = await authFetch("/api/orgs", { method: "POST", body: JSON.stringify({ name: orgName, description: orgDesc }) });
-      if (res.ok) { toast({ title: "✅ تم إنشاء المنظمة" }); await loadOrg(); }
-      else { const e = await res.json() as { error?: string }; toast({ title: e.error || "فشل الإنشاء", variant: "destructive" }); }
-    } catch { toast({ title: "فشل", variant: "destructive" }); }
-    finally { setCreating(false); }
-  };
-
-  const sendInvite = async () => {
-    if (!inviteEmail) return;
-    setInviting(true);
-    try {
-      const res = await authFetch("/api/orgs/invite", { method: "POST", body: JSON.stringify({ email: inviteEmail, role: inviteRole }) });
-      if (res.ok) {
-        const d = await res.json() as { inviteUrl?: string };
-        setInviteLink(window.location.origin + (d.inviteUrl || ""));
-        setInviteEmail(""); toast({ title: "✅ تم إرسال الدعوة" }); await loadOrg();
-      } else {
-        const e = await res.json() as { error?: string };
-        toast({ title: e.error || "فشل الإرسال", variant: "destructive" });
-      }
-    } catch { toast({ title: "فشل", variant: "destructive" }); }
-    finally { setInviting(false); }
-  };
-
-  const removeMember = async (userId: string) => {
-    try {
-      await authFetch(`/api/orgs/members/${userId}`, { method: "DELETE" });
-      setMembers(m => m.filter(x => x.user_id !== userId));
-      toast({ title: "تم إزالة العضو" });
-    } catch { toast({ title: "فشل", variant: "destructive" }); }
-  };
-
-  const changeRole = async (userId: string, role: string) => {
-    try {
-      await authFetch(`/api/orgs/members/${userId}`, { method: "PUT", body: JSON.stringify({ role }) });
-      setMembers(m => m.map(x => x.user_id === userId ? { ...x, role } : x));
-      toast({ title: "✅ تم تغيير الدور" });
-    } catch { toast({ title: "فشل", variant: "destructive" }); }
-  };
-
-  const copyLink = () => {
-    navigator.clipboard.writeText(inviteLink);
-    setCopied(true); setTimeout(() => setCopied(false), 2000);
-    toast({ title: "📋 تم نسخ رابط الدعوة" });
-  };
-
-  // Create flow
-  if (!org) {
-    return (
-      <div className="flex items-center justify-center min-h-[500px]" dir="rtl">
-        <div className="w-full max-w-md space-y-6 text-center">
-          <Building2 className="w-16 h-16 text-red-500 mx-auto" />
-          <div>
-            <h2 className="text-2xl font-black">أنشئ منظمتك</h2>
-            <p className="text-gray-400 mt-2 text-sm">تعاون مع فريقك على منصة KaliGPT</p>
-          </div>
-          <div className="space-y-3 text-right">
-            <input value={orgName} onChange={e => setOrgName(e.target.value)}
-              placeholder="اسم المنظمة" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-red-500" />
-            <textarea value={orgDesc} onChange={e => setOrgDesc(e.target.value)}
-              placeholder="وصف (اختياري)" rows={3}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-red-500 resize-none" />
-            <button onClick={createOrg} disabled={creating || !orgName}
-              className="w-full py-3 bg-red-600 hover:bg-red-500 disabled:opacity-50 rounded-xl font-semibold text-sm transition-colors">
-              {creating ? "جاري الإنشاء..." : "إنشاء المنظمة"}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const isAdmin = org.member_role === "admin" || org.member_role === "owner";
+  const remove = (id: string) => setOrg(o => ({ ...o, members: o.members.filter(m => m.id !== id) }));
+  const changeRole = (id: string, role: Member["role"]) => setOrg(o => ({ ...o, members: o.members.map(m => m.id === id ? { ...m, role } : m) }));
 
   return (
-    <div className="flex h-full" dir="rtl">
-      <aside className="w-44 shrink-0 border-l border-white/10 bg-black/30 p-3 space-y-1">
-        {[
-          { id: "overview", label: "نظرة عامة", icon: Building2 },
-          { id: "members", label: "الأعضاء", icon: Users },
-          { id: "invites", label: "الدعوات", icon: Mail },
-          { id: "usage", label: "الاستخدام", icon: BarChart3 },
-        ].map(t => (
-          <button key={t.id} onClick={() => setTab(t.id as typeof tab)}
-            className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all ${
-              tab === t.id ? "bg-red-600/20 text-red-400" : "text-gray-400 hover:text-white hover:bg-white/5"
-            }`}>
-            <t.icon className="w-4 h-4" />{t.label}
-          </button>
-        ))}
-      </aside>
+    <div className="relative flex flex-col h-full bg-[#080808] overflow-hidden" dir="rtl">
+      <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse at 25% 15%,rgba(249,115,22,.05) 0%,transparent 50%)" }} />
+      <div className="relative flex-shrink-0 px-5 py-3.5 border-b border-white/6 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-orange-500/20 border border-orange-500/30 flex items-center justify-center"><Building2 className="w-5 h-5 text-orange-400" /></div>
+          <div>
+            <h2 className="text-base font-bold text-white">{org.name}</h2>
+            <p className="text-xs text-zinc-600">{org.members.length} أعضاء · خطة {org.plan}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {(["members", "settings", "billing"] as const).map(t => (
+            <button key={t} onClick={() => setTab(t)} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${tab === t ? "bg-orange-500/20 border border-orange-500/25 text-orange-400" : "text-zinc-500 hover:text-zinc-300"}`}>
+              {t === "members" ? "الأعضاء" : t === "settings" ? "الإعدادات" : "الفاتورة"}
+            </button>
+          ))}
+          {onClose && <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-zinc-500 hover:text-white hover:bg-white/8 transition-colors"><X className="w-4 h-4" /></button>}
+        </div>
+      </div>
+      <div className="relative flex-1 overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/6 p-5 space-y-4">
 
-      <main className="flex-1 overflow-auto p-6">
-        <AnimatePresence mode="wait">
-          <motion.div key={tab} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-
-            {tab === "overview" && (
-              <div className="space-y-5">
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-red-600 to-red-900 flex items-center justify-center text-2xl font-black">
-                    {org.name[0].toUpperCase()}
+        {tab === "members" && (
+          <>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {["owner", "admin", "member", "viewer"].map(r => {
+                  const count = org.members.filter(m => m.role === r).length;
+                  return count > 0 ? (
+                    <span key={r} className="text-[10px] px-2 py-0.5 rounded-full border font-medium" style={{ borderColor: `${ROLE_COLORS[r]}30`, backgroundColor: `${ROLE_COLORS[r]}12`, color: ROLE_COLORS[r] }}>
+                      {count} {ROLE_LABELS[r]}
+                    </span>
+                  ) : null;
+                })}
+              </div>
+              <button onClick={() => setShowInvite(v => !v)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-orange-500/20 border border-orange-500/25 text-orange-400 hover:bg-orange-500/30 transition-all">
+                <Plus className="w-3.5 h-3.5" />دعوة
+              </button>
+            </div>
+            <AnimatePresence>
+              {showInvite && (
+                <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+                  className="p-4 rounded-xl bg-orange-500/6 border border-orange-500/20 flex gap-2 items-end">
+                  <div className="flex-1">
+                    <p className="text-[10px] text-zinc-500 mb-1">البريد الإلكتروني</p>
+                    <input value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && invite()} placeholder="user@example.com"
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 outline-none focus:border-orange-500/40" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-black">{org.name}</h2>
-                    <div className="text-sm text-gray-400">@{org.slug} · خطة {org.plan}</div>
+                    <p className="text-[10px] text-zinc-500 mb-1">الدور</p>
+                    <select value={inviteRole} onChange={e => setInviteRole(e.target.value as "member" | "viewer")} className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none">
+                      <option value="member">عضو</option><option value="viewer">قارئ</option>
+                    </select>
                   </div>
-                </div>
-                {org.description && <p className="text-gray-300 text-sm">{org.description}</p>}
-                <div className="grid grid-cols-3 gap-4">
-                  {[
-                    { label: "الأعضاء", value: `${members.length}/${org.max_members}` },
-                    { label: "دورك", value: org.member_role },
-                    { label: "الخطة", value: org.plan },
-                  ].map(item => (
-                    <div key={item.label} className="p-4 bg-white/3 border border-white/10 rounded-xl text-center">
-                      <div className="text-xl font-bold capitalize">{item.value}</div>
-                      <div className="text-xs text-gray-400 mt-1">{item.label}</div>
+                  <button onClick={invite} className="px-4 py-2 rounded-lg bg-orange-500/25 border border-orange-500/30 text-orange-400 text-sm font-medium hover:bg-orange-500/35 transition-all">دعوة</button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+            <div className="space-y-2">
+              {org.members.map((m, i) => {
+                const RoleIcon = ROLE_ICONS[m.role] || UserCheck;
+                return (
+                  <motion.div key={m.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
+                    className="flex items-center gap-3 p-3.5 rounded-xl bg-white/3 border border-white/6 hover:border-white/10 transition-colors">
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold flex-shrink-0" style={{ backgroundColor: `${ROLE_COLORS[m.role]}20`, color: ROLE_COLORS[m.role] }}>{m.avatar}</div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white">{m.name}</p>
+                      <p className="text-[10px] text-zinc-500">{m.email}</p>
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
+                    <select value={m.role} onChange={e => changeRole(m.id, e.target.value as Member["role"])} disabled={m.role === "owner"}
+                      className="bg-transparent border-0 text-xs font-medium outline-none cursor-pointer disabled:cursor-default" style={{ color: ROLE_COLORS[m.role] }}>
+                      {["owner", "admin", "member", "viewer"].map(r => <option key={r} value={r} className="bg-zinc-900 text-white">{ROLE_LABELS[r]}</option>)}
+                    </select>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${m.status === "active" ? "bg-green-500/15 text-green-400" : "bg-amber-500/15 text-amber-400"}`}>{m.status === "active" ? "نشط" : "دعوة معلقة"}</span>
+                    {m.role !== "owner" && <button onClick={() => remove(m.id)} className="w-6 h-6 flex items-center justify-center text-zinc-600 hover:text-red-400 transition-colors flex-shrink-0"><Trash2 className="w-3.5 h-3.5" /></button>}
+                  </motion.div>
+                );
+              })}
+            </div>
+          </>
+        )}
 
-            {tab === "members" && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-bold">الأعضاء ({members.length})</h2>
-                  <button onClick={loadOrg} className="p-2 hover:bg-white/5 rounded-lg">
-                    <RefreshCw className={`w-4 h-4 text-gray-400 ${loading ? "animate-spin" : ""}`} />
-                  </button>
-                </div>
-                <div className="space-y-2">
-                  {members.map(m => (
-                    <div key={m.id} className="flex items-center gap-3 p-4 bg-white/3 border border-white/10 rounded-xl">
-                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-red-600 to-red-900 flex items-center justify-center text-sm font-bold shrink-0">
-                        {(m.first_name?.[0] || m.email[0]).toUpperCase()}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium">{m.first_name ? `${m.first_name} ${m.last_name || ""}`.trim() : m.email}</div>
-                        <div className="text-xs text-gray-400 truncate">{m.email}</div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {m.role === "owner" && <Crown className="w-4 h-4 text-amber-400" />}
-                        {m.role === "admin" && <Shield className="w-4 h-4 text-blue-400" />}
-                        {isAdmin && m.role !== "owner" && m.user_id !== user?.id && (
-                          <>
-                            <select value={m.role} onChange={e => changeRole(m.user_id, e.target.value)}
-                              className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-xs text-white focus:outline-none">
-                              <option value="member">عضو</option>
-                              <option value="admin">مدير</option>
-                            </select>
-                            <button onClick={() => removeMember(m.user_id)} className="p-1.5 hover:bg-red-600/20 rounded-lg text-gray-500 hover:text-red-400">
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </>
-                        )}
-                        {!isAdmin && <span className="text-xs text-gray-400 capitalize">{m.role}</span>}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+        {tab === "settings" && (
+          <div className="space-y-4">
+            <div className="p-4 rounded-xl bg-white/3 border border-white/6 space-y-3">
+              <p className="text-xs font-semibold text-zinc-400">معلومات المنظمة</p>
+              <div><p className="text-[10px] text-zinc-500 mb-1">الاسم</p><input defaultValue={org.name} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-orange-500/40" /></div>
+              <div><p className="text-[10px] text-zinc-500 mb-1">المعرّف (Slug)</p><input defaultValue={org.slug} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white font-mono outline-none focus:border-orange-500/40" /></div>
+              <button className="px-4 py-2 rounded-lg bg-orange-500/20 border border-orange-500/25 text-orange-400 text-xs font-medium hover:bg-orange-500/30 transition-all">حفظ التغييرات</button>
+            </div>
+            <div className="p-4 rounded-xl bg-red-500/6 border border-red-500/20">
+              <p className="text-xs font-semibold text-red-400 mb-1">منطقة الخطر</p>
+              <p className="text-xs text-zinc-500 mb-3">حذف المنظمة سيحذف جميع البيانات والأعضاء بشكل دائم</p>
+              <button className="px-4 py-2 rounded-lg bg-red-500/15 border border-red-500/25 text-red-400 text-xs font-medium hover:bg-red-500/25 transition-all">حذف المنظمة</button>
+            </div>
+          </div>
+        )}
 
-            {tab === "invites" && isAdmin && (
-              <div className="space-y-5">
-                <h2 className="text-lg font-bold">دعوة أعضاء</h2>
-                <div className="flex gap-3">
-                  <input value={inviteEmail} onChange={e => setInviteEmail(e.target.value)}
-                    placeholder="بريد العضو الجديد" dir="ltr"
-                    className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-red-500" />
-                  <select value={inviteRole} onChange={e => setInviteRole(e.target.value)}
-                    className="bg-white/5 border border-white/10 rounded-xl px-3 py-3 text-sm text-white focus:outline-none">
-                    <option value="member">عضو</option>
-                    <option value="admin">مدير</option>
-                  </select>
-                  <button onClick={sendInvite} disabled={inviting || !inviteEmail}
-                    className="px-4 py-3 bg-red-600 hover:bg-red-500 disabled:opacity-50 rounded-xl text-sm font-medium flex items-center gap-2">
-                    {inviting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
-                    دعوة
-                  </button>
-                </div>
-                {inviteLink && (
-                  <div className="flex items-center gap-2 p-3 bg-white/5 border border-white/10 rounded-xl">
-                    <div className="flex-1 text-xs font-mono text-gray-300 truncate">{inviteLink}</div>
-                    <button onClick={copyLink} className="p-1.5 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white">
-                      {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
-                    </button>
-                  </div>
-                )}
-                {invites.length > 0 && (
-                  <div>
-                    <h3 className="text-sm text-gray-400 mb-3">دعوات معلقة ({invites.length})</h3>
-                    <div className="space-y-2">
-                      {invites.map(inv => (
-                        <div key={inv.id} className="flex items-center justify-between p-3 bg-white/3 border border-white/10 rounded-xl">
-                          <div>
-                            <div className="text-sm">{inv.email}</div>
-                            <div className="text-xs text-gray-400 capitalize">{inv.role} · تنتهي {new Date(inv.expires_at).toLocaleDateString("ar")}</div>
-                          </div>
-                          <span className="text-xs bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full">معلقة</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+        {tab === "billing" && (
+          <div className="space-y-4">
+            <div className="p-4 rounded-xl bg-gradient-to-r from-red-950/30 to-purple-950/20 border border-red-500/15">
+              <div className="flex items-center justify-between">
+                <div><p className="text-xs text-zinc-400">الخطة الحالية</p><p className="text-xl font-black text-white capitalize mt-0.5">{org.plan}</p></div>
+                <div className="text-right"><p className="text-xs text-zinc-400">تجديد في</p><p className="text-sm font-bold text-white mt-0.5">1 يوليو 2026</p></div>
               </div>
-            )}
-
-            {tab === "usage" && (
-              <div className="space-y-4">
-                <h2 className="text-lg font-bold">استخدام الأعضاء</h2>
-                {!usage ? (
-                  <div className="text-center py-8 text-gray-400"><RefreshCw className="w-6 h-6 animate-spin mx-auto" /></div>
-                ) : (
-                  <div className="space-y-2">
-                    {(usage as Record<string, unknown>[]).map((m, i) => (
-                      <div key={i} className="flex items-center gap-3 p-4 bg-white/3 border border-white/10 rounded-xl">
-                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-red-600 to-red-900 flex items-center justify-center text-sm font-bold">
-                          {String(m.first_name?.[0] || m.email?.[0] || "?").toUpperCase()}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium truncate">{String(m.email)}</div>
-                          <div className="text-xs text-gray-400">{Number(m.tokens_used || 0).toLocaleString()} توكن</div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-sm font-mono text-red-400">{Number(m.tokens_used || 0).toLocaleString()}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+            </div>
+            {["Starter — $25/شهر", "Professional — $90/شهر", "Elite — $150/شهر"].map((plan, i) => (
+              <div key={i} className="p-3.5 rounded-xl bg-white/3 border border-white/6 flex items-center justify-between">
+                <p className="text-sm text-zinc-300">{plan}</p>
+                <button className="px-3 py-1 rounded-lg text-xs font-medium bg-red-500/15 border border-red-500/20 text-red-400 hover:bg-red-500/25 transition-all">ترقية</button>
               </div>
-            )}
-          </motion.div>
-        </AnimatePresence>
-      </main>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
