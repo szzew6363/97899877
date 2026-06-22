@@ -20,7 +20,7 @@ import agent4Router from "./agent4";
 import ollamaRouter from "./ollama";
 import localEnginesRouter from "./local-engines";
 import loadBalancerRouter from "./load-balancer";
-// ── New feature routes ────────────────────────────────────────────────────────
+// ── Feature routes ────────────────────────────────────────────────────────────
 import userAuthRouter from "./user-auth";
 import stripeRouter from "./stripe";
 import apiKeysRouter from "./api-keys";
@@ -33,11 +33,17 @@ import pluginsRouter from "./plugins";
 import ragRouter from "./rag";
 import adminRouter from "./admin";
 import subscriptionsRouter from "./subscriptions";
+// ── New systems #8 #10 #13 #15 #18 #20 ───────────────────────────────────────
+import organizationsRouter from "./organizations";
+import billingRouter from "./billing";
+import monitoringRouter from "./monitoring";
+import trainingRouter from "./training";
+import analyticsRouter from "./analytics";
+import securityComplianceRouter from "./security-compliance";
 
 const router: IRouter = Router();
 
-// Apply tier-based rate limiting to all AI routes
-router.use(["/chat", "/council", "/godmode", "/image", "/vision", "/agent", "/agent4", "/rag", "/finetune"], tierRateLimit);
+router.use(["/chat", "/council", "/godmode", "/image", "/vision", "/agent", "/agent4", "/rag", "/finetune", "/training"], tierRateLimit);
 
 router.use(healthRouter);
 router.use(chatRouter);
@@ -59,7 +65,6 @@ router.use(agent4Router);
 router.use(ollamaRouter);
 router.use(localEnginesRouter);
 router.use(loadBalancerRouter);
-// ── New feature routes ────────────────────────────────────────────────────────
 router.use(userAuthRouter);
 router.use(stripeRouter);
 router.use(apiKeysRouter);
@@ -72,5 +77,12 @@ router.use(pluginsRouter);
 router.use(ragRouter);
 router.use(adminRouter);
 router.use(subscriptionsRouter);
+// ── New systems ───────────────────────────────────────────────────────────────
+router.use(organizationsRouter);
+router.use(billingRouter);
+router.use(monitoringRouter);
+router.use(trainingRouter);
+router.use(analyticsRouter);
+router.use(securityComplianceRouter);
 
 export default router;

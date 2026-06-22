@@ -213,6 +213,24 @@ import { NotificationCenter } from "./components/NotificationCenter";
 import { PluginMarketplaceModal } from "./components/modals/PluginMarketplaceModal";
 import { FinetuneModal } from "./components/modals/FinetuneModal";
 import { startTokenMonitor } from "./lib/token-monitor";
+// ── KaliGPT Feature Pages (Systems #2-#20) ────────────────────────────────────
+const AdminDashboardPage     = lazy(() => import("./pages/AdminDashboard").then(m=>({default:m.AdminDashboard})));
+const PaymentGatewayPage     = lazy(() => import("./pages/PaymentGatewayPage").then(m=>({default:m.PaymentGatewayPage})));
+const RAGSystemPage          = lazy(() => import("./pages/RAGSystemPage").then(m=>({default:m.RAGSystemPage})));
+const MemorySystemPage       = lazy(() => import("./pages/MemorySystemPage").then(m=>({default:m.MemorySystemPage})));
+const NotificationsPage      = lazy(() => import("./pages/NotificationsPage").then(m=>({default:m.NotificationsPage})));
+const MultiAgentPage         = lazy(() => import("./pages/MultiAgentPage").then(m=>({default:m.MultiAgentPage})));
+const OrganizationsPage      = lazy(() => import("./pages/OrganizationsPage").then(m=>({default:m.OrganizationsPage})));
+const MarketplacePage        = lazy(() => import("./pages/MarketplacePage").then(m=>({default:m.MarketplacePage})));
+const AnalyticsDashboardPage = lazy(() => import("./pages/AnalyticsDashboardPage").then(m=>({default:m.AnalyticsDashboardPage})));
+const FinetunePipelinePage   = lazy(() => import("./pages/FinetunePage").then(m=>({default:m.FinetunePage})));
+const APIKeysPage            = lazy(() => import("./pages/APIKeysPage").then(m=>({default:m.APIKeysPage})));
+const MonitoringPage         = lazy(() => import("./pages/MonitoringPage").then(m=>({default:m.MonitoringPage})));
+const SemanticSearchPage     = lazy(() => import("./pages/SemanticSearchPage").then(m=>({default:m.SemanticSearchPage})));
+const CollaborationPage      = lazy(() => import("./pages/CollaborationPage").then(m=>({default:m.CollaborationPage})));
+const ContextManagementPage  = lazy(() => import("./pages/ContextManagementPage").then(m=>({default:m.ContextManagementPage})));
+const PentestLabPage         = lazy(() => import("./pages/PentestLabPage").then(m=>({default:m.PentestLabPage})));
+const SecurityCompliancePage = lazy(() => import("./pages/SecurityCompliancePage").then(m=>({default:m.SecurityCompliancePage})));
 const TIER_TOKENS = _TIER_TOKENS;
 
 // ── MODAL STATE REDUCER ───────────────────────────────────────────────────────
@@ -258,6 +276,24 @@ const MODAL_IDS = [
   'pluginMarket',
   'finetune',
   'collab',
+  // ── KaliGPT Systems #2-#20 ──────────────────────────────────────────────────
+  'kgAdmin',
+  'kgPayment',
+  'kgRAG',
+  'kgMemory',
+  'kgNotifications',
+  'kgMultiAgent',
+  'kgOrganizations',
+  'kgMarketplace',
+  'kgAnalytics',
+  'kgFinetune',
+  'kgAPIKeys',
+  'kgMonitoring',
+  'kgSemanticSearch',
+  'kgCollaboration',
+  'kgContext',
+  'kgPentestLab',
+  'kgSecurity',
 ] as const;
 
 type ModalId = typeof MODAL_IDS[number];
@@ -609,6 +645,23 @@ function AppContent() {
         onOpenUseCaseLib={() => open('useCaseLib')}
         onOpenOmegaAgent={() => open('omegaAgent')}
         onOpenLocalEngineHub={() => open('localEngineHub')}
+        onOpenKgAdmin={() => open('kgAdmin')}
+        onOpenKgPayment={() => open('kgPayment')}
+        onOpenKgRAG={() => open('kgRAG')}
+        onOpenKgMemory={() => open('kgMemory')}
+        onOpenKgNotifications={() => open('kgNotifications')}
+        onOpenKgMultiAgent={() => open('kgMultiAgent')}
+        onOpenKgOrganizations={() => open('kgOrganizations')}
+        onOpenKgMarketplace={() => open('kgMarketplace')}
+        onOpenKgAnalytics={() => open('kgAnalytics')}
+        onOpenKgFinetune={() => open('kgFinetune')}
+        onOpenKgAPIKeys={() => open('kgAPIKeys')}
+        onOpenKgMonitoring={() => open('kgMonitoring')}
+        onOpenKgSemanticSearch={() => open('kgSemanticSearch')}
+        onOpenKgCollaboration={() => open('kgCollaboration')}
+        onOpenKgContext={() => open('kgContext')}
+        onOpenKgPentestLab={() => open('kgPentestLab')}
+        onOpenKgSecurity={() => open('kgSecurity')}
       />
 
       <main className="flex-1 flex flex-col min-w-0 h-full relative">
@@ -1106,6 +1159,61 @@ function AppContent() {
 
       {/* ── Notification Center ── */}
       <NotificationCenter />
+
+      {/* ── KaliGPT Systems #2-#20 ─────────────────────────────────────────── */}
+      <Suspense fallback={null}>
+        <WindowChrome open={modals.kgAdmin} color="#e21227" title="لوحة الإدارة — Admin Panel" onClose={() => close('kgAdmin')}>
+          <AdminDashboardPage onClose={() => close('kgAdmin')} />
+        </WindowChrome>
+        <WindowChrome open={modals.kgPayment} color="#f59e0b" title="خطط الاشتراك — Payment Gateway" onClose={() => close('kgPayment')}>
+          <PaymentGatewayPage onClose={() => close('kgPayment')} />
+        </WindowChrome>
+        <WindowChrome open={modals.kgRAG} color="#3b82f6" title="نظام RAG — Knowledge Base" onClose={() => close('kgRAG')}>
+          <RAGSystemPage onClose={() => close('kgRAG')} />
+        </WindowChrome>
+        <WindowChrome open={modals.kgMemory} color="#8b5cf6" title="الذاكرة الطويلة — Long-term Memory" onClose={() => close('kgMemory')}>
+          <MemorySystemPage onClose={() => close('kgMemory')} />
+        </WindowChrome>
+        <WindowChrome open={modals.kgNotifications} color="#06b6d4" title="الإشعارات — Notifications" onClose={() => close('kgNotifications')}>
+          <NotificationsPage onClose={() => close('kgNotifications')} />
+        </WindowChrome>
+        <WindowChrome open={modals.kgMultiAgent} color="#10b981" title="مجلس الوكلاء — Multi-Agent Council" onClose={() => close('kgMultiAgent')}>
+          <MultiAgentPage onClose={() => close('kgMultiAgent')} />
+        </WindowChrome>
+        <WindowChrome open={modals.kgOrganizations} color="#f97316" title="المنظمات والفرق — Organizations" onClose={() => close('kgOrganizations')}>
+          <OrganizationsPage onClose={() => close('kgOrganizations')} />
+        </WindowChrome>
+        <WindowChrome open={modals.kgMarketplace} color="#ec4899" title="سوق الوحدات — Marketplace" onClose={() => close('kgMarketplace')}>
+          <MarketplacePage onClose={() => close('kgMarketplace')} />
+        </WindowChrome>
+        <WindowChrome open={modals.kgAnalytics} color="#6366f1" title="لوحة التحليلات — Analytics" onClose={() => close('kgAnalytics')}>
+          <AnalyticsDashboardPage onClose={() => close('kgAnalytics')} />
+        </WindowChrome>
+        <WindowChrome open={modals.kgFinetune} color="#14b8a6" title="Fine-Tuning Pipeline — مسار التدريب" onClose={() => close('kgFinetune')}>
+          <FinetunePipelinePage onClose={() => close('kgFinetune')} />
+        </WindowChrome>
+        <WindowChrome open={modals.kgAPIKeys} color="#84cc16" title="مفاتيح API للمطورين — API Keys" onClose={() => close('kgAPIKeys')}>
+          <APIKeysPage onClose={() => close('kgAPIKeys')} />
+        </WindowChrome>
+        <WindowChrome open={modals.kgMonitoring} color="#22d3ee" title="مراقبة النظام — System Monitoring" onClose={() => close('kgMonitoring')}>
+          <MonitoringPage onClose={() => close('kgMonitoring')} />
+        </WindowChrome>
+        <WindowChrome open={modals.kgSemanticSearch} color="#a78bfa" title="البحث الدلالي الذكي — Semantic Search" onClose={() => close('kgSemanticSearch')}>
+          <SemanticSearchPage onClose={() => close('kgSemanticSearch')} />
+        </WindowChrome>
+        <WindowChrome open={modals.kgCollaboration} color="#fb923c" title="التعاون الفوري — Real-time Collaboration" onClose={() => close('kgCollaboration')}>
+          <CollaborationPage onClose={() => close('kgCollaboration')} />
+        </WindowChrome>
+        <WindowChrome open={modals.kgContext} color="#34d399" title="إدارة السياق — Context Management" onClose={() => close('kgContext')}>
+          <ContextManagementPage onClose={() => close('kgContext')} />
+        </WindowChrome>
+        <WindowChrome open={modals.kgPentestLab} color="#e21227" title="مختبر الاختراق — Pentest Lab Pro" onClose={() => close('kgPentestLab')}>
+          <PentestLabPage onClose={() => close('kgPentestLab')} />
+        </WindowChrome>
+        <WindowChrome open={modals.kgSecurity} color="#ef4444" title="الأمان والامتثال — Security & Compliance" onClose={() => close('kgSecurity')}>
+          <SecurityCompliancePage onClose={() => close('kgSecurity')} />
+        </WindowChrome>
+      </Suspense>
     </div>
     </>
   );

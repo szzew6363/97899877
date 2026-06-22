@@ -291,6 +291,48 @@ export async function ensureAuthTables() {
       );
     `);
 
+    // New tables for systems #8 #10 #13 #15
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS org_invites (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid()::varchar,
+        org_id VARCHAR NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+        email VARCHAR NOT NULL,
+        role VARCHAR NOT NULL DEFAULT 'member',
+        token VARCHAR NOT NULL,
+        status VARCHAR NOT NULL DEFAULT 'pending',
+        invited_by VARCHAR REFERENCES users(id) ON DELETE SET NULL,
+        expires_at TIMESTAMP NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(org_id, email)
+      );
+      CREATE INDEX IF NOT EXISTS idx_org_invites_token ON org_invites(token);
+
+      CREATE TABLE IF NOT EXISTS training_jobs (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid()::varchar,
+        user_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        name VARCHAR NOT NULL,
+        model_base VARCHAR NOT NULL,
+        dataset_id VARCHAR,
+        epochs INTEGER DEFAULT 3,
+        learning_rate NUMERIC DEFAULT 0.0001,
+        batch_size INTEGER DEFAULT 8,
+        status VARCHAR NOT NULL DEFAULT 'queued',
+        progress INTEGER DEFAULT 0,
+        loss NUMERIC,
+        error_msg TEXT,
+        started_at TIMESTAMP,
+        completed_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_training_jobs_user ON training_jobs(user_id, created_at DESC);
+
+      ALTER TABLE error_logs ADD COLUMN IF NOT EXISTS stack_trace TEXT;
+      ALTER TABLE error_logs ADD COLUMN IF NOT EXISTS url VARCHAR;
+      ALTER TABLE error_logs ADD COLUMN IF NOT EXISTS component VARCHAR;
+      ALTER TABLE error_logs ADD COLUMN IF NOT EXISTS severity VARCHAR NOT NULL DEFAULT 'error';
+      ALTER TABLE error_logs ADD COLUMN IF NOT EXISTS environment VARCHAR NOT NULL DEFAULT 'production';
+    `);
+
     // Idempotent column additions for tables that may already exist
     const alterations = [
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS username VARCHAR`,

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Plus, Search, TerminalSquare, Code, Globe, KeyRound, Network, FileCode, Bug, Gift, Clock, Coins, Pin, Pencil, Trash2, MessageSquare, Filter, Check, LayoutGrid, Hash, Binary, QrCode, Calculator, Regex, FileJson, Fingerprint, Terminal, ShieldAlert, Sparkles, Cookie, Lock as LockIcon, ScanLine, Server, Link as LinkIcon, Wand2, Image as ImageIcon, FileText, Languages, ShieldAlert as PhishIcon, BookOpenCheck, Activity, UserCog, TrendingUp, Mail, Brain, Bookmark, ArrowLeftRight, AtSign, Wallet, Eye, Send, Database as DbIcon, Container as ContainerIcon, FileSearch, Radar, Crosshair, ScrollText, FileCheck2, GitCommit, Music, Palette, ShieldCheck, FlaskConical, ChevronDown, Zap } from "lucide-react";
+import { Plus, Search, TerminalSquare, Code, Globe, KeyRound, Network, FileCode, Bug, Gift, Clock, Coins, Pin, Pencil, Trash2, MessageSquare, Filter, Check, LayoutGrid, Hash, Binary, QrCode, Calculator, Regex, FileJson, Fingerprint, Terminal, ShieldAlert, Sparkles, Cookie, Lock as LockIcon, ScanLine, Server, Link as LinkIcon, Wand2, Image as ImageIcon, FileText, Languages, ShieldAlert as PhishIcon, BookOpenCheck, Activity, UserCog, TrendingUp, Mail, Brain, Bookmark, ArrowLeftRight, AtSign, Wallet, Eye, Send, Database as DbIcon, Container as ContainerIcon, FileSearch, Radar, Crosshair, ScrollText, FileCheck2, GitCommit, Music, Palette, ShieldCheck, FlaskConical, ChevronDown, Zap, Users, Layers, Bell, CreditCard, Shield } from "lucide-react";
 import { AI_MODELS } from "@/lib/ai-config";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -143,6 +143,24 @@ interface SidebarProps {
   onOpenLocalEngineHub?: () => void;
   onOpenMultiModelRace?: () => void;
   onOpenLocalBenchmark?: () => void;
+  // ── KaliGPT Systems #2-#20 ──────────────────────────────────────────────────
+  onOpenKgAdmin?: () => void;
+  onOpenKgPayment?: () => void;
+  onOpenKgRAG?: () => void;
+  onOpenKgMemory?: () => void;
+  onOpenKgNotifications?: () => void;
+  onOpenKgMultiAgent?: () => void;
+  onOpenKgOrganizations?: () => void;
+  onOpenKgMarketplace?: () => void;
+  onOpenKgAnalytics?: () => void;
+  onOpenKgFinetune?: () => void;
+  onOpenKgAPIKeys?: () => void;
+  onOpenKgMonitoring?: () => void;
+  onOpenKgSemanticSearch?: () => void;
+  onOpenKgCollaboration?: () => void;
+  onOpenKgContext?: () => void;
+  onOpenKgPentestLab?: () => void;
+  onOpenKgSecurity?: () => void;
 }
 
 const ADDITIONAL_TOOLS: { icon: React.ElementType; label: UtilityTool; color?: string }[] = [
@@ -265,7 +283,7 @@ const ADDITIONAL_TOOLS: { icon: React.ElementType; label: UtilityTool; color?: s
   { icon: DbIcon, label: "Kali SQLi Guide", color: "text-blue-400" },
 ];
 
-export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapsed, onOpenPricing, onOpenApi, onOpenTool, onOpenSettings, onOpenAccount, onOpenLogin, onOpenUtility, onOpenToolsHub, onOpenMemory, onOpenBookmarks, onOpenSearch, onOpenCompare, onOpenQRSync, onOpenChangelog, onOpenOsint, onOpenUseCaseLib, onOpenOmegaAgent, onOpenLocalEngineHub, onOpenMultiModelRace, onOpenLocalBenchmark }: SidebarProps) {
+export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapsed, onOpenPricing, onOpenApi, onOpenTool, onOpenSettings, onOpenAccount, onOpenLogin, onOpenUtility, onOpenToolsHub, onOpenMemory, onOpenBookmarks, onOpenSearch, onOpenCompare, onOpenQRSync, onOpenChangelog, onOpenOsint, onOpenUseCaseLib, onOpenOmegaAgent, onOpenLocalEngineHub, onOpenMultiModelRace, onOpenLocalBenchmark, onOpenKgAdmin, onOpenKgPayment, onOpenKgRAG, onOpenKgMemory, onOpenKgNotifications, onOpenKgMultiAgent, onOpenKgOrganizations, onOpenKgMarketplace, onOpenKgAnalytics, onOpenKgFinetune, onOpenKgAPIKeys, onOpenKgMonitoring, onOpenKgSemanticSearch, onOpenKgCollaboration, onOpenKgContext, onOpenKgPentestLab, onOpenKgSecurity }: SidebarProps) {
   const { toast } = useToast();
   const { state, dispatch } = useStore();
   const { t } = useT();
@@ -1051,6 +1069,117 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapsed, onOpenP
                 </motion.div>
               )}
             </AnimatePresence>
+          </div>
+        )}
+
+        {/* ── KaliGPT Systems — Quick Access Grid ─────────────────────── */}
+        {(onOpenKgAdmin || onOpenKgAnalytics || onOpenKgPentestLab || onOpenKgSecurity) && (
+          <div className="mb-2">
+            <div className="text-[9px] font-bold tracking-[0.2em] text-[#e21227]/60 uppercase mb-1.5 px-1">KaliGPT Systems</div>
+            <div className="grid grid-cols-3 gap-1">
+              {onOpenKgAdmin && (
+                <button onClick={onOpenKgAdmin} title="Admin Panel" className="flex flex-col items-center gap-0.5 p-1.5 rounded-lg bg-[#e21227]/10 hover:bg-[#e21227]/20 border border-[#e21227]/20 hover:border-[#e21227]/40 transition-all group">
+                  <Shield className="w-3.5 h-3.5 text-[#e21227]/70 group-hover:text-[#e21227]" />
+                  <span className="text-[8px] text-gray-500 group-hover:text-gray-300">Admin</span>
+                </button>
+              )}
+              {onOpenKgAnalytics && (
+                <button onClick={onOpenKgAnalytics} title="Analytics Dashboard" className="flex flex-col items-center gap-0.5 p-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 hover:border-indigo-500/40 transition-all group">
+                  <Activity className="w-3.5 h-3.5 text-indigo-400/70 group-hover:text-indigo-400" />
+                  <span className="text-[8px] text-gray-500 group-hover:text-gray-300">Analytics</span>
+                </button>
+              )}
+              {onOpenKgRAG && (
+                <button onClick={onOpenKgRAG} title="RAG Knowledge Base" className="flex flex-col items-center gap-0.5 p-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 hover:border-blue-500/40 transition-all group">
+                  <Brain className="w-3.5 h-3.5 text-blue-400/70 group-hover:text-blue-400" />
+                  <span className="text-[8px] text-gray-500 group-hover:text-gray-300">RAG</span>
+                </button>
+              )}
+              {onOpenKgMemory && (
+                <button onClick={onOpenKgMemory} title="Long-term Memory" className="flex flex-col items-center gap-0.5 p-1.5 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 hover:border-purple-500/40 transition-all group">
+                  <Sparkles className="w-3.5 h-3.5 text-purple-400/70 group-hover:text-purple-400" />
+                  <span className="text-[8px] text-gray-500 group-hover:text-gray-300">Memory</span>
+                </button>
+              )}
+              {onOpenKgMultiAgent && (
+                <button onClick={onOpenKgMultiAgent} title="Multi-Agent Council" className="flex flex-col items-center gap-0.5 p-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 hover:border-emerald-500/40 transition-all group">
+                  <Network className="w-3.5 h-3.5 text-emerald-400/70 group-hover:text-emerald-400" />
+                  <span className="text-[8px] text-gray-500 group-hover:text-gray-300">Agents</span>
+                </button>
+              )}
+              {onOpenKgOrganizations && (
+                <button onClick={onOpenKgOrganizations} title="Organizations & Teams" className="flex flex-col items-center gap-0.5 p-1.5 rounded-lg bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/20 hover:border-orange-500/40 transition-all group">
+                  <Users className="w-3.5 h-3.5 text-orange-400/70 group-hover:text-orange-400" />
+                  <span className="text-[8px] text-gray-500 group-hover:text-gray-300">Orgs</span>
+                </button>
+              )}
+              {onOpenKgMarketplace && (
+                <button onClick={onOpenKgMarketplace} title="Plugin Marketplace" className="flex flex-col items-center gap-0.5 p-1.5 rounded-lg bg-pink-500/10 hover:bg-pink-500/20 border border-pink-500/20 hover:border-pink-500/40 transition-all group">
+                  <Globe className="w-3.5 h-3.5 text-pink-400/70 group-hover:text-pink-400" />
+                  <span className="text-[8px] text-gray-500 group-hover:text-gray-300">Market</span>
+                </button>
+              )}
+              {onOpenKgPayment && (
+                <button onClick={onOpenKgPayment} title="Subscription Plans" className="flex flex-col items-center gap-0.5 p-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 hover:border-amber-500/40 transition-all group">
+                  <CreditCard className="w-3.5 h-3.5 text-amber-400/70 group-hover:text-amber-400" />
+                  <span className="text-[8px] text-gray-500 group-hover:text-gray-300">Plans</span>
+                </button>
+              )}
+              {onOpenKgMonitoring && (
+                <button onClick={onOpenKgMonitoring} title="System Monitoring" className="flex flex-col items-center gap-0.5 p-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 hover:border-cyan-500/40 transition-all group">
+                  <Activity className="w-3.5 h-3.5 text-cyan-400/70 group-hover:text-cyan-400" />
+                  <span className="text-[8px] text-gray-500 group-hover:text-gray-300">Monitor</span>
+                </button>
+              )}
+              {onOpenKgAPIKeys && (
+                <button onClick={onOpenKgAPIKeys} title="API Keys" className="flex flex-col items-center gap-0.5 p-1.5 rounded-lg bg-lime-500/10 hover:bg-lime-500/20 border border-lime-500/20 hover:border-lime-500/40 transition-all group">
+                  <KeyRound className="w-3.5 h-3.5 text-lime-400/70 group-hover:text-lime-400" />
+                  <span className="text-[8px] text-gray-500 group-hover:text-gray-300">API Keys</span>
+                </button>
+              )}
+              {onOpenKgSemanticSearch && (
+                <button onClick={onOpenKgSemanticSearch} title="Semantic Search" className="flex flex-col items-center gap-0.5 p-1.5 rounded-lg bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/20 hover:border-violet-500/40 transition-all group">
+                  <Search className="w-3.5 h-3.5 text-violet-400/70 group-hover:text-violet-400" />
+                  <span className="text-[8px] text-gray-500 group-hover:text-gray-300">Search</span>
+                </button>
+              )}
+              {onOpenKgCollaboration && (
+                <button onClick={onOpenKgCollaboration} title="Real-time Collaboration" className="flex flex-col items-center gap-0.5 p-1.5 rounded-lg bg-fuchsia-500/10 hover:bg-fuchsia-500/20 border border-fuchsia-500/20 hover:border-fuchsia-500/40 transition-all group">
+                  <Users className="w-3.5 h-3.5 text-fuchsia-400/70 group-hover:text-fuchsia-400" />
+                  <span className="text-[8px] text-gray-500 group-hover:text-gray-300">Collab</span>
+                </button>
+              )}
+              {onOpenKgContext && (
+                <button onClick={onOpenKgContext} title="Context Management" className="flex flex-col items-center gap-0.5 p-1.5 rounded-lg bg-teal-500/10 hover:bg-teal-500/20 border border-teal-500/20 hover:border-teal-500/40 transition-all group">
+                  <Layers className="w-3.5 h-3.5 text-teal-400/70 group-hover:text-teal-400" />
+                  <span className="text-[8px] text-gray-500 group-hover:text-gray-300">Context</span>
+                </button>
+              )}
+              {onOpenKgFinetune && (
+                <button onClick={onOpenKgFinetune} title="Fine-Tuning Pipeline" className="flex flex-col items-center gap-0.5 p-1.5 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/20 hover:border-sky-500/40 transition-all group">
+                  <Wand2 className="w-3.5 h-3.5 text-sky-400/70 group-hover:text-sky-400" />
+                  <span className="text-[8px] text-gray-500 group-hover:text-gray-300">Finetune</span>
+                </button>
+              )}
+              {onOpenKgNotifications && (
+                <button onClick={onOpenKgNotifications} title="Notifications" className="flex flex-col items-center gap-0.5 p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 hover:border-rose-500/40 transition-all group">
+                  <Bell className="w-3.5 h-3.5 text-rose-400/70 group-hover:text-rose-400" />
+                  <span className="text-[8px] text-gray-500 group-hover:text-gray-300">Alerts</span>
+                </button>
+              )}
+              {onOpenKgPentestLab && (
+                <button onClick={onOpenKgPentestLab} title="Pentest Lab Pro" className="flex flex-col items-center gap-0.5 p-1.5 rounded-lg bg-[#e21227]/10 hover:bg-[#e21227]/20 border border-[#e21227]/20 hover:border-[#e21227]/40 transition-all group">
+                  <Terminal className="w-3.5 h-3.5 text-[#e21227]/70 group-hover:text-[#e21227]" />
+                  <span className="text-[8px] text-gray-500 group-hover:text-gray-300">Pentest</span>
+                </button>
+              )}
+              {onOpenKgSecurity && (
+                <button onClick={onOpenKgSecurity} title="Security & Compliance" className="flex flex-col items-center gap-0.5 p-1.5 rounded-lg bg-red-900/20 hover:bg-red-900/30 border border-red-900/30 hover:border-red-900/50 transition-all group">
+                  <ShieldAlert className="w-3.5 h-3.5 text-red-400/70 group-hover:text-red-400" />
+                  <span className="text-[8px] text-gray-500 group-hover:text-gray-300">Security</span>
+                </button>
+              )}
+            </div>
           </div>
         )}
 
