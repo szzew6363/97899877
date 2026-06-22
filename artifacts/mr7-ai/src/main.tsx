@@ -9,6 +9,10 @@ import ContactPage from "./pages/contact";
 import RoadmapPage from "./pages/roadmap";
 import NotFound from "./pages/not-found";
 import "./index.css";
+import { initErrorMonitor } from "./lib/error-monitor";
+
+// ── Initialize error monitoring ───────────────────────────────────────────────
+initErrorMonitor();
 
 // ── PWA Service Worker registration ──────────────────────────────────────────
 if ("serviceWorker" in navigator && import.meta.env.PROD) {

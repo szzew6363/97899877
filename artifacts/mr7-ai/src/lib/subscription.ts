@@ -40,34 +40,51 @@ export function tierAtLeast(_current: SubscriptionTier, _required: SubscriptionT
   return true;
 }
 
-const ADMIN_SECRET = "CHATGPT-OWNER-2026";
-
-export function generateActivationCode(tier: SubscriptionTier, days: number): string {
-  const expiry = Date.now() + days * 86_400_000;
-  const raw = `${tier}|${expiry}|${ADMIN_SECRET}`;
-  const encoded = btoa(raw).replace(/=/g, "");
-  return encoded.toUpperCase().slice(0, 32);
-}
-
-export function verifyActivationCode(code: string): { tier: SubscriptionTier; expiresAt: number } | null {
+/**
+ * verifyAdminPassword — validates against /api/admin/verify (server-side secret).
+ * The ADMIN_SECRET is NEVER stored in the frontend bundle.
+ */
+export async function verifyAdminPassword(password: string): Promise<boolean> {
   try {
-    const padded = code.toLowerCase() + "=".repeat((4 - (code.length % 4)) % 4);
-    const decoded = atob(padded);
-    const parts = decoded.split("|");
-    if (parts.length !== 3) return null;
-    const [tier, expiryStr, secret] = parts;
-    if (secret !== ADMIN_SECRET) return null;
-    const expiresAt = parseInt(expiryStr, 10);
-    if (isNaN(expiresAt) || Date.now() > expiresAt) return null;
-    if (!["free", "starter", "professional", "elite"].includes(tier)) return null;
-    return { tier: tier as SubscriptionTier, expiresAt };
+    const res = await fetch("/api/admin/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password }),
+    });
+    const data = await res.json() as { ok?: boolean };
+    return !!data.ok;
   } catch {
-    return null;
+    return false;
   }
 }
 
-export function verifyAdminPassword(password: string): boolean {
-  return password === ADMIN_SECRET;
+/**
+ * generateActivationCode — generates a code via the server (requires admin auth).
+ */
+export async function generateActivationCode(
+  tier: SubscriptionTier,
+  days: number,
+  adminPassword: string,
+): Promise<string> {
+  try {
+    const res = await fetch("/api/admin/gen-code", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: adminPassword, tier, days }),
+    });
+    const data = await res.json() as { code?: string; error?: string };
+    if (!data.code) throw new Error(data.error ?? "Failed");
+    return data.code;
+  } catch (e) {
+    throw e instanceof Error ? e : new Error("Failed to generate code");
+  }
+}
+
+export function verifyActivationCode(code: string): { tier: SubscriptionTier; expiresAt: number } | null {
+  // Activation code verification is now fully server-side via /api/subscriptions/activate
+  // This stub exists for backward compatibility — always return null client-side
+  void code;
+  return null;
 }
 
 export type PaymentSettings = {

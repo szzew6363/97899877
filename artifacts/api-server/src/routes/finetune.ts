@@ -126,4 +126,39 @@ router.get("/finetune/export", jwtAuth, async (req: Request, res: Response): Pro
   }
 });
 
+/* ── GET /api/finetune/samples?limit=50&tag=xxx ── */
+router.get("/finetune/samples", jwtAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const limit = Math.min(100, parseInt((req.query["limit"] as string) ?? "50", 10) || 50);
+    const tag   = req.query["tag"] as string | undefined;
+    const userFilter = req.authUser ? "AND user_id = $1" : "";
+    const params: unknown[] = req.authUser ? [req.authUser.id] : [];
+    let tagClause = "";
+    if (tag) { params.push(tag); tagClause = `AND $${params.length} = ANY(tags)`; }
+    params.push(limit);
+    const { rows } = await pool.query(
+      `SELECT id, messages, system_prompt, quality_score, tags, approved, created_at
+       FROM finetune_samples WHERE 1=1 ${userFilter} ${tagClause}
+       ORDER BY created_at DESC LIMIT $${params.length}`,
+      params,
+    );
+    res.json({ samples: rows });
+  } catch {
+    res.status(500).json({ error: "Failed to list samples" });
+  }
+});
+
+/* ── DELETE /api/finetune/samples/:id ── */
+router.delete("/finetune/samples/:id", jwtAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    await pool.query(
+      "DELETE FROM finetune_samples WHERE id = $1 AND user_id = $2",
+      [req.params["id"], req.authUser?.id],
+    );
+    res.json({ ok: true });
+  } catch {
+    res.status(500).json({ error: "Failed to delete sample" });
+  }
+});
+
 export default router;

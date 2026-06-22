@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ModalShell } from "@/components/ModalShell";
 import {
   Shield, Lock, Check, Copy, RefreshCw, Crown, Users, Zap, AlertCircle,
-  CreditCard, Save, ChevronDown, ChevronUp,
+  CreditCard, Save, ChevronDown, ChevronUp, Loader2,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { useToast } from "@/hooks/use-toast";
@@ -25,24 +25,31 @@ export function AdminPanel({ open, onOpenChange }: AdminPanelProps) {
   const [authed, setAuthed] = useState(false);
   const [password, setPassword] = useState("");
   const [pwError, setPwError] = useState(false);
+  const [logging, setLogging] = useState(false);
   const [genTier, setGenTier] = useState<SubscriptionTier>("starter");
   const [genDays, setGenDays] = useState(30);
   const [generatedCode, setGeneratedCode] = useState("");
+  const [genLoading, setGenLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [setTier, setSetTier] = useState<SubscriptionTier>(state.subscription.tier);
   const [setDays, setSetDays] = useState(30);
   const [payOpen, setPayOpen] = useState(false);
   const [paySettings, setPaySettings] = useState<PaymentSettings>(loadPaymentSettings());
+  const [savedPassword, setSavedPassword] = useState("");
 
-  function login() {
-    if (verifyAdminPassword(password)) {
+  async function login() {
+    setLogging(true);
+    setPwError(false);
+    const ok = await verifyAdminPassword(password);
+    if (ok) {
       setAuthed(true);
-      setPwError(false);
+      setSavedPassword(password);
       setPassword("");
       setPaySettings(loadPaymentSettings());
     } else {
       setPwError(true);
     }
+    setLogging(false);
   }
 
   function handleClose(v: boolean) {
@@ -71,9 +78,16 @@ export function AdminPanel({ open, onOpenChange }: AdminPanelProps) {
     toast({ description: `Subscription set to ${TIER_LABELS[setTier]}${setTier !== "free" ? ` for ${setDays} days` : ""}.` });
   }
 
-  function genCode() {
-    const code = generateActivationCode(genTier, genDays);
-    setGeneratedCode(code);
+  async function genCode() {
+    setGenLoading(true);
+    try {
+      const code = await generateActivationCode(genTier, genDays, savedPassword);
+      setGeneratedCode(code);
+    } catch {
+      toast({ description: "فشل إنشاء الكود — تحقق من صلاحيات الأدمن", variant: "destructive" });
+    } finally {
+      setGenLoading(false);
+    }
   }
 
   function copyCode() {
@@ -156,9 +170,11 @@ export function AdminPanel({ open, onOpenChange }: AdminPanelProps) {
 
             <button
               onClick={login}
-              className="w-full py-3 rounded-xl bg-primary text-white font-bold hover:opacity-90 transition-opacity"
+              disabled={logging}
+              className="w-full py-3 rounded-xl bg-primary text-white font-bold hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-60"
             >
-              Authenticate
+              {logging ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+              {logging ? "Verifying…" : "Authenticate"}
             </button>
           </div>
         ) : (
@@ -268,9 +284,11 @@ export function AdminPanel({ open, onOpenChange }: AdminPanelProps) {
               </div>
               <button
                 onClick={genCode}
-                className="w-full py-2.5 rounded-xl border border-cyan-500/30 bg-cyan-500/10 text-cyan-400 font-bold text-sm hover:bg-cyan-500/20 transition-colors"
+                disabled={genLoading}
+                className="w-full py-2.5 rounded-xl border border-cyan-500/30 bg-cyan-500/10 text-cyan-400 font-bold text-sm hover:bg-cyan-500/20 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                Generate Code
+                {genLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                {genLoading ? "Generating…" : "Generate Code"}
               </button>
               {generatedCode && (
                 <div className="space-y-2">

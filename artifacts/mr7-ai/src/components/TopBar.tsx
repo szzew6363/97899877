@@ -10,6 +10,7 @@ import { ProviderHealthBadge3D } from "./ProviderHealthBadge3D";
 import { PersonaSwitcher3D } from "./PersonaSwitcher3D";
 import { QuantumPersona3D } from "./QuantumPersona3D";
 import { NotificationsPanel } from "./NotificationsPanel";
+import { NotificationsBell } from "./NotificationsBell";
 import { ThemePopover } from "./ThemePopover";
 import { TokensPopover } from "./TokensPopover";
 import { LocalAIWindow } from "./LocalAIWindow";
@@ -2066,6 +2067,7 @@ export function TopBar({
           {compact ? <PanelLeftOpen className="w-3.5 h-3.5" /> : <PanelLeftClose className="w-3.5 h-3.5" />}
         </motion.button>
 
+        <NotificationsBell />
         <NotificationsPanel />
         <ThemePopover />
         <TokensPopover onUpgrade={onOpenPricing} />

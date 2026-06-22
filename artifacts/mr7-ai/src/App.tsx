@@ -209,6 +209,7 @@ import { AuthModal } from "./components/modals/AuthModal";
 import { CodeScannerModal } from "./components/modals/CodeScannerModal";
 import { NotificationCenter } from "./components/NotificationCenter";
 import { PluginMarketplaceModal } from "./components/modals/PluginMarketplaceModal";
+import { FinetuneModal } from "./components/modals/FinetuneModal";
 
 // ── MODAL STATE REDUCER ───────────────────────────────────────────────────────
 const MODAL_IDS = [
@@ -251,6 +252,7 @@ const MODAL_IDS = [
   'authRegister',
   'codeScanner',
   'pluginMarket',
+  'finetune',
 ] as const;
 
 type ModalId = typeof MODAL_IDS[number];
@@ -483,6 +485,7 @@ function AppContent() {
       if (!inField && (e.metaKey||e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "c") { e.preventDefault(); toggle('compare'); }
       if (e.key === "Escape") { close('sidebar' as ModalId); }
       if ((e.metaKey||e.ctrlKey) && e.shiftKey && e.altKey && e.key.toLowerCase() === "a") { e.preventDefault(); open('admin'); }
+      if ((e.metaKey||e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "j") { e.preventDefault(); toggle('finetune'); }
       if ((e.metaKey||e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "e") { e.preventDefault(); open('monaco'); }
       if ((e.metaKey||e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "x") { e.preventDefault(); toggle('exploitChain'); }
       if ((e.metaKey||e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "a" && !e.altKey) { e.preventDefault(); window.dispatchEvent(new CustomEvent("kali:trigger-auto-setup")); }
@@ -1067,6 +1070,12 @@ function AppContent() {
       <PluginMarketplaceModal
         open={modals.pluginMarket}
         onClose={() => close('pluginMarket')}
+      />
+
+      {/* ── Fine-Tuning Pipeline ── */}
+      <FinetuneModal
+        open={modals.finetune}
+        onClose={() => close('finetune')}
       />
 
       {/* ── Notification Center ── */}

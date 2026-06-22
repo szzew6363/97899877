@@ -29,6 +29,8 @@ import reportsRouter from "./reports";
 import swaggerRouter from "./swagger";
 import finetuneRouter from "./finetune";
 import pluginsRouter from "./plugins";
+import ragRouter from "./rag";
+import adminRouter from "./admin";
 
 const router: IRouter = Router();
 
@@ -62,5 +64,7 @@ router.use(reportsRouter);
 router.use(swaggerRouter);
 router.use(finetuneRouter);
 router.use(pluginsRouter);
+router.use(ragRouter);
+router.use(adminRouter);
 
 export default router;
