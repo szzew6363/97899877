@@ -47,6 +47,7 @@ import personalKeysRouter from "./personal-keys";
 import debateRouter from "./debate";
 import chainOfThoughtRouter from "./chain-of-thought";
 import aiEngineRouter from "./ai-engine";
+import agentV2Router from "./agent-v2";
 
 const router: IRouter = Router();
 
@@ -98,5 +99,6 @@ router.use(personalKeysRouter);
 router.use(debateRouter);
 router.use(chainOfThoughtRouter);
 router.use(aiEngineRouter);
+router.use(agentV2Router);
 
 export default router;
