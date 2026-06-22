@@ -19,6 +19,16 @@ import agent4Router from "./agent4";
 import ollamaRouter from "./ollama";
 import localEnginesRouter from "./local-engines";
 import loadBalancerRouter from "./load-balancer";
+// ── New feature routes ────────────────────────────────────────────────────────
+import userAuthRouter from "./user-auth";
+import stripeRouter from "./stripe";
+import apiKeysRouter from "./api-keys";
+import notificationsRouter from "./notifications";
+import codeScanRouter from "./code-scan";
+import reportsRouter from "./reports";
+import swaggerRouter from "./swagger";
+import finetuneRouter from "./finetune";
+import pluginsRouter from "./plugins";
 
 const router: IRouter = Router();
 
@@ -42,5 +52,15 @@ router.use(agent4Router);
 router.use(ollamaRouter);
 router.use(localEnginesRouter);
 router.use(loadBalancerRouter);
+// ── New feature routes ────────────────────────────────────────────────────────
+router.use(userAuthRouter);
+router.use(stripeRouter);
+router.use(apiKeysRouter);
+router.use(notificationsRouter);
+router.use(codeScanRouter);
+router.use(reportsRouter);
+router.use(swaggerRouter);
+router.use(finetuneRouter);
+router.use(pluginsRouter);
 
 export default router;

@@ -363,3 +363,32 @@ export async function* streamCompletion(
     clearTimeout(timeout);
   }
 }
+
+// ── Standalone streamOpenAI for code scanner (non-generator) ─────────────────
+export const aiProviders = {
+  async streamOpenAI(
+    opts: {
+      model: string;
+      messages: { role: "system" | "user" | "assistant"; content: string }[];
+      temperature?: number;
+      max_tokens?: number;
+      response_format?: { type: string };
+      apiKey: string;
+    },
+    onChunk: (chunk: string) => void,
+  ): Promise<void> {
+    const client = new OpenAI({ apiKey: opts.apiKey });
+    const res = await client.chat.completions.create({
+      model: opts.model,
+      messages: opts.messages,
+      stream: true,
+      temperature: opts.temperature ?? 0.1,
+      max_tokens: opts.max_tokens ?? 4000,
+      ...(opts.response_format ? { response_format: opts.response_format as { type: "json_object" } } : {}),
+    });
+    for await (const chunk of res) {
+      const c = chunk.choices?.[0]?.delta?.content;
+      if (c) onChunk(c);
+    }
+  },
+};

@@ -10,6 +10,13 @@ import RoadmapPage from "./pages/roadmap";
 import NotFound from "./pages/not-found";
 import "./index.css";
 
+// ── PWA Service Worker registration ──────────────────────────────────────────
+if ("serviceWorker" in navigator && import.meta.env.PROD) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => { /* silent */ });
+  });
+}
+
 const INTERNAL_KEY = import.meta.env.VITE_INTERNAL_KEY as string | undefined;
 
 if (INTERNAL_KEY) {

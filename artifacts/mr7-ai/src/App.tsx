@@ -205,6 +205,10 @@ const JARVISCommandCenterModal      = lazy(() => import("./components/modals/JAR
 const OmegaAgentModal               = lazy(() => import("./components/modals/OmegaAgentModal").then(m=>({default:m.OmegaAgentModal})));
 const OllamaHub3D                   = lazy(() => import("./components/OllamaHub3D").then(m=>({default:m.OllamaHub3D})));
 import { LocalAIModelNexus } from "./components/LocalAIModelNexus";
+import { AuthModal } from "./components/modals/AuthModal";
+import { CodeScannerModal } from "./components/modals/CodeScannerModal";
+import { NotificationCenter } from "./components/NotificationCenter";
+import { PluginMarketplaceModal } from "./components/modals/PluginMarketplaceModal";
 
 // ── MODAL STATE REDUCER ───────────────────────────────────────────────────────
 const MODAL_IDS = [
@@ -243,6 +247,10 @@ const MODAL_IDS = [
   'multiModelRace',
   'localBenchmark',
   'localAINexus',
+  'authLogin',
+  'authRegister',
+  'codeScanner',
+  'pluginMarket',
 ] as const;
 
 type ModalId = typeof MODAL_IDS[number];
@@ -1041,6 +1049,28 @@ function AppContent() {
 
       {/* Global Window Tray — minimized windows only */}
       <WindowTray />
+
+      {/* ── Auth Modal — Login & Register ── */}
+      <AuthModal
+        open={modals.authLogin || modals.authRegister}
+        defaultTab={modals.authRegister ? "register" : "login"}
+        onClose={() => { close('authLogin'); close('authRegister'); }}
+      />
+
+      {/* ── Code Security Scanner Modal ── */}
+      <CodeScannerModal
+        open={modals.codeScanner}
+        onClose={() => close('codeScanner')}
+      />
+
+      {/* ── Plugin Marketplace ── */}
+      <PluginMarketplaceModal
+        open={modals.pluginMarket}
+        onClose={() => close('pluginMarket')}
+      />
+
+      {/* ── Notification Center ── */}
+      <NotificationCenter />
     </div>
     </>
   );

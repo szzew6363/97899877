@@ -1,4 +1,4 @@
-import express, { type Express } from "express";
+import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import cors from "cors";
 import helmet from "helmet";
 import { rateLimit } from "express-rate-limit";
@@ -14,6 +14,14 @@ import { logger } from "./lib/logger";
 import { internalAuth } from "./middlewares/internalAuth";
 import { pool, ensureAuthTables } from "./db";
 import { setupReplitAuth } from "./routes/auth";
+
+// ── Validate critical secrets at startup ──────────────────────────────────────
+const REQUIRED_SECRETS_WARN = ["SESSION_SECRET", "JWT_SECRET"];
+for (const key of REQUIRED_SECRETS_WARN) {
+  if (!process.env[key]) {
+    logger.warn(`[security] ${key} not set — using insecure default. Set this in production!`);
+  }
+}
 
 const app: Express = express();
 
@@ -33,12 +41,13 @@ const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
 app.use(
   cors({
     origin: ALLOWED_ORIGINS,
-    methods: ["GET", "POST", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Internal-Key"],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Internal-Key", "X-Api-Key", "stripe-signature"],
     credentials: true,
   }),
 );
 
+// ── Rate limiting by tier ─────────────────────────────────────────────────────
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 2000,
@@ -64,6 +73,22 @@ const shellLimiter = rateLimit({
   message: { error: "Shell rate limit — max 30 commands/min." },
 });
 
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  message: { error: "Too many auth attempts. Try again in 15 minutes." },
+});
+
+const scanLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  message: { error: "Scan rate limit — max 10 scans/min." },
+});
+
 app.use(globalLimiter);
 
 app.use(
@@ -80,10 +105,13 @@ app.use(
   }),
 );
 
-app.use(express.json({ limit: "2mb" }));
-app.use(express.urlencoded({ extended: true, limit: "2mb" }));
+app.use(express.json({ limit: "4mb" }));
+app.use(express.urlencoded({ extended: true, limit: "4mb" }));
 
-// ── Session + Passport ───────────────────────────────────────────────────────
+// ── Stripe webhook needs raw body ─────────────────────────────────────────────
+app.use("/api/stripe/webhook", express.raw({ type: "application/json" }));
+
+// ── Session + Passport ────────────────────────────────────────────────────────
 const PgStore = connectPg(session);
 
 app.use(
@@ -100,6 +128,7 @@ app.use(
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       maxAge: 7 * 24 * 60 * 60 * 1000,
+      sameSite: "lax",
     },
   }),
 );
@@ -107,7 +136,7 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
-// ── Rate limits ──────────────────────────────────────────────────────────────
+// ── Route-specific rate limits ────────────────────────────────────────────────
 app.use(
   [
     "/api/chat",
@@ -123,13 +152,19 @@ app.use(
   aiLimiter,
 );
 app.use(["/api/shell/exec"], shellLimiter);
+app.use(["/api/auth/login", "/api/auth/register", "/api/auth/refresh"], authLimiter);
+app.use(["/api/scan/code"], scanLimiter);
 
-// ── Public routes (no internalAuth gate) ────────────────────────────────────
+// ── Public routes (no internalAuth gate) ─────────────────────────────────────
 app.use("/api", providersRouter);
 app.use("/api", cloudChatsRouter);
 app.use("/api", cisaRouter);
 
-// ── Auth routes (no internalAuth gate) ──────────────────────────────────────
+// ── Stripe webhook (public — Stripe signature verifies it) ───────────────────
+import stripeWebhookRouter from "./routes/stripe";
+app.use("/api", stripeWebhookRouter);
+
+// ── Auth setup ────────────────────────────────────────────────────────────────
 (async () => {
   try {
     await ensureAuthTables();
@@ -141,6 +176,18 @@ app.use("/api", cisaRouter);
   }
 })();
 
+// ── All other API routes ──────────────────────────────────────────────────────
 app.use("/api", internalAuth, router);
+
+// ── 404 handler ───────────────────────────────────────────────────────────────
+app.use("/api", (_req: Request, res: Response) => {
+  res.status(404).json({ error: "Not found" });
+});
+
+// ── Global error handler ──────────────────────────────────────────────────────
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  logger.error({ err }, "Unhandled error");
+  res.status(500).json({ error: "Internal server error" });
+});
 
 export default app;

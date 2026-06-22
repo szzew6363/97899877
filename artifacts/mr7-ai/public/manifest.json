@@ -1,0 +1,30 @@
+{
+  "name": "KaliGPT — مساعد الأمن السيبراني",
+  "short_name": "KaliGPT",
+  "description": "منصة ذكاء اصطناعي متخصصة في الأمن السيبراني — اختبار الاختراق، تحليل الثغرات، OSINT",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#080808",
+  "theme_color": "#e21227",
+  "lang": "ar",
+  "dir": "rtl",
+  "categories": ["security", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "دردشة جديدة",
+      "url": "/app",
+      "description": "ابدأ محادثة أمنية جديدة"
+    }
+  ]
+}
