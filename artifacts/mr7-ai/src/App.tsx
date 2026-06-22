@@ -235,6 +235,7 @@ const HelpCenterPage         = lazy(() => import("./pages/HelpCenterPage").then(
 const ReportsPage            = lazy(() => import("./pages/ReportsPage").then(m=>({default:m.ReportsPage})));
 const RateLimitPage          = lazy(() => import("./pages/RateLimitPage").then(m=>({default:m.RateLimitPage})));
 const SystemsHub3D           = lazy(() => import("./components/SystemsHub3D").then(m=>({default:m.SystemsHub3D})));
+const InfraMap3DPage         = lazy(() => import("./components/InfrastructureMap3D").then(m=>({default:m.InfrastructureMap3D})));
 const TIER_TOKENS = _TIER_TOKENS;
 
 // ── MODAL STATE REDUCER ───────────────────────────────────────────────────────
@@ -302,6 +303,7 @@ const MODAL_IDS = [
   'kgReports',
   'kgRateLimit',
   'kgSystemsHub',
+  'infraMap3D',
 ] as const;
 
 type ModalId = typeof MODAL_IDS[number];
@@ -1237,6 +1239,18 @@ function AppContent() {
       </Suspense>
       <Suspense fallback={null}>
         <SystemsHub3D open={modals.kgSystemsHub} onClose={() => close('kgSystemsHub')} />
+      </Suspense>
+      <Suspense fallback={null}>
+        {modals.infraMap3D && (
+          <div className="fixed inset-0 z-[9999] bg-black" onClick={(e) => { if (e.target === e.currentTarget) close('infraMap3D'); }}>
+            <div className="absolute top-3 right-3 z-10">
+              <button onClick={() => close('infraMap3D')} className="px-3 py-1.5 text-[10px] uppercase tracking-widest rounded border border-[#00ff8844] text-[#00ff88] bg-black/60 hover:bg-[#00ff8815] transition-all">
+                ✕ Close
+              </button>
+            </div>
+            <InfraMap3DPage />
+          </div>
+        )}
       </Suspense>
     </div>
     </>

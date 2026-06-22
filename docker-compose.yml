@@ -1,0 +1,126 @@
+version: "3.9"
+
+# ============================================================
+# mr7.ai — Development Docker Compose
+# Start everything: docker compose up -d
+# Stop everything:  docker compose down
+# Reset DB:         docker compose down -v && docker compose up -d
+# ============================================================
+
+services:
+  # ── PostgreSQL with pgvector ──────────────────────────────
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: mr7_postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: mr7
+      POSTGRES_PASSWORD: mr7_dev_password
+      POSTGRES_DB: mr7ai
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations/001_initial_schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      - ./migrations/002_add_updated_at_triggers.sql:/docker-entrypoint-initdb.d/02_triggers.sql:ro
+      - ./migrations/003_add_conversation_stats_trigger.sql:/docker-entrypoint-initdb.d/03_conv_stats.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mr7 -d mr7ai"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - mr7_network
+
+  # ── Redis (caching, rate limiting, sessions, queues) ───────
+  redis:
+    image: redis:7-alpine
+    container_name: mr7_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: >
+      redis-server
+      --requirepass mr7_redis_dev_password
+      --save 60 1
+      --loglevel warning
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "mr7_redis_dev_password", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - mr7_network
+
+  # ── MailHog (local email testing, no real SMTP needed) ─────
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: mr7_mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI → http://localhost:8025
+    networks:
+      - mr7_network
+
+  # ── Webhook.site local proxy (test outbound webhooks) ──────
+  webhook-proxy:
+    image: tarampampam/webhook-tester:latest
+    container_name: mr7_webhooks
+    restart: unless-stopped
+    ports:
+      - "9090:9090"   # Web UI + API → http://localhost:9090
+    networks:
+      - mr7_network
+
+  # ── pgAdmin (optional DB GUI) ──────────────────────────────
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: mr7_pgadmin
+    restart: unless-stopped
+    profiles: ["tools"]   # Only starts with: docker compose --profile tools up
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@mr7.ai
+      PGADMIN_DEFAULT_PASSWORD: admin
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - mr7_network
+
+  # ── Redis Insight (optional Redis GUI) ─────────────────────
+  redisinsight:
+    image: redis/redisinsight:latest
+    container_name: mr7_redisinsight
+    restart: unless-stopped
+    profiles: ["tools"]
+    ports:
+      - "5540:5540"
+    volumes:
+      - redisinsight_data:/data
+    networks:
+      - mr7_network
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+  redisinsight_data:
+    driver: local
+
+networks:
+  mr7_network:
+    driver: bridge
+    name: mr7_network

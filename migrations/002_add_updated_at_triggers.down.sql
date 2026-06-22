@@ -1,0 +1,12 @@
+DROP TRIGGER IF EXISTS webhooks_updated_at ON webhooks;
+DROP TRIGGER IF EXISTS api_keys_updated_at ON api_keys;
+DROP TRIGGER IF EXISTS reports_updated_at ON reports;
+DROP TRIGGER IF EXISTS documents_updated_at ON documents;
+DROP TRIGGER IF EXISTS knowledge_bases_updated_at ON knowledge_bases;
+DROP TRIGGER IF EXISTS modules_updated_at ON modules;
+DROP TRIGGER IF EXISTS projects_updated_at ON projects;
+DROP TRIGGER IF EXISTS teams_updated_at ON teams;
+DROP TRIGGER IF EXISTS conversations_updated_at ON conversations;
+DROP TRIGGER IF EXISTS subscriptions_updated_at ON subscriptions;
+DROP TRIGGER IF EXISTS users_updated_at ON users;
+DROP FUNCTION IF EXISTS set_updated_at();
