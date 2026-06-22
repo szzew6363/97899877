@@ -176,6 +176,10 @@ app.use("/api", providersRouter);
 app.use("/api", cloudChatsRouter);
 app.use("/api", cisaRouter);
 
+// ── Autonomous Agent (public — uses AI providers internally) ─────────────────
+import autonomousAgentRouter from "./routes/autonomous-agent.js";
+app.use("/api/autonomous-agent", autonomousAgentRouter);
+
 // ── Stripe webhook (public — Stripe signature verifies it) ───────────────────
 import stripeWebhookRouter from "./routes/stripe.js";
 app.use("/api", stripeWebhookRouter);

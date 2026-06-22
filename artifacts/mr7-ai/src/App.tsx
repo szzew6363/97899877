@@ -204,6 +204,7 @@ const SOCCommandModal    = lazy(() => import("./components/modals/SOCCommandModa
 const AutonomousDecisionEngineModal = lazy(() => import("./components/modals/AutonomousDecisionEngineModal").then(m=>({default:m.AutonomousDecisionEngineModal})));
 const JARVISCommandCenterModal      = lazy(() => import("./components/modals/JARVISCommandCenterModal").then(m=>({default:m.JARVISCommandCenterModal})));
 const OmegaAgentModal               = lazy(() => import("./components/modals/OmegaAgentModal").then(m=>({default:m.OmegaAgentModal})));
+const AutonomousAgentModal          = lazy(() => import("./components/modals/AutonomousAgentModal").then(m=>({default:m.AutonomousAgentModal})));
 const OllamaHub3D                   = lazy(() => import("./components/OllamaHub3D").then(m=>({default:m.OllamaHub3D})));
 const CollabModal                   = lazy(() => import("./components/modals/CollabModal"));
 import { LocalAIModelNexus } from "./components/LocalAIModelNexus";
@@ -274,6 +275,7 @@ const MODAL_IDS = [
   'autonomousDecisionEngine',
   'jarvisCommandCenter',
   'omegaAgent',
+  'autonomousAgent',
   'ollamaHub',
   'localEngineHub',
   'multiModelRace',
@@ -334,12 +336,7 @@ function modalReducer(state: ModalState, action: ModalAction): ModalState {
 }
 
 function computeInitialAutoSetup(): boolean {
-  if (localStorage.getItem("mr7-ai-autoinit-done") !== "1") return true;
-  const P_KEY = "mr7-ai-p-key-";
-  const PROVIDERS = ["groq","openai","anthropic","gemini","openrouter","deepseek","xai","mistral","together","fireworks","perplexity","cohere","nvidia","github"];
-  const hasKey = PROVIDERS.some(id => { const k = localStorage.getItem(P_KEY + id)?.trim(); return k && k.length > 10; });
-  try { const s = JSON.parse(localStorage.getItem("mr7-ai-state-v2") || "{}"); if ((s?.settings?.personalApiKey?.trim()?.length ?? 0) > 10) return false; } catch { /* ignore */ }
-  return !hasKey;
+  return false;
 }
 
 function makeInitialModals(): ModalState {
@@ -565,6 +562,7 @@ function AppContent() {
       if ((e.metaKey||e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "i") { e.preventDefault(); toggle('intelligenceCore'); }
       if (!inField && (e.metaKey||e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "h") { e.preventDefault(); toggle('widgetsDock'); }
       if ((e.metaKey||e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "g") { e.preventDefault(); toggle('omegaAgent'); }
+      if ((e.metaKey||e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "q") { e.preventDefault(); toggle('autonomousAgent'); }
       // ── Part 3: Advanced AI Engine shortcuts ──────────────────────────────
       if ((e.metaKey||e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "d" && !e.altKey) { e.preventDefault(); toggle('debate'); }
       if ((e.metaKey||e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "p") { e.preventDefault(); toggle('providerHealth'); }
@@ -1069,12 +1067,71 @@ function AppContent() {
         />
       </div>
 
-      {/* AI Auto-Setup 3D */}
+      {/* AI Auto-Setup — opened manually via button, never auto-opens */}
       <AnimatePresence>
         {modals.autoSetup && (
           <AIAutoSetup3D key="auto-setup" onComplete={() => { localStorage.setItem("mr7-ai-autoinit-done", "1"); close('autoSetup'); }} />
         )}
       </AnimatePresence>
+
+      {/* Quick-access floating button — open AI Setup */}
+      <AnimatePresence>
+        {!modals.autoSetup && (
+          <motion.button
+            key="setup-fab"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            transition={{ delay: 1.5, duration: 0.3 }}
+            onClick={() => open('autoSetup')}
+            title="إعداد AI"
+            style={{
+              position: "fixed", bottom: 88, right: 18, zIndex: 400,
+              width: 36, height: 36, borderRadius: 10,
+              background: "rgba(8,8,18,0.92)",
+              border: "1px solid rgba(162,78,246,0.3)",
+              boxShadow: "0 0 16px rgba(162,78,246,0.15)",
+              color: "#c084fc",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer", backdropFilter: "blur(12px)",
+              transition: "all 0.2s",
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(162,78,246,0.2)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(8,8,18,0.92)"; }}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
+            </svg>
+          </motion.button>
+        )}
+      </AnimatePresence>
+
+      {/* Autonomous Agent quick-launch button */}
+      <motion.button
+        key="agent-fab"
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 2, duration: 0.3 }}
+        onClick={() => toggle('autonomousAgent')}
+        title="الوكيل المستقل (Ctrl+Shift+Q)"
+        style={{
+          position: "fixed", bottom: 132, right: 18, zIndex: 400,
+          width: 36, height: 36, borderRadius: 10,
+          background: modals.autonomousAgent ? "rgba(162,78,246,0.3)" : "rgba(8,8,18,0.92)",
+          border: `1px solid rgba(162,78,246,${modals.autonomousAgent ? "0.6" : "0.3"})`,
+          boxShadow: modals.autonomousAgent ? "0 0 20px rgba(162,78,246,0.4)" : "0 0 16px rgba(162,78,246,0.15)",
+          color: "#c084fc",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          cursor: "pointer", backdropFilter: "blur(12px)",
+          transition: "all 0.2s",
+        }}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(162,78,246,0.25)"; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = modals.autonomousAgent ? "rgba(162,78,246,0.3)" : "rgba(8,8,18,0.92)"; }}
+      >
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 6v6l3 3"/><circle cx="18" cy="6" r="3"/><path d="M21 3l-3 3"/>
+        </svg>
+      </motion.button>
 
       {/* Conditional 3D overlays — only mount when open */}
       {modals.perfDash    && <PerformanceDashboard3D onClose={() => close('perfDash')} />}
@@ -1142,6 +1199,11 @@ function AppContent() {
       <WindowChrome open={modals.omegaAgent} color="#fbbf24" title="OMEGA AGENT" onClose={() => close('omegaAgent')}>
         <OmegaAgentModal open={modals.omegaAgent} onOpenChange={(v) => mDispatch({type:'SET',id:'omegaAgent',value:v})} />
       </WindowChrome>
+
+      {/* ── AUTONOMOUS AGENT — الوكيل المستقل الحقيقي ── */}
+      {modals.autonomousAgent && (
+        <AutonomousAgentModal open={modals.autonomousAgent} onOpenChange={(v) => mDispatch({type:'SET',id:'autonomousAgent',value:v})} />
+      )}
 
       {/* ── OLLAMA NEURAL HUB — Local AI Model Command Center ── */}
       <Suspense fallback={null}>
