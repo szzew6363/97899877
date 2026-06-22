@@ -267,7 +267,21 @@ ${VOICE_LINE}
 ${langLine}${memLine}${ciLine}`;
 }
 
-const SYNTHESIZER_SYSTEM = `You are the COUNCIL SYNTHESIZER on CHAT-GPT.ai.
+// Weight-aware synthesis: brains with higher weights get more emphasis in synthesis
+function buildWeightedSynthSystem(weights: Record<string, number>): string {
+  const highlighted = Object.entries(weights)
+    .filter(([, w]) => w >= 1.5)
+    .map(([id]) => {
+      const b = COUNCIL_BRAINS.find(b => b.id === id);
+      return b ? b.label : id;
+    });
+  const weightNote = highlighted.length > 0
+    ? `\n\nUser has given EXTRA WEIGHT to these brains (emphasize their insights more): ${highlighted.join(", ")}.`
+    : "";
+  return SYNTHESIZER_SYSTEM_BASE + weightNote;
+}
+
+const SYNTHESIZER_SYSTEM_BASE = `You are the COUNCIL SYNTHESIZER on CHAT-GPT.ai.
 
 You have just received parallel responses from a council of expert AI brains, each writing from a different specialty (security, business, science, philosophy, code, etc.). Your job is to synthesize them into ONE coherent, deeply-reasoned answer for the user.
 
@@ -303,6 +317,7 @@ router.post("/council", async (req, res) => {
       customInstructions?: string;
       memory?: string[];
       brainIds?: string[];
+      weights?: Record<string, number>; // dynamic brain weights (0.1–2.0)
       autoSelect?: boolean;
       maxBrains?: number;
       fusion?: boolean;
@@ -312,6 +327,8 @@ router.post("/council", async (req, res) => {
     };
     const fusionOn = body.fusion === true;
     const scoringOn = body.scoring === true;
+    // Dynamic weights per brain (1.0 = normal, 2.0 = double emphasis, 0.1 = minimal)
+    const brainWeights: Record<string, number> = body.weights ?? {};
 
     const language = body.language ?? "en";
     const customInstructions = body.customInstructions ?? "";
@@ -579,7 +596,7 @@ No prose, no markdown.`,
       .join("\n\n");
 
     const synthMessages: ChatMessage[] = [
-      { role: "system", content: SYNTHESIZER_SYSTEM },
+      { role: "system", content: buildWeightedSynthSystem(brainWeights) },
       { role: "user", content: `User question:\n${userText}\n\nCouncil responses:\n\n${transcript || "(council returned no usable content)"}` },
     ];
 

@@ -44,6 +44,9 @@ import securityComplianceRouter from "./security-compliance";
 import { collabRouter } from "./collab";
 import securityDashboardRouter from "./security-dashboard";
 import personalKeysRouter from "./personal-keys";
+import debateRouter from "./debate";
+import chainOfThoughtRouter from "./chain-of-thought";
+import aiEngineRouter from "./ai-engine";
 
 const router: IRouter = Router();
 
@@ -92,5 +95,8 @@ router.use(securityComplianceRouter);
 router.use(collabRouter);
 router.use(securityDashboardRouter);
 router.use(personalKeysRouter);
+router.use(debateRouter);
+router.use(chainOfThoughtRouter);
+router.use(aiEngineRouter);
 
 export default router;

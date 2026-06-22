@@ -77,6 +77,10 @@ interface TopBarProps {
   onOpenBenchmark?: () => void;
   onOpenMultiModelRace?: () => void;
   onOpenLocalBenchmark?: () => void;
+  onOpenProviderHealth?: () => void;
+  onOpenDebate?: () => void;
+  onOpenChainOfThought?: () => void;
+  onOpenDynamicCouncil?: () => void;
   hudsVisible?: boolean;
   sidebarCollapsed?: boolean;
   onToggleSidebar?: () => void;
@@ -1708,6 +1712,10 @@ export function TopBar({
   onOpenLocalAINexus,
   onOpenLocalEngineHub,
   onOpenBenchmark,
+  onOpenProviderHealth,
+  onOpenDebate,
+  onOpenChainOfThought,
+  onOpenDynamicCouncil,
   hudsVisible,
   sidebarCollapsed,
   onToggleSidebar,
@@ -1967,6 +1975,40 @@ export function TopBar({
         )}
 
         <LocalModelQuickToggle onOpenLocalModel={onOpenLocalModel} />
+
+        {/* ── Part 3: Advanced AI Engine Buttons ── */}
+        {onOpenProviderHealth && (
+          <motion.button
+            onClick={onOpenProviderHealth}
+            className="flex-shrink-0 relative flex items-center gap-1 px-2 py-2 rounded-xl overflow-hidden"
+            style={{ background: "radial-gradient(circle at 35% 35%, rgba(34,197,94,0.15), rgba(0,0,0,0.85))", border: "1px solid rgba(34,197,94,0.35)", color: "#22c55e" }}
+            whileHover={{ scale: 1.06, y: -0.5 }}
+            whileTap={{ scale: 0.94 }}
+            title="Provider Health Dashboard (Ctrl+Shift+P)"
+          >
+            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: "#22c55e", boxShadow: "0 0 5px rgba(34,197,94,0.9)", animation: "pulse 2s infinite" }} />
+            <span className="hidden sm:block text-[8px] font-black tracking-wider uppercase">Health</span>
+          </motion.button>
+        )}
+        {(onOpenDebate || onOpenChainOfThought || onOpenDynamicCouncil) && (
+          <div className="flex items-center gap-1">
+            {onOpenDebate && (
+              <motion.button onClick={onOpenDebate} className="flex-shrink-0 px-2 py-2 rounded-xl text-[8px] font-black tracking-wider uppercase" style={{ background: "rgba(226,18,39,0.08)", border: "1px solid rgba(226,18,39,0.25)", color: "#e21227" }} whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.94 }} title="Debate Mode (Ctrl+Shift+D)">
+                Debate
+              </motion.button>
+            )}
+            {onOpenChainOfThought && (
+              <motion.button onClick={onOpenChainOfThought} className="flex-shrink-0 px-2 py-2 rounded-xl text-[8px] font-black tracking-wider uppercase" style={{ background: "rgba(0,229,255,0.06)", border: "1px solid rgba(0,229,255,0.2)", color: "#00e5ff" }} whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.94 }} title="Chain of Thought (Ctrl+Shift+Y)">
+                CoT
+              </motion.button>
+            )}
+            {onOpenDynamicCouncil && (
+              <motion.button onClick={onOpenDynamicCouncil} className="flex-shrink-0 px-2 py-2 rounded-xl text-[8px] font-black tracking-wider uppercase" style={{ background: "rgba(251,191,36,0.06)", border: "1px solid rgba(251,191,36,0.2)", color: "#fbbf24" }} whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.94 }} title="Dynamic Council (Ctrl+Shift+Z)">
+                Council+
+              </motion.button>
+            )}
+          </div>
+        )}
 
         {/* ── LOCAL AI TopBar Button ── */}
         <LocalAITopBarButton

@@ -236,6 +236,10 @@ const ReportsPage            = lazy(() => import("./pages/ReportsPage").then(m=>
 const RateLimitPage          = lazy(() => import("./pages/RateLimitPage").then(m=>({default:m.RateLimitPage})));
 const SystemsHub3D           = lazy(() => import("./components/SystemsHub3D").then(m=>({default:m.SystemsHub3D})));
 const InfraMap3DPage         = lazy(() => import("./components/InfrastructureMap3D").then(m=>({default:m.InfrastructureMap3D})));
+const DebateModal            = lazy(() => import("./components/modals/DebateModal").then(m=>({default:m.DebateModal})));
+const ChainOfThoughtModal    = lazy(() => import("./components/modals/ChainOfThoughtModal").then(m=>({default:m.ChainOfThoughtModal})));
+const DynamicCouncilModal    = lazy(() => import("./components/modals/DynamicCouncilModal").then(m=>({default:m.DynamicCouncilModal})));
+import { ProviderHealthDashboard } from "./components/ProviderHealthDashboard";
 const TIER_TOKENS = _TIER_TOKENS;
 
 // ── MODAL STATE REDUCER ───────────────────────────────────────────────────────
@@ -281,6 +285,11 @@ const MODAL_IDS = [
   'pluginMarket',
   'finetune',
   'collab',
+  // ── Part 3: Advanced AI Engine ───────────────────────────────────────────────
+  'debate',
+  'chainOfThought',
+  'dynamicCouncil',
+  'providerHealth',
   // ── KaliGPT Systems #2-#20 ──────────────────────────────────────────────────
   'kgAdmin',
   'kgPayment',
@@ -556,6 +565,11 @@ function AppContent() {
       if ((e.metaKey||e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "i") { e.preventDefault(); toggle('intelligenceCore'); }
       if (!inField && (e.metaKey||e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "h") { e.preventDefault(); toggle('widgetsDock'); }
       if ((e.metaKey||e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "g") { e.preventDefault(); toggle('omegaAgent'); }
+      // ── Part 3: Advanced AI Engine shortcuts ──────────────────────────────
+      if ((e.metaKey||e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "d" && !e.altKey) { e.preventDefault(); toggle('debate'); }
+      if ((e.metaKey||e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "p") { e.preventDefault(); toggle('providerHealth'); }
+      if ((e.metaKey||e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "y") { e.preventDefault(); toggle('chainOfThought'); }
+      if ((e.metaKey||e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "z") { e.preventDefault(); toggle('dynamicCouncil'); }
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
@@ -731,6 +745,10 @@ function AppContent() {
           onOpenLocalAINexus={() => open('localAINexus')}
           onOpenLocalEngineHub={() => open('localEngineHub')}
           onOpenBenchmark={() => open('localBenchmark')}
+          onOpenProviderHealth={() => toggle('providerHealth')}
+          onOpenDebate={() => open('debate')}
+          onOpenChainOfThought={() => open('chainOfThought')}
+          onOpenDynamicCouncil={() => open('dynamicCouncil')}
         />
         <ChatView onOpenOsintDash={() => open('osintDash')} />
         {modals.compare && <CompareView onClose={() => close('compare')} />}
@@ -1252,6 +1270,18 @@ function AppContent() {
           </div>
         )}
       </Suspense>
+
+      {/* ── Part 3: Advanced AI Engine ──────────────────────────────────────── */}
+      <Suspense fallback={null}>
+        {modals.debate && <DebateModal onClose={() => close('debate')} />}
+      </Suspense>
+      <Suspense fallback={null}>
+        {modals.chainOfThought && <ChainOfThoughtModal onClose={() => close('chainOfThought')} />}
+      </Suspense>
+      <Suspense fallback={null}>
+        {modals.dynamicCouncil && <DynamicCouncilModal onClose={() => close('dynamicCouncil')} />}
+      </Suspense>
+      {modals.providerHealth && <ProviderHealthDashboard onClose={() => close('providerHealth')} />}
     </div>
     </>
   );
