@@ -1,6 +1,16 @@
+/**
+ * JWT Authentication Middleware (RSA-signed)
+ * ────────────────────────────────────────────
+ * All JWTs are now signed with RSA-2048 (RS256).
+ * Refresh tokens: hashed in DB, revoked on first use, replaced with new token (rotation).
+ * API keys: looked up by SHA-256 hash of the raw key.
+ */
+
 import type { Request, Response, NextFunction } from "express";
-import jwt from "jsonwebtoken";
-import { getUserById } from "../db";
+import { getUserById } from "../db.js";
+import { verifyJwtRsa, signAccessToken, signRefreshToken } from "../lib/crypto.js";
+import { pool } from "../db.js";
+import crypto from "crypto";
 
 export interface AuthUser {
   id: string;
@@ -19,30 +29,33 @@ declare global {
   }
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || "mr7-ai-jwt-dev-secret-change-in-prod";
+// Re-export crypto sign helpers under the old names for backward-compat
+export { verifyJwtRsa as verifyJwt };
+export { signAccessToken, signRefreshToken };
 
-export function signJwt(payload: Record<string, unknown>, expiresIn: string = "15m") {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn } as jwt.SignOptions);
+/**
+ * Backward-compatible signJwt — accepts (payload, expiresIn?) like the old symmetric version.
+ * Now signs with RSA-2048 instead of symmetric secret.
+ */
+export function signJwt(payload: Record<string, unknown>, expiresIn?: string): string {
+  const { sub, email, role, tier, ...rest } = payload;
+  return signAccessToken({
+    sub: String(sub ?? ""),
+    email: String(email ?? ""),
+    role: String(role ?? "user"),
+    tier: String(tier ?? "free"),
+    ...rest,
+  } as Parameters<typeof signAccessToken>[0]);
 }
 
-export function verifyJwt(token: string): Record<string, unknown> | null {
-  try {
-    return jwt.verify(token, JWT_SECRET) as Record<string, unknown>;
-  } catch {
-    return null;
-  }
-}
-
-/** Middleware: verify JWT Bearer token and attach authUser to request */
+/** Middleware: verify JWT Bearer token (RSA) and attach authUser */
 export async function jwtAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
   const authHeader = req.headers.authorization;
   const apiKey = req.headers["x-api-key"] as string | undefined;
 
-  // Support API key auth
+  // ── API key auth ──────────────────────────────────────────────────────────
   if (apiKey) {
     try {
-      const { pool } = await import("../db");
-      const crypto = await import("crypto");
       const keyHash = crypto.createHash("sha256").update(apiKey).digest("hex");
       const { rows } = await pool.query(
         `SELECT ak.*, u.id as uid, u.email, u.role, u.subscription, u.tokens_used, u.tokens_limit
@@ -52,7 +65,18 @@ export async function jwtAuth(req: Request, res: Response, next: NextFunction): 
         [keyHash],
       );
       if (rows[0]) {
-        await pool.query("UPDATE api_keys SET last_used_at = NOW() WHERE id = $1", [rows[0].id]);
+        // Check IP allowlist if set
+        const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.socket.remoteAddress;
+        const allowedIps: string[] | null = rows[0].allowed_ips ?? null;
+        if (allowedIps && allowedIps.length > 0 && ip && !allowedIps.includes(ip)) {
+          res.status(403).json({ error: "Forbidden" });
+          return;
+        }
+
+        await pool.query(
+          "UPDATE api_keys SET last_used_at = NOW(), last_used_ip = $2 WHERE id = $1",
+          [rows[0].id, ip ?? null],
+        );
         req.authUser = {
           id: rows[0].uid,
           email: rows[0].email,
@@ -65,26 +89,25 @@ export async function jwtAuth(req: Request, res: Response, next: NextFunction): 
         return;
       }
     } catch {
-      // fall through
+      // fall through to JWT check
     }
   }
 
   if (!authHeader?.startsWith("Bearer ")) {
-    // Allow unauthenticated for non-critical routes — next layer decides
     next();
     return;
   }
 
   const token = authHeader.slice(7);
-  const payload = verifyJwt(token);
+  const payload = verifyJwtRsa(token);
 
-  if (!payload || typeof payload["sub"] !== "string") {
+  if (!payload || payload.type !== "access") {
     res.status(401).json({ error: "Invalid or expired token" });
     return;
   }
 
   try {
-    const user = await getUserById(payload["sub"] as string);
+    const user = await getUserById(payload.sub);
     if (!user) {
       res.status(401).json({ error: "User not found" });
       return;
@@ -103,7 +126,7 @@ export async function jwtAuth(req: Request, res: Response, next: NextFunction): 
   }
 }
 
-/** Middleware: require authenticated user */
+/** Require authenticated user */
 export function requireAuth(req: Request, res: Response, next: NextFunction): void {
   if (!req.authUser) {
     res.status(401).json({ error: "Authentication required" });
@@ -112,7 +135,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
   next();
 }
 
-/** Middleware: require admin role */
+/** Require admin role */
 export function requireAdmin(req: Request, res: Response, next: NextFunction): void {
   if (!req.authUser || req.authUser.role !== "admin") {
     res.status(403).json({ error: "Admin access required" });
@@ -121,7 +144,7 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction): v
   next();
 }
 
-/** Middleware: check token quota */
+/** Check token quota */
 export function checkTokenQuota(req: Request, res: Response, next: NextFunction): void {
   const user = req.authUser;
   if (!user) { next(); return; }

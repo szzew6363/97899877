@@ -1,22 +1,23 @@
 import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import cors from "cors";
-import helmet from "helmet";
 import { rateLimit } from "express-rate-limit";
 import pinoHttp from "pino-http";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import passport from "passport";
-import router from "./routes";
-import providersRouter from "./routes/providers";
-import cloudChatsRouter from "./routes/cloud-chats";
-import { cisaRouter } from "./routes/cisa";
-import { logger } from "./lib/logger";
-import { internalAuth } from "./middlewares/internalAuth";
-import { pool, ensureAuthTables } from "./db";
-import { setupReplitAuth } from "./routes/auth";
+import router from "./routes/index.js";
+import providersRouter from "./routes/providers.js";
+import cloudChatsRouter from "./routes/cloud-chats.js";
+import { cisaRouter } from "./routes/cisa.js";
+import { logger } from "./lib/logger.js";
+import { internalAuth } from "./middlewares/internalAuth.js";
+import { pool, ensureAuthTables } from "./db.js";
+import { setupReplitAuth } from "./routes/auth.js";
+import { applySecurityHeaders } from "./middlewares/security-headers.js";
+import { attackDetector } from "./middlewares/attack-detector.js";
 
 // ── Validate critical secrets at startup ──────────────────────────────────────
-const REQUIRED_SECRETS_WARN = ["SESSION_SECRET", "JWT_SECRET"];
+const REQUIRED_SECRETS_WARN = ["SESSION_SECRET", "AES_ENCRYPTION_KEY", "JWT_PRIVATE_KEY", "JWT_PUBLIC_KEY"];
 for (const key of REQUIRED_SECRETS_WARN) {
   if (!process.env[key]) {
     logger.warn(`[security] ${key} not set — using insecure default. Set this in production!`);
@@ -27,27 +28,31 @@ const app: Express = express();
 
 app.set("trust proxy", 1);
 
-app.use(
-  helmet({
-    contentSecurityPolicy: false,
-    crossOriginEmbedderPolicy: false,
-  }),
-);
+// ── Layer 1: Security Headers (Helmet + CSP + HSTS + clickjacking + MIME) ────
+applySecurityHeaders(app);
 
-const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
+// ── CORS — only allow known origins ──────────────────────────────────────────
+const ALLOWED_ORIGINS: string[] | boolean = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim())
-  : true;
+  : true; // true = reflect origin (dev only) — set ALLOWED_ORIGINS in production
 
 app.use(
   cors({
     origin: ALLOWED_ORIGINS,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Internal-Key", "X-Api-Key", "stripe-signature"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-Internal-Key",
+      "X-Api-Key",
+      "stripe-signature",
+    ],
     credentials: true,
+    maxAge: 86400,
   }),
 );
 
-// ── Rate limiting by tier ─────────────────────────────────────────────────────
+// ── Global rate limiter ───────────────────────────────────────────────────────
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 2000,
@@ -91,6 +96,7 @@ const scanLimiter = rateLimit({
 
 app.use(globalLimiter);
 
+// ── HTTP request logger ───────────────────────────────────────────────────────
 app.use(
   pinoHttp({
     logger,
@@ -105,11 +111,21 @@ app.use(
   }),
 );
 
+// ── Body parsers ──────────────────────────────────────────────────────────────
 app.use(express.json({ limit: "4mb" }));
 app.use(express.urlencoded({ extended: true, limit: "4mb" }));
 
 // ── Stripe webhook needs raw body ─────────────────────────────────────────────
 app.use("/api/stripe/webhook", express.raw({ type: "application/json" }));
+
+// ── Layer 2: Attack Detection (SQLi / XSS / path traversal / SSRF / cmd) ─────
+// After body parsing so req.body is available. Exempt stripe + health.
+app.use((req: Request, res: Response, next: NextFunction) => {
+  if (req.path.startsWith("/api/stripe/webhook") || req.path.startsWith("/api/health")) {
+    return next();
+  }
+  attackDetector(req, res, next);
+});
 
 // ── Session + Passport ────────────────────────────────────────────────────────
 const PgStore = connectPg(session);
@@ -161,7 +177,7 @@ app.use("/api", cloudChatsRouter);
 app.use("/api", cisaRouter);
 
 // ── Stripe webhook (public — Stripe signature verifies it) ───────────────────
-import stripeWebhookRouter from "./routes/stripe";
+import stripeWebhookRouter from "./routes/stripe.js";
 app.use("/api", stripeWebhookRouter);
 
 // ── Auth setup ────────────────────────────────────────────────────────────────
@@ -184,7 +200,7 @@ app.use("/api", (_req: Request, res: Response) => {
   res.status(404).json({ error: "Not found" });
 });
 
-// ── Global error handler ──────────────────────────────────────────────────────
+// ── Global error handler — never expose internals ─────────────────────────────
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   logger.error({ err }, "Unhandled error");
   res.status(500).json({ error: "Internal server error" });

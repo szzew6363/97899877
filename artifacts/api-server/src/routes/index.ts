@@ -42,6 +42,8 @@ import trainingRouter from "./training";
 import analyticsRouter from "./analytics";
 import securityComplianceRouter from "./security-compliance";
 import { collabRouter } from "./collab";
+import securityDashboardRouter from "./security-dashboard";
+import personalKeysRouter from "./personal-keys";
 
 const router: IRouter = Router();
 
@@ -88,5 +90,7 @@ router.use(trainingRouter);
 router.use(analyticsRouter);
 router.use(securityComplianceRouter);
 router.use(collabRouter);
+router.use(securityDashboardRouter);
+router.use(personalKeysRouter);
 
 export default router;
