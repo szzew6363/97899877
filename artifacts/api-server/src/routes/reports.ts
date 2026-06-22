@@ -115,4 +115,15 @@ router.post("/reports/scan/:id", jwtAuth, async (req: Request, res: Response): P
   }
 });
 
+// ── GET /api/reports/history — List user reports ─────────────────────────────
+router.get("/reports/history", jwtAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT id, title, template, language, status, created_at, pdf_url FROM reports WHERE user_id=$1 ORDER BY created_at DESC LIMIT 50`,
+      [req.authUser.id]
+    ).catch(() => ({ rows: [] }));
+    res.json({ reports: rows });
+  } catch { res.status(500).json({ error: "Failed to fetch reports" }); }
+});
+
 export default router;

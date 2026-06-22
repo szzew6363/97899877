@@ -95,6 +95,44 @@ router.get("/analytics/admin", async (req: Request, res: Response): Promise<void
   } catch { res.status(500).json({ error: "Failed" }); }
 });
 
+// ── GET /api/analytics/rate-status — Current user rate limit status ─────────
+router.get("/analytics/rate-status", jwtAuth, requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = req.authUser.id;
+    const tier = req.authUser.subscription || "free";
+
+    const TIER_LIMITS: Record<string, { rpm: number; rpd: number; tokens: number }> = {
+      free:         { rpm: 10,   rpd: 100,    tokens: 50_000 },
+      starter:      { rpm: 100,  rpd: 1000,   tokens: 200_000 },
+      pro:          { rpm: 500,  rpd: 10000,  tokens: 500_000 },
+      professional: { rpm: 500,  rpd: 10000,  tokens: 1_000_000 },
+      elite:        { rpm: 2000, rpd: -1,     tokens: 5_000_000 },
+      enterprise:   { rpm: 2000, rpd: -1,     tokens: -1 },
+    };
+    const limits = TIER_LIMITS[tier] || TIER_LIMITS.free;
+
+    const [todayRow, minuteRow, userRow] = await Promise.all([
+      pool.query(`SELECT COUNT(*) as cnt FROM usage_stats WHERE user_id=$1 AND created_at > NOW()-INTERVAL '24h'`, [userId]).catch(() => ({ rows: [{ cnt: 0 }] })),
+      pool.query(`SELECT COUNT(*) as cnt FROM usage_stats WHERE user_id=$1 AND created_at > NOW()-INTERVAL '1 min'`, [userId]).catch(() => ({ rows: [{ cnt: 0 }] })),
+      pool.query(`SELECT tokens_used, tokens_limit, subscription FROM users WHERE id=$1`, [userId]).catch(() => ({ rows: [] })),
+    ]);
+
+    const user = userRow.rows[0] || {};
+    res.json({
+      tier,
+      requestsPerMin: limits.rpm,
+      requestsPerDay: limits.rpd,
+      tokensPerMonth: limits.tokens,
+      usedToday: Number(todayRow.rows[0]?.cnt || 0),
+      usedThisMinute: Number(minuteRow.rows[0]?.cnt || 0),
+      tokensUsed: Number(user.tokens_used || 0),
+      tokensLimit: Number(user.tokens_limit || limits.tokens),
+      resetMinute: 60,
+      resetDay: 86400,
+    });
+  } catch { res.status(500).json({ error: "Failed to fetch rate status" }); }
+});
+
 // ── GET /api/analytics/realtime — Live stats (last 5 min) ────────────────────
 router.get("/analytics/realtime", async (req: Request, res: Response): Promise<void> => {
   if (!verifyAdmin(req)) { res.status(403).json({ error: "Unauthorized" }); return; }

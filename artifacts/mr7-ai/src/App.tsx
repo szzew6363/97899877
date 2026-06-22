@@ -231,6 +231,9 @@ const CollaborationPage      = lazy(() => import("./pages/CollaborationPage").th
 const ContextManagementPage  = lazy(() => import("./pages/ContextManagementPage").then(m=>({default:m.ContextManagementPage})));
 const PentestLabPage         = lazy(() => import("./pages/PentestLabPage").then(m=>({default:m.PentestLabPage})));
 const SecurityCompliancePage = lazy(() => import("./pages/SecurityCompliancePage").then(m=>({default:m.SecurityCompliancePage})));
+const HelpCenterPage         = lazy(() => import("./pages/HelpCenterPage").then(m=>({default:m.HelpCenterPage})));
+const ReportsPage            = lazy(() => import("./pages/ReportsPage").then(m=>({default:m.ReportsPage})));
+const RateLimitPage          = lazy(() => import("./pages/RateLimitPage").then(m=>({default:m.RateLimitPage})));
 const TIER_TOKENS = _TIER_TOKENS;
 
 // ── MODAL STATE REDUCER ───────────────────────────────────────────────────────
@@ -294,6 +297,9 @@ const MODAL_IDS = [
   'kgContext',
   'kgPentestLab',
   'kgSecurity',
+  'kgHelpCenter',
+  'kgReports',
+  'kgRateLimit',
 ] as const;
 
 type ModalId = typeof MODAL_IDS[number];
@@ -662,6 +668,9 @@ function AppContent() {
         onOpenKgContext={() => open('kgContext')}
         onOpenKgPentestLab={() => open('kgPentestLab')}
         onOpenKgSecurity={() => open('kgSecurity')}
+        onOpenKgHelpCenter={() => open('kgHelpCenter')}
+        onOpenKgReports={() => open('kgReports')}
+        onOpenKgRateLimit={() => open('kgRateLimit')}
       />
 
       <main className="flex-1 flex flex-col min-w-0 h-full relative">
@@ -1212,6 +1221,15 @@ function AppContent() {
         </WindowChrome>
         <WindowChrome open={modals.kgSecurity} color="#ef4444" title="الأمان والامتثال — Security & Compliance" onClose={() => close('kgSecurity')}>
           <SecurityCompliancePage onClose={() => close('kgSecurity')} />
+        </WindowChrome>
+        <WindowChrome open={modals.kgHelpCenter} color="#e21227" title="مركز المساعدة — Help Center" onClose={() => close('kgHelpCenter')}>
+          <HelpCenterPage onClose={() => close('kgHelpCenter')} />
+        </WindowChrome>
+        <WindowChrome open={modals.kgReports} color="#a855f7" title="تقارير PDF — Pentest Reports" onClose={() => close('kgReports')}>
+          <ReportsPage onClose={() => close('kgReports')} />
+        </WindowChrome>
+        <WindowChrome open={modals.kgRateLimit} color="#f97316" title="معدل الطلبات — Rate Limits" onClose={() => close('kgRateLimit')}>
+          <RateLimitPage onClose={() => close('kgRateLimit')} />
         </WindowChrome>
       </Suspense>
     </div>
