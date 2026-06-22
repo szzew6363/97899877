@@ -180,6 +180,10 @@ app.use("/api", cisaRouter);
 import autonomousAgentRouter from "./routes/autonomous-agent.js";
 app.use("/api/autonomous-agent", autonomousAgentRouter);
 
+// ── OSINT Advanced Engine ─────────────────────────────────────────────────────
+import osintAdvancedRouter from "./routes/osint-advanced.js";
+app.use("/api/osint-advanced", osintAdvancedRouter);
+
 // ── Stripe webhook (public — Stripe signature verifies it) ───────────────────
 import stripeWebhookRouter from "./routes/stripe.js";
 app.use("/api", stripeWebhookRouter);

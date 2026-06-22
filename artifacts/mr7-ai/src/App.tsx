@@ -205,6 +205,7 @@ const AutonomousDecisionEngineModal = lazy(() => import("./components/modals/Aut
 const JARVISCommandCenterModal      = lazy(() => import("./components/modals/JARVISCommandCenterModal").then(m=>({default:m.JARVISCommandCenterModal})));
 const OmegaAgentModal               = lazy(() => import("./components/modals/OmegaAgentModal").then(m=>({default:m.OmegaAgentModal})));
 const AutonomousAgentModal          = lazy(() => import("./components/modals/AutonomousAgentModal").then(m=>({default:m.AutonomousAgentModal})));
+const OsintPlatformModal            = lazy(() => import("./components/modals/OsintPlatformModal").then(m=>({default:m.OsintPlatformModal})));
 const OllamaHub3D                   = lazy(() => import("./components/OllamaHub3D").then(m=>({default:m.OllamaHub3D})));
 const CollabModal                   = lazy(() => import("./components/modals/CollabModal"));
 import { LocalAIModelNexus } from "./components/LocalAIModelNexus";
@@ -276,6 +277,7 @@ const MODAL_IDS = [
   'jarvisCommandCenter',
   'omegaAgent',
   'autonomousAgent',
+  'osintPlatform',
   'ollamaHub',
   'localEngineHub',
   'multiModelRace',
@@ -563,6 +565,7 @@ function AppContent() {
       if (!inField && (e.metaKey||e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "h") { e.preventDefault(); toggle('widgetsDock'); }
       if ((e.metaKey||e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "g") { e.preventDefault(); toggle('omegaAgent'); }
       if ((e.metaKey||e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "q") { e.preventDefault(); toggle('autonomousAgent'); }
+      if ((e.metaKey||e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "o") { e.preventDefault(); toggle('osintPlatform'); }
       // ── Part 3: Advanced AI Engine shortcuts ──────────────────────────────
       if ((e.metaKey||e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "d" && !e.altKey) { e.preventDefault(); toggle('debate'); }
       if ((e.metaKey||e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "p") { e.preventDefault(); toggle('providerHealth'); }
@@ -1133,6 +1136,33 @@ function AppContent() {
         </svg>
       </motion.button>
 
+      {/* OSINT Platform quick-launch button */}
+      <motion.button
+        key="osint-fab"
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 2.2, duration: 0.3 }}
+        onClick={() => toggle('osintPlatform')}
+        title="OSINT Platform (Ctrl+Shift+O)"
+        style={{
+          position: "fixed", bottom: 176, right: 18, zIndex: 400,
+          width: 36, height: 36, borderRadius: 10,
+          background: modals.osintPlatform ? "rgba(59,130,246,0.3)" : "rgba(8,8,18,0.92)",
+          border: `1px solid rgba(59,130,246,${modals.osintPlatform ? "0.6" : "0.3"})`,
+          boxShadow: modals.osintPlatform ? "0 0 20px rgba(59,130,246,0.4)" : "0 0 16px rgba(59,130,246,0.15)",
+          color: "#60a5fa",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          cursor: "pointer", backdropFilter: "blur(12px)",
+          transition: "all 0.2s",
+        }}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(59,130,246,0.25)"; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = modals.osintPlatform ? "rgba(59,130,246,0.3)" : "rgba(8,8,18,0.92)"; }}
+      >
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/><path d="M11 8v6M8 11h6"/>
+        </svg>
+      </motion.button>
+
       {/* Conditional 3D overlays — only mount when open */}
       {modals.perfDash    && <PerformanceDashboard3D onClose={() => close('perfDash')} />}
       {modals.costDash    && <CostDashboard3D entries={costEntries} onClose={() => close('costDash')} />}
@@ -1204,6 +1234,9 @@ function AppContent() {
       {modals.autonomousAgent && (
         <AutonomousAgentModal open={modals.autonomousAgent} onOpenChange={(v) => mDispatch({type:'SET',id:'autonomousAgent',value:v})} />
       )}
+
+      {/* ── OSINT PLATFORM — محرك OSINT المتقدم ── */}
+      <OsintPlatformModal open={modals.osintPlatform} onOpenChange={(v) => mDispatch({type:'SET',id:'osintPlatform',value:v})} />
 
       {/* ── OLLAMA NEURAL HUB — Local AI Model Command Center ── */}
       <Suspense fallback={null}>
