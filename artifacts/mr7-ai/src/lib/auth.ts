@@ -1,6 +1,6 @@
 /**
  * Auth client library — JWT-based authentication
- * Wraps API calls for login, register, logout, refresh, and token management
+ * Full system: Login, Register, TOTP, Sessions, Security Events, Password Reset
  */
 
 const API = "/api";
@@ -13,12 +13,18 @@ export interface AuthUser {
   email: string;
   firstName?: string;
   lastName?: string;
+  username?: string;
   role: "user" | "admin";
-  subscription: "free" | "pro" | "enterprise" | "starter" | "professional" | "elite";
+  status: "active" | "suspended" | "banned";
+  subscription: "free" | "starter" | "professional" | "elite" | "pro" | "enterprise";
   subscriptionExpiresAt?: string;
   tokensUsed: number;
   tokensLimit: number;
   profileImageUrl?: string;
+  emailVerified: boolean;
+  totpEnabled: boolean;
+  lastLoginAt?: string;
+  createdAt?: string;
 }
 
 export interface AuthResponse {
@@ -26,24 +32,41 @@ export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
   expiresIn: number;
+  verifyCodeSent?: boolean;
+}
+
+export interface SecurityEvent {
+  id: string;
+  event_type: string;
+  success: boolean;
+  ip_address?: string;
+  user_agent?: string;
+  details?: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface UserSession {
+  id: string;
+  device_name?: string;
+  device_type?: string;
+  browser?: string;
+  os?: string;
+  ip_address?: string;
+  location?: string;
+  last_active_at: string;
+  expires_at: string;
+  created_at: string;
 }
 
 // ── Token storage ─────────────────────────────────────────────────────────────
-export function getAccessToken(): string | null {
-  return localStorage.getItem(ACCESS_KEY);
-}
-
-export function getRefreshToken(): string | null {
-  return localStorage.getItem(REFRESH_KEY);
-}
+export function getAccessToken(): string | null  { return localStorage.getItem(ACCESS_KEY); }
+export function getRefreshToken(): string | null { return localStorage.getItem(REFRESH_KEY); }
 
 export function getCachedUser(): AuthUser | null {
   try {
     const raw = localStorage.getItem(USER_KEY);
     return raw ? (JSON.parse(raw) as AuthUser) : null;
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
 function saveTokens(data: AuthResponse) {
@@ -76,17 +99,16 @@ async function doRefresh(): Promise<string | null> {
     localStorage.setItem(ACCESS_KEY, data.accessToken);
     localStorage.setItem(REFRESH_KEY, data.refreshToken);
     return data.accessToken;
-  } catch {
-    clearTokens();
-    return null;
-  }
+  } catch { clearTokens(); return null; }
 }
 
 export async function authFetch(url: string, init: RequestInit = {}): Promise<Response> {
   const token = getAccessToken();
   const headers = new Headers(init.headers);
   if (token) headers.set("Authorization", `Bearer ${token}`);
-  headers.set("Content-Type", headers.get("Content-Type") ?? "application/json");
+  if (!headers.has("Content-Type") && !(init.body instanceof FormData)) {
+    headers.set("Content-Type", "application/json");
+  }
 
   const res = await fetch(url, { ...init, headers });
 
@@ -103,7 +125,7 @@ export async function authFetch(url: string, init: RequestInit = {}): Promise<Re
       }
     } else {
       return new Promise(resolve => {
-        refreshQueue.push((newToken) => {
+        refreshQueue.push(newToken => {
           if (newToken) headers.set("Authorization", `Bearer ${newToken}`);
           resolve(fetch(url, { ...init, headers }));
         });
@@ -113,9 +135,9 @@ export async function authFetch(url: string, init: RequestInit = {}): Promise<Re
   return res;
 }
 
-// ── Auth API calls ─────────────────────────────────────────────────────────────
+// ── Auth API ──────────────────────────────────────────────────────────────────
 export async function register(data: {
-  email: string; password: string; firstName?: string; lastName?: string;
+  email: string; password: string; firstName?: string; lastName?: string; username?: string;
 }): Promise<AuthResponse> {
   const res = await fetch(`${API}/auth/register`, {
     method: "POST",
@@ -128,24 +150,31 @@ export async function register(data: {
   return json;
 }
 
-export async function login(email: string, password: string): Promise<AuthResponse> {
+export async function login(
+  email: string,
+  password: string,
+  totpCode?: string,
+): Promise<AuthResponse & { requiresTOTP?: boolean }> {
   const res = await fetch(`${API}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email, password, totpCode }),
   });
-  const json = await res.json() as AuthResponse & { error?: string };
-  if (!res.ok) throw new Error(json.error ?? "Login failed");
+  const json = await res.json() as AuthResponse & { requiresTOTP?: boolean; error?: string; attemptsLeft?: number; lockedUntil?: string };
+  if (json.requiresTOTP) return json;
+  if (!res.ok) throw Object.assign(new Error(json.error ?? "Login failed"), { attemptsLeft: json.attemptsLeft, lockedUntil: json.lockedUntil });
   saveTokens(json);
   return json;
 }
 
 export async function logout(): Promise<void> {
   try {
-    await authFetch(`${API}/auth/logout`, { method: "POST" });
-  } finally {
-    clearTokens();
-  }
+    const rt = getRefreshToken();
+    await authFetch(`${API}/auth/logout`, {
+      method: "POST",
+      body: JSON.stringify({ refreshToken: rt }),
+    });
+  } finally { clearTokens(); }
 }
 
 export async function fetchMe(): Promise<AuthUser | null> {
@@ -155,29 +184,89 @@ export async function fetchMe(): Promise<AuthUser | null> {
     const user = await res.json() as AuthUser;
     localStorage.setItem(USER_KEY, JSON.stringify(user));
     return user;
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
 export async function updateProfile(data: {
-  firstName?: string; lastName?: string; currentPassword?: string; newPassword?: string;
+  firstName?: string; lastName?: string; username?: string;
+  currentPassword?: string; newPassword?: string;
 }): Promise<void> {
-  const res = await authFetch(`${API}/auth/me`, {
-    method: "PUT",
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) {
-    const j = await res.json() as { error?: string };
-    throw new Error(j.error ?? "Update failed");
-  }
+  const res = await authFetch(`${API}/auth/me`, { method: "PUT", body: JSON.stringify(data) });
+  if (!res.ok) { const j = await res.json() as { error?: string }; throw new Error(j.error ?? "Update failed"); }
+  // Refresh cached user
+  await fetchMe();
 }
 
-// ── Subscription helpers ───────────────────────────────────────────────────────
+export async function verifyEmail(code: string): Promise<void> {
+  const res = await authFetch(`${API}/auth/verify-email`, { method: "POST", body: JSON.stringify({ code }) });
+  if (!res.ok) { const j = await res.json() as { error?: string }; throw new Error(j.error ?? "Verification failed"); }
+}
+
+export async function resendVerification(): Promise<void> {
+  await authFetch(`${API}/auth/resend-verify`, { method: "POST" });
+}
+
+export async function forgotPassword(email: string): Promise<void> {
+  await fetch(`${API}/auth/forgot-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+}
+
+export async function resetPassword(token: string, newPassword: string): Promise<void> {
+  const res = await fetch(`${API}/auth/reset-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token, newPassword }),
+  });
+  if (!res.ok) { const j = await res.json() as { error?: string }; throw new Error(j.error ?? "Reset failed"); }
+}
+
+// ── Sessions ──────────────────────────────────────────────────────────────────
+export async function getSessions(): Promise<UserSession[]> {
+  const res = await authFetch(`${API}/auth/sessions`);
+  const j = await res.json() as { sessions: UserSession[] };
+  return j.sessions ?? [];
+}
+
+export async function revokeSession(sessionId: string): Promise<void> {
+  await authFetch(`${API}/auth/sessions/${sessionId}`, { method: "DELETE" });
+}
+
+export async function revokeAllSessions(): Promise<void> {
+  await authFetch(`${API}/auth/sessions`, { method: "DELETE" });
+}
+
+// ── Security events ───────────────────────────────────────────────────────────
+export async function getSecurityEvents(limit = 50): Promise<SecurityEvent[]> {
+  const res = await authFetch(`${API}/auth/security-events?limit=${limit}`);
+  const j = await res.json() as { events: SecurityEvent[] };
+  return j.events ?? [];
+}
+
+// ── TOTP ──────────────────────────────────────────────────────────────────────
+export async function setupTOTP(): Promise<{ secret: string; otpAuthUrl: string }> {
+  const res = await authFetch(`${API}/auth/totp/setup`, { method: "POST" });
+  if (!res.ok) throw new Error("TOTP setup failed");
+  return res.json() as Promise<{ secret: string; otpAuthUrl: string }>;
+}
+
+export async function verifyTOTP(code: string): Promise<void> {
+  const res = await authFetch(`${API}/auth/totp/verify`, { method: "POST", body: JSON.stringify({ code }) });
+  if (!res.ok) { const j = await res.json() as { error?: string }; throw new Error(j.error ?? "Invalid code"); }
+}
+
+export async function disableTOTP(password: string): Promise<void> {
+  const res = await authFetch(`${API}/auth/totp`, { method: "DELETE", body: JSON.stringify({ password }) });
+  if (!res.ok) { const j = await res.json() as { error?: string }; throw new Error(j.error ?? "Failed"); }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 export function isSubscribed(user: AuthUser | null, tier: "pro" | "enterprise" = "pro"): boolean {
   if (!user) return false;
-  if (user.subscription === "enterprise") return true;
-  if (tier === "pro" && (user.subscription === "pro" || user.subscription === "professional" || user.subscription === "starter" || user.subscription === "elite")) return true;
+  if (user.subscription === "enterprise" || user.subscription === "elite") return true;
+  if (tier === "pro") return ["pro", "professional", "starter"].includes(user.subscription);
   return false;
 }
 
@@ -186,7 +275,6 @@ export function tokenUsagePercent(user: AuthUser | null): number {
   return Math.min(100, Math.round((user.tokensUsed / user.tokensLimit) * 100));
 }
 
-// ── Plans ──────────────────────────────────────────────────────────────────────
 export async function getPlans() {
   const res = await fetch(`${API}/stripe/plans`);
   return res.json();
@@ -200,4 +288,23 @@ export async function createCheckout(planId: string): Promise<string> {
   const data = await res.json() as { url?: string; error?: string };
   if (!res.ok || !data.url) throw new Error(data.error ?? "Checkout failed");
   return data.url;
+}
+
+export function getEventLabel(type: string): string {
+  const labels: Record<string, string> = {
+    login_success: "✅ تسجيل دخول ناجح",
+    login_fail: "❌ محاولة دخول فاشلة",
+    register: "🆕 تسجيل حساب جديد",
+    logout: "🚪 تسجيل خروج",
+    password_change: "🔑 تغيير كلمة المرور",
+    password_reset_request: "📧 طلب إعادة تعيين كلمة المرور",
+    password_reset_success: "✅ إعادة تعيين كلمة المرور",
+    email_verified: "📬 تم التحقق من البريد",
+    totp_enabled: "🔐 تفعيل المصادقة الثنائية",
+    totp_disabled: "🔓 إيقاف المصادقة الثنائية",
+    totp_fail: "❌ رمز TOTP خاطئ",
+    session_revoked: "🚫 إلغاء جلسة",
+    all_sessions_revoked: "🚫 إلغاء جميع الجلسات",
+  };
+  return labels[type] ?? type;
 }

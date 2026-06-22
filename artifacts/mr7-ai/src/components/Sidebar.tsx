@@ -128,6 +128,7 @@ interface SidebarProps {
   onOpenTool: () => void;
   onOpenSettings: () => void;
   onOpenAccount: () => void;
+  onOpenLogin?: () => void;
   onOpenUtility: (name: UtilityTool) => void;
   onOpenToolsHub: () => void;
   onOpenMemory: () => void;
@@ -264,7 +265,7 @@ const ADDITIONAL_TOOLS: { icon: React.ElementType; label: UtilityTool; color?: s
   { icon: DbIcon, label: "Kali SQLi Guide", color: "text-blue-400" },
 ];
 
-export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapsed, onOpenPricing, onOpenApi, onOpenTool, onOpenSettings, onOpenAccount, onOpenUtility, onOpenToolsHub, onOpenMemory, onOpenBookmarks, onOpenSearch, onOpenCompare, onOpenQRSync, onOpenChangelog, onOpenOsint, onOpenUseCaseLib, onOpenOmegaAgent, onOpenLocalEngineHub, onOpenMultiModelRace, onOpenLocalBenchmark }: SidebarProps) {
+export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapsed, onOpenPricing, onOpenApi, onOpenTool, onOpenSettings, onOpenAccount, onOpenLogin, onOpenUtility, onOpenToolsHub, onOpenMemory, onOpenBookmarks, onOpenSearch, onOpenCompare, onOpenQRSync, onOpenChangelog, onOpenOsint, onOpenUseCaseLib, onOpenOmegaAgent, onOpenLocalEngineHub, onOpenMultiModelRace, onOpenLocalBenchmark }: SidebarProps) {
   const { toast } = useToast();
   const { state, dispatch } = useStore();
   const { t } = useT();
@@ -1094,7 +1095,7 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapsed, onOpenP
         )}
 
         <div className="flex items-center justify-between pt-1">
-          <UserMenu onAccount={onOpenAccount} onSettings={onOpenSettings} onTheme={onOpenSettings} />
+          <UserMenu onAccount={onOpenAccount} onSettings={onOpenSettings} onTheme={onOpenSettings} onLogin={onOpenLogin} />
           <div className="flex items-center gap-1">
             {onOpenLocalEngineHub && (
               <button
@@ -1132,7 +1133,7 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapsed, onOpenP
                 <QrCode className="w-3.5 h-3.5" />
               </button>
             )}
-            <UserMenu trigger="dots" onAccount={onOpenAccount} onSettings={onOpenSettings} onTheme={onOpenSettings} />
+            <UserMenu trigger="dots" onAccount={onOpenAccount} onSettings={onOpenSettings} onTheme={onOpenSettings} onLogin={onOpenLogin} />
           </div>
         </div>
       </div>

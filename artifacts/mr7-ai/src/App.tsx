@@ -56,6 +56,7 @@ import { WindowTray } from "./components/WindowTray";
 const ApiAccessModal        = lazy(() => import("./components/modals/ApiAccessModal").then(m=>({default:m.ApiAccessModal})));
 const SettingsModal         = lazy(() => import("./components/modals/SettingsModal").then(m=>({default:m.SettingsModal})));
 const AccountModal          = lazy(() => import("./components/modals/AccountModal").then(m=>({default:m.AccountModal})));
+const AccountSettingsPage   = lazy(() => import("./pages/AccountSettingsPage").then(m=>({default:m.AccountSettingsPage})));
 const ToolModal             = lazy(() => import("./components/modals/ToolModal").then(m=>({default:m.ToolModal})));
 const UtilityToolModal      = lazy(() => import("./components/modals/UtilityToolModal").then(m=>({default:m.UtilityToolModal})));
 const ToolsHubModal         = lazy(() => import("./components/modals/ToolsHubModal").then(m=>({default:m.ToolsHubModal})));
@@ -595,6 +596,7 @@ function AppContent() {
         onOpenTool={() => open('tool')}
         onOpenSettings={() => open('settings')}
         onOpenAccount={() => open('account')}
+        onOpenLogin={() => open('authLogin')}
         onOpenUtility={(name) => setUtility(name)}
         onOpenToolsHub={() => open('toolsHub')}
         onOpenMemory={() => open('memory')}
@@ -695,8 +697,10 @@ function AppContent() {
         <WindowChrome open={modals.settings} color="#e21227" title="SETTINGS" onClose={() => close('settings')}>
           <SettingsModal open={modals.settings} onOpenChange={(v) => mDispatch({type:'SET',id:'settings',value:v})} />
         </WindowChrome>
-        <WindowChrome open={modals.account} color="#e21227" title="ACCOUNT" onClose={() => close('account')}>
-          <AccountModal open={modals.account} onOpenChange={(v) => mDispatch({type:'SET',id:'account',value:v})} onUpgrade={() => { close('account'); open('pricing'); }} />
+        <WindowChrome open={modals.account} color="#e21227" title="إعدادات الحساب" onClose={() => close('account')}>
+          <Suspense fallback={null}>
+            <AccountSettingsPage onClose={() => close('account')} />
+          </Suspense>
         </WindowChrome>
         <ToolModal open={modals.tool} onOpenChange={(v) => mDispatch({type:'SET',id:'tool',value:v})} />
         <UtilityToolModal tool={utility} onOpenChange={(v) => { if (!v) setUtility(null); }} />
