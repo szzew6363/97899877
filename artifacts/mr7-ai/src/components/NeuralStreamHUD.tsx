@@ -47,10 +47,6 @@ function RadarCanvas({ color, tps }: { color: string; tps: number }) {
       // Rotating radar sweep
       const sweepAngle = tc * 1.2;
       const sweepR = W * 0.41;
-      const grad = ctx.createConicalGradient
-        ? null // not in all browsers
-        : null;
-      void grad;
       ctx.save();
       ctx.translate(cx, cy);
       ctx.rotate(sweepAngle);
@@ -262,15 +258,12 @@ export function NeuralStreamHUD({
 
   /* Elapsed timer */
   useEffect(() => {
-    if (streaming) {
-      startRef.current = Date.now();
-      const id = setInterval(() => {
-        setElapsedSec(((Date.now() - (startRef.current ?? Date.now())) / 1000));
-      }, 100);
-      return () => clearInterval(id);
-    } else {
-      setElapsedSec(0);
-    }
+    if (!streaming) { setElapsedSec(0); return; }
+    startRef.current = Date.now();
+    const id = setInterval(() => {
+      setElapsedSec(((Date.now() - (startRef.current ?? Date.now())) / 1000));
+    }, 100);
+    return () => clearInterval(id);
   }, [streaming]);
 
   const cur = PHASES[phase];

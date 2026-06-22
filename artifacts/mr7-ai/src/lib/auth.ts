@@ -14,7 +14,7 @@ export interface AuthUser {
   firstName?: string;
   lastName?: string;
   role: "user" | "admin";
-  subscription: "free" | "pro" | "enterprise";
+  subscription: "free" | "pro" | "enterprise" | "starter" | "professional" | "elite";
   subscriptionExpiresAt?: string;
   tokensUsed: number;
   tokensLimit: number;
@@ -177,7 +177,7 @@ export async function updateProfile(data: {
 export function isSubscribed(user: AuthUser | null, tier: "pro" | "enterprise" = "pro"): boolean {
   if (!user) return false;
   if (user.subscription === "enterprise") return true;
-  if (tier === "pro" && (user.subscription === "pro" || user.subscription === "enterprise")) return true;
+  if (tier === "pro" && (user.subscription === "pro" || user.subscription === "professional" || user.subscription === "starter" || user.subscription === "elite")) return true;
   return false;
 }
 

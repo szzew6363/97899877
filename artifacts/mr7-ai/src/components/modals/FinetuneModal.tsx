@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X, Download, Brain, CheckCircle2, Loader2, Star, Trash2,
-  Plus, Filter, BarChart3, Zap, FileJson, AlertCircle,
+  Plus, Filter, BarChart3, Zap, FileJson, AlertCircle, RefreshCw,
 } from "lucide-react";
 import { authFetch, getCachedUser } from "@/lib/auth";
 import { useStore } from "@/lib/store";
@@ -65,7 +65,7 @@ export function FinetuneModal({ open, onClose }: Props) {
   }
 
   async function approveCurrentChat() {
-    const currentChat = state.chats.find(c => c.id === state.currentChatId);
+    const currentChat = state.chats.find(c => c.id === state.activeChatId);
     if (!currentChat || currentChat.messages.length < 2) {
       setError("المحادثة الحالية فارغة أو قصيرة جداً");
       return;

@@ -64,6 +64,24 @@ router.delete("/notifications/:id", jwtAuth, requireAuth, async (req: Request, r
   }
 });
 
+/* ── POST /api/notifications ── create notification (for system use e.g. token warnings) */
+router.post("/notifications", jwtAuth, requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { type = "system", title, body, data = {} } = req.body as {
+      type?: string; title?: string; body?: string; data?: Record<string, unknown>;
+    };
+    if (!title) { res.status(400).json({ error: "title required" }); return; }
+    const { rows } = await pool.query(
+      `INSERT INTO notifications (user_id, type, title, body, data)
+       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+      [req.authUser!.id, type, title, body ?? "", JSON.stringify(data)],
+    );
+    res.status(201).json({ id: rows[0].id, ok: true });
+  } catch {
+    res.status(500).json({ error: "Failed to create notification" });
+  }
+});
+
 /* ── POST /api/notifications/push-subscribe ── Web Push */
 router.post("/notifications/push-subscribe", jwtAuth, requireAuth, async (req: Request, res: Response): Promise<void> => {
   // Store push subscription in DB for future use

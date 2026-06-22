@@ -194,7 +194,7 @@ export function NotificationCenter({ compact = false }: Props) {
                           <div className="absolute right-3 top-3 w-1.5 h-1.5 rounded-full bg-red-500" />
                         )}
                         <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${color}15`, border: `1px solid ${color}30` }}>
-                          <Icon className="w-4 h-4" style={{ color }} />
+                          <span style={{ color }}><Icon className="w-4 h-4" /></span>
                         </div>
                         <div className="flex-1 min-w-0 pr-2">
                           <div className="text-xs font-semibold text-white mb-0.5">{n.title}</div>

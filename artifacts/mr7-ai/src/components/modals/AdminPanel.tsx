@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ModalShell } from "@/components/ModalShell";
+import { AdminDashboard } from "@/components/AdminDashboard";
 import {
   Shield, Lock, Check, Copy, RefreshCw, Crown, Users, Zap, AlertCircle,
   CreditCard, Save, ChevronDown, ChevronUp, Loader2,
@@ -36,6 +37,7 @@ export function AdminPanel({ open, onOpenChange }: AdminPanelProps) {
   const [payOpen, setPayOpen] = useState(false);
   const [paySettings, setPaySettings] = useState<PaymentSettings>(loadPaymentSettings());
   const [savedPassword, setSavedPassword] = useState("");
+  const [showDash, setShowDash] = useState(false);
 
   async function login() {
     setLogging(true);
@@ -181,6 +183,22 @@ export function AdminPanel({ open, onOpenChange }: AdminPanelProps) {
           <div className="space-y-5">
             <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-2 text-[12px] text-emerald-400">
               <Check className="w-4 h-4 shrink-0" /> Authenticated as Owner
+            </div>
+
+            {/* Dashboard Tab Toggle */}
+            <div>
+              <button onClick={() => setShowDash(v => !v)}
+                className="w-full flex items-center justify-between px-3 py-2 rounded-xl border border-white/6 bg-white/2 text-[11px] font-bold text-zinc-400 hover:text-white transition-colors">
+                <span className="flex items-center gap-1.5">
+                  <span>📊</span> Platform Dashboard
+                </span>
+                <span className="text-zinc-600">{showDash ? "▲" : "▼"}</span>
+              </button>
+              {showDash && (
+                <div className="mt-3">
+                  <AdminDashboard adminPassword={savedPassword} />
+                </div>
+              )}
             </div>
 
             {/* Current subscription */}

@@ -12,7 +12,7 @@ import { ChatView } from "./components/ChatView";
 import { PricingView } from "./components/PricingView";
 import { AITerminal } from "./components/AITerminal";
 import { StoreProvider, useStore } from "./lib/store";
-import { checkAndExpireSubscription } from "./lib/subscription";
+import { checkAndExpireSubscription, TIER_TOKENS as _TIER_TOKENS } from "./lib/subscription";
 import { FloatingActionDock } from "./components/FloatingActionDock";
 import { PipelineHUD } from "./components/PipelineHUD";
 import type { PipelineItem } from "./lib/pipeline";
@@ -204,12 +204,15 @@ const AutonomousDecisionEngineModal = lazy(() => import("./components/modals/Aut
 const JARVISCommandCenterModal      = lazy(() => import("./components/modals/JARVISCommandCenterModal").then(m=>({default:m.JARVISCommandCenterModal})));
 const OmegaAgentModal               = lazy(() => import("./components/modals/OmegaAgentModal").then(m=>({default:m.OmegaAgentModal})));
 const OllamaHub3D                   = lazy(() => import("./components/OllamaHub3D").then(m=>({default:m.OllamaHub3D})));
+const CollabModal                   = lazy(() => import("./components/modals/CollabModal"));
 import { LocalAIModelNexus } from "./components/LocalAIModelNexus";
 import { AuthModal } from "./components/modals/AuthModal";
 import { CodeScannerModal } from "./components/modals/CodeScannerModal";
 import { NotificationCenter } from "./components/NotificationCenter";
 import { PluginMarketplaceModal } from "./components/modals/PluginMarketplaceModal";
 import { FinetuneModal } from "./components/modals/FinetuneModal";
+import { startTokenMonitor } from "./lib/token-monitor";
+const TIER_TOKENS = _TIER_TOKENS;
 
 // ── MODAL STATE REDUCER ───────────────────────────────────────────────────────
 const MODAL_IDS = [
@@ -253,6 +256,7 @@ const MODAL_IDS = [
   'codeScanner',
   'pluginMarket',
   'finetune',
+  'collab',
 ] as const;
 
 type ModalId = typeof MODAL_IDS[number];
@@ -356,6 +360,15 @@ function AppContent() {
 
   // ── Real-time threat notification service (CISA KEV via WebSocket) ────────
   useEffect(() => { getThreatNotifier(); }, []);
+
+  // ── Token usage monitor (warns at 80% and 95%) ───────────────────────────
+  useEffect(() => {
+    startTokenMonitor(
+      () => state.subscription.tokensUsed,
+      () => TIER_TOKENS[state.subscription.tier] ?? 10_000,
+    );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.subscription.tokensUsed, state.subscription.tier]);
 
   // ── Subscription expiry check ─────────────────────────────────────────────
   useEffect(() => {
@@ -486,6 +499,7 @@ function AppContent() {
       if (e.key === "Escape") { close('sidebar' as ModalId); }
       if ((e.metaKey||e.ctrlKey) && e.shiftKey && e.altKey && e.key.toLowerCase() === "a") { e.preventDefault(); open('admin'); }
       if ((e.metaKey||e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "j") { e.preventDefault(); toggle('finetune'); }
+      if ((e.metaKey||e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "u") { e.preventDefault(); toggle('collab'); }
       if ((e.metaKey||e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "e") { e.preventDefault(); open('monaco'); }
       if ((e.metaKey||e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "x") { e.preventDefault(); toggle('exploitChain'); }
       if ((e.metaKey||e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "a" && !e.altKey) { e.preventDefault(); window.dispatchEvent(new CustomEvent("kali:trigger-auto-setup")); }
@@ -1077,6 +1091,14 @@ function AppContent() {
         open={modals.finetune}
         onClose={() => close('finetune')}
       />
+
+      {/* ── Collab Room ── */}
+      <Suspense fallback={null}>
+        <CollabModal
+          open={modals.collab}
+          onOpenChange={(v) => mDispatch({type:'SET',id:'collab',value:v})}
+        />
+      </Suspense>
 
       {/* ── Notification Center ── */}
       <NotificationCenter />

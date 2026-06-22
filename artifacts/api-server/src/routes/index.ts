@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { tierRateLimit } from "../middlewares/tierRateLimit";
 import healthRouter from "./health";
 import chatRouter from "./chat";
 import councilRouter from "./council";
@@ -31,8 +32,12 @@ import finetuneRouter from "./finetune";
 import pluginsRouter from "./plugins";
 import ragRouter from "./rag";
 import adminRouter from "./admin";
+import subscriptionsRouter from "./subscriptions";
 
 const router: IRouter = Router();
+
+// Apply tier-based rate limiting to all AI routes
+router.use(["/chat", "/council", "/godmode", "/image", "/vision", "/agent", "/agent4", "/rag", "/finetune"], tierRateLimit);
 
 router.use(healthRouter);
 router.use(chatRouter);
@@ -66,5 +71,6 @@ router.use(finetuneRouter);
 router.use(pluginsRouter);
 router.use(ragRouter);
 router.use(adminRouter);
+router.use(subscriptionsRouter);
 
 export default router;
